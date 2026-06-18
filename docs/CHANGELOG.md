@@ -4,6 +4,20 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O 
 
 ---
 
+## [0.4.0] - 2026-06-18
+
+### Adicionado
+- **Motor de Tipagem do Vampiro V5:**
+  - Criação do arquivo `src/types/character.ts` tipando estritamente a ficha de personagem JSONB com perfis, trackers, especializações de habilidades, disciplinas, vantagens, loresheets e macros.
+- **Interface de Ficha Reativa Completa:**
+  - Criação da página de exibição e controle da ficha de personagem em `src/app/campanhas/[campaign_id]/personagens/[character_id]/page.tsx` usando dados mockados baseados nas regras do Demiplane Nexus.
+  - **Cabeçalho Fixo:** Exibição do avatar SVG, perfil detalhado com Bane e marcadores rápidos de Vitalidade, Força de Vontade, Fome, Humanidade e Máculas (Stains) interativos com rotação de estado.
+  - **Tabs de Navegação Customizadas:** Abas reativas para Núcleo, Sangue, Vantagens e Sistema com visual gótico e transições suaves.
+  - **Aba Núcleo com Prevenção de Overflow:** Componente `DotSlider` com largura máxima de `110px` e touch target vertical de `44px` para prevenir overflow horizontal em viewports móveis de `375px`.
+  - **Simulador de Rolagem Gótico (V5):** Simulador interativo que calcula pools dinâmicos, separa dados normais e de fome, e resolve sucessos, falhas bestiais e críticos messiânicos graficamente na tela com logs temáticos.
+
+---
+
 ## [0.3.0] - 2026-06-18
 
 ### Adicionado
