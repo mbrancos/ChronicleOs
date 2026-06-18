@@ -2,6 +2,25 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.6.0] - 2026-06-18
+
+### Adicionado
+- **Persistência Assíncrona no Neon Database:**
+  - Criação do arquivo `src/app/actions/characterActions.ts` contendo as Server Actions `getCharacterSheet` e `updateCharacterSheet` para carregamento e salvamento atômico do JSONB da ficha no banco de dados Neon.
+  - Validação robusta de UUID via regex nas Server Actions para garantir que apenas IDs de personagens válidos façam queries no PostgreSQL.
+- **Autosave Debounced:**
+  - Criação do hook customizado `useAutosave.ts` em `src/hooks/` com debounce de 1000ms.
+  - Utilização de `useRef` para encapsular a referência de `onSave` e do valor atual da ficha, isolando-a de renderizações cíclicas causadas por troca de abas ou outros estados locais da UI (evitando loops infinitos e vazamentos de memória).
+
+### Modificado
+- **Arquitetura Server/Client Component da Rota de Personagem:**
+  - Refatoração de `src/app/campanhas/[campaign_id]/personagens/[character_id]/page.tsx` para se tornar um Server Component puro, realizando a busca de dados no servidor e passando-os para o cliente.
+  - Criação de `src/components/sheet/CharacterSheetClient.tsx` para gerenciar toda a lógica interativa da interface da ficha no lado do cliente.
+- **Indicador Visual de Sincronia:**
+  - Implementação de um status de sincronização (`syncStatus`) exibido discretamente no cabeçalho fixo, transitando de forma limpa entre inativo, "Salvando alterações...", "✓ Sincronizado" e "⚠️ Falha na sincronia".
+- **Resiliência de Tipagem no Next.js:**
+  - Correção na atribuição de dados iniciais no Server Component de `page.tsx` para garantir que `initialData` não seja `undefined` e passe na verificação estrita do compilador TypeScript.
+
 ---
 
 ## [0.5.0] - 2026-06-18
