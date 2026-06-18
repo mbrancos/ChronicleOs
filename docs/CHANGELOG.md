@@ -2,6 +2,28 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.7.0] - 2026-06-18
+
+### Adicionado
+- **Server Actions de Criação de Entidades:**
+  - Criação do arquivo `src/app/actions/campaignActions.ts` contendo a ação `createCampaignAction` para inserir novas crônicas e disparar a revalidação de dados em tela.
+  - Adição da Server Action `createCharacterAction` em `src/app/actions/characterActions.ts` para criar novos personagens a partir de uma campanha associada, inicializando com o objeto `DEFAULT_CHARACTER_DATA`.
+- **Painel de Controle Centralizado do Hub:**
+  - Desenvolvimento do Client Component `HubClient.tsx` sob `src/components/hub/` com estética gótica em tons de vermelho sangue e dourado.
+  - Implementação de Empty States poéticos para listas de crônicas e fichas.
+  - Modais interativos de criação de Campanhas e Personagens, acionando as Server Actions correspondentes.
+
+### Modificado
+- **Arquitetura de Rota do Hub:**
+  - Refatoração de `src/app/hub/page.tsx` para se tornar um Server Component puro que busca campanhas e personagens do banco via Drizzle e injeta como props no `HubClient`.
+  - Configuração de `export const dynamic = "force-dynamic"` na página do Hub para assegurar o funcionamento da verificação de sessão (cookies) sem emitir avisos durante a geração de build estático.
+- **Trava de Segurança Relacional (FK):**
+  - Implementação de trava de validação lógica no botão "Novo Personagem" do Hub, bloqueando a criação caso o usuário não possua campanhas cadastradas para evitar erros de restrição de chave estrangeira no banco de dados.
+- **Centralização de Constantes de Ficha:**
+  - Migração de `DEFAULT_CHARACTER_DATA` de `CharacterSheetClient.tsx` para `src/types/character.ts` a fim de compartilhá-la de forma limpa entre o lado do cliente e o lado do servidor.
+
+---
+
 ## [0.6.0] - 2026-06-18
 
 ### Adicionado

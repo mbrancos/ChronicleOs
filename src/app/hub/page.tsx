@@ -1,10 +1,44 @@
-export default function HubPage() {
+import { auth } from "@/lib/auth/server";
+import { db } from "@/db";
+import { campaigns, characters } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import HubClient from "@/components/hub/HubClient";
+
+export const dynamic = "force-dynamic";
+
+export default async function HubPage() {
+  // 1. Validar sessão ativa no servidor
+  const { data: session } = await auth.getSession();
+
+  if (!session || !session.user) {
+    redirect("/");
+  }
+
+  const userId = session.user.id;
+
+  // 2. Buscar as campanhas narradas pelo usuário
+  const userCampaigns = await db
+    .select()
+    .from(campaigns)
+    .where(eq(campaigns.narratorId, userId));
+
+  // 3. Buscar os personagens pertencentes ao usuário
+  const userCharacters = await db
+    .select()
+    .from(characters)
+    .where(eq(characters.userId, userId));
+
+  // 4. Renderizar o Client Component passando os dados
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold tracking-tight">ChronicleOS - Hub</h1>
-      <p className="mt-4 text-zinc-500">
-        Painel central do usuário. Gerencie suas crônicas e fichas.
-      </p>
-    </main>
+    <HubClient
+      user={{
+        id: session.user.id,
+        name: session.user.name ?? "Membro da Camarilla",
+        email: session.user.email,
+      }}
+      campaigns={userCampaigns}
+      characters={userCharacters}
+    />
   );
 }
