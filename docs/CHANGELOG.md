@@ -4,6 +4,21 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O 
 
 ---
 
+## [0.5.0] - 2026-06-18
+
+### Adicionado
+- **Componentes Modulares de Interface da Ficha:**
+  - Criação do componente `DotSlider.tsx` sob `src/components/sheet/` para controle de bolinhas em ouro/vermelho com prevenção de overflow e touch target de 44px.
+  - Criação do componente `DamageTracker.tsx` sob `src/components/sheet/` com lógica de clique por valor (anti-teleporte) e suporte a variantes de vitalidade e força de vontade.
+  - Criação do componente `HumanityTracker.tsx` sob `src/components/sheet/` para rastreamento da trilha de 10 caixas combinando humanidade e máculas com feedback de degeneração moral.
+
+### Modificado
+- **Clean Code no Componente Principal da Ficha:**
+  - Atualização de [page.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/app/campanhas/[campaign_id]/personagens/[character_id]/page.tsx) para integrar as instâncias dos novos componentes modulares.
+  - Remoção de lógicas inlined complexas de rotação de danos, trilhas e definições locais inlined de componentes auxiliares.
+
+---
+
 ## [0.4.0] - 2026-06-18
 
 ### Adicionado

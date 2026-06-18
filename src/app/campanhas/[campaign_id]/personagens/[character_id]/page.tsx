@@ -11,6 +11,9 @@ import {
   CharacterSkills
 } from "@/types/character";
 import Link from "next/link";
+import DotSlider from "@/components/sheet/DotSlider";
+import DamageTracker from "@/components/sheet/DamageTracker";
+import HumanityTracker from "@/components/sheet/HumanityTracker";
 
 interface PageProps {
   params: Promise<{
@@ -178,80 +181,7 @@ export default function CharacterPage({ params }: PageProps) {
     diceList: { type: "normal" | "hunger"; value: number }[];
   } | null>(null);
 
-  // 1. ATUALIZAÇÃO DOS TRACKERS DE DANO (Health & Willpower)
-  const handleTrackerClick = (type: "health" | "willpower", idx: number) => {
-    setCharacter(prev => {
-      const tracker = { ...prev.status[type] };
-      
-      // Ciclo: Livre -> Superficial (1) -> Agravado (2) -> Livre (0)
-      let currentType = 0;
-      if (idx < tracker.superficial) {
-        currentType = 1;
-      } else if (idx < tracker.superficial + tracker.aggravated) {
-        currentType = 2;
-      }
 
-      let nextType = (currentType + 1) % 3;
-
-      // Recalcular contadores
-      let newSuperficial = tracker.superficial;
-      let newAggravated = tracker.aggravated;
-
-      if (currentType === 1) {
-        newSuperficial = Math.max(0, newSuperficial - 1);
-        if (nextType === 2) newAggravated = Math.min(tracker.max, newAggravated + 1);
-      } else if (currentType === 2) {
-        newAggravated = Math.max(0, newAggravated - 1);
-      } else {
-        if (nextType === 1) newSuperficial = Math.min(tracker.max, newSuperficial + 1);
-        else if (nextType === 2) newAggravated = Math.min(tracker.max, newAggravated + 1);
-      }
-
-      return {
-        ...prev,
-        status: {
-          ...prev.status,
-          [type]: {
-            ...tracker,
-            superficial: newSuperficial,
-            aggravated: newAggravated
-          }
-        }
-      };
-    });
-  };
-
-  // 2. CONTROLE DE FOME (Hunger Tracker)
-  const handleHungerClick = (level: number) => {
-    setCharacter(prev => ({
-      ...prev,
-      status: {
-        ...prev.status,
-        hunger: prev.status.hunger === level ? Math.max(0, level - 1) : level
-      }
-    }));
-  };
-
-  // 3. CONTROLE DE HUMANIDADE E MÁCULAS (Humanity & Stains)
-  const handleHumanityClick = (level: number) => {
-    setCharacter(prev => ({
-      ...prev,
-      status: {
-        ...prev.status,
-        humanity: prev.status.humanity === level ? Math.max(0, level - 1) : level
-      }
-    }));
-  };
-
-  const handleStainsClick = (level: number) => {
-    setCharacter(prev => ({
-      ...prev,
-      status: {
-        ...prev.status,
-        stains: prev.status.stains === level ? Math.max(0, level - 1) : level
-      }
-    }));
-  };
 
   // 4. CONTROLE DE BOLINHAS (SLIDER DE ATRIBUTOS E HABILIDADES)
   const handleAttributeChange = (category: "physical" | "social" | "mental", attrName: string, value: number) => {
@@ -410,142 +340,37 @@ export default function CharacterPage({ params }: PageProps) {
           <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
             
             {/* VITALIDADE (HEALTH) */}
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-xs font-data uppercase font-semibold text-text-muted">
-                <span>Vitalidade</span>
-                <span className="text-[10px] text-text-dim font-normal">Clique para alternar (/ ou X)</span>
-              </div>
-              <div className="flex space-x-1.5 h-11 items-center">
-                {Array.from({ length: character.status.health.max }).map((_, idx) => {
-                  let char = "";
-                  let colorClass = "border-text-muted text-text-primary bg-bg-input";
-                  
-                  if (idx < character.status.health.superficial) {
-                    char = "/";
-                    colorClass = "border-text-primary text-text-primary bg-bg-input";
-                  } else if (idx < character.status.health.superficial + character.status.health.aggravated) {
-                    char = "X";
-                    colorClass = "border-deep-crimson text-hunger-red bg-deep-crimson/10 font-bold";
-                  }
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleTrackerClick("health", idx)}
-                      className={`w-7 h-7 rounded-sm border flex items-center justify-center text-xs cursor-pointer focus:outline-none transition-all duration-150 hover:border-gold-accent ${colorClass}`}
-                    >
-                      {char}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <DamageTracker 
+              label="Vitalidade" 
+              value={character.status.health} 
+              onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, health: val } }))} 
+              variant="health" 
+            />
 
             {/* FORÇA DE VONTADE (WILLPOWER) */}
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-xs font-data uppercase font-semibold text-text-muted">
-                <span>Força de Vontade</span>
-                <span className="text-[10px] text-text-dim font-normal">Clique para alternar (/ ou X)</span>
-              </div>
-              <div className="flex space-x-1.5 h-11 items-center">
-                {Array.from({ length: character.status.willpower.max }).map((_, idx) => {
-                  let char = "";
-                  let colorClass = "border-text-muted text-text-primary bg-bg-input";
-                  
-                  if (idx < character.status.willpower.superficial) {
-                    char = "/";
-                    colorClass = "border-willpower-blue text-willpower-blue bg-willpower-blue/5";
-                  } else if (idx < character.status.willpower.superficial + character.status.willpower.aggravated) {
-                    char = "X";
-                    colorClass = "border-deep-crimson text-hunger-red bg-deep-crimson/15 font-bold";
-                  }
+            <DamageTracker 
+              label="Força de Vontade" 
+              value={character.status.willpower} 
+              onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, willpower: val } }))} 
+              variant="willpower" 
+            />
 
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleTrackerClick("willpower", idx)}
-                      className={`w-7 h-7 rounded-sm border flex items-center justify-center text-xs cursor-pointer focus:outline-none transition-all duration-150 hover:border-gold-accent ${colorClass}`}
-                    >
-                      {char}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* FOME (HUNGER TRACKER) */}
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-xs font-data uppercase font-semibold text-text-muted">
-                <span>Fome (Hunger)</span>
-                <span className="text-[10px] text-hunger-red font-semibold">{character.status.hunger} / 5</span>
-              </div>
-              <div className="flex space-x-2 h-11 items-center">
-                {Array.from({ length: 5 }).map((_, idx) => {
-                  const isActive = idx < character.status.hunger;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleHungerClick(idx + 1)}
-                      className={`w-7 h-7 rounded-full border cursor-pointer flex items-center justify-center transition-all duration-150 focus:outline-none ${
-                        isActive 
-                          ? "bg-hunger-red border-hunger-red text-bg-main shadow-[0_0_8px_rgba(255,92,92,0.6)]" 
-                          : "border-text-dim hover:border-hunger-red bg-bg-input"
-                      }`}
-                    >
-                      {isActive && (
-                        <svg className="w-3.5 h-3.5 fill-current text-white" viewBox="0 0 24 24">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                        </svg>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            {/* FOME (HUNGER) */}
+            <DotSlider
+              label="Fome"
+              value={character.status.hunger}
+              onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
+              allowZero
+              variant="red"
+            />
 
             {/* HUMANIDADE & MÁCULAS (HUMANITY & STAINS) */}
-            <div className="space-y-1">
-              <div className="flex justify-between items-center text-xs font-data uppercase font-semibold text-text-muted">
-                <span>Humanidade & Máculas</span>
-                <span className="text-[10px] text-gold-accent font-semibold">Hum: {character.status.humanity} | Mac: {character.status.stains}</span>
-              </div>
-              
-              {/* TRILHA DE 10 CAIXAS PARA HUMANIDADE (ESQUERDA) E MÁCULAS (DIREITA) */}
-              <div className="flex space-x-1 h-11 items-center">
-                {Array.from({ length: 10 }).map((_, idx) => {
-                  const boxNum = idx + 1;
-                  const isHumanity = boxNum <= character.status.humanity;
-                  const isStain = boxNum > (10 - character.status.stains);
-                  
-                  let bgClass = "bg-bg-input border-text-dim hover:border-gold-accent";
-                  let content = null;
-
-                  if (isHumanity) {
-                    bgClass = "bg-gold-accent border-gold-accent text-bg-main shadow-[0_0_6px_rgba(255,216,77,0.4)]";
-                    content = <div className="w-1.5 h-1.5 rounded-full bg-bg-main" />;
-                  } else if (isStain) {
-                    bgClass = "bg-deep-crimson/30 border-blood-red text-blood-red animate-pulse";
-                    content = <span className="text-[10px] font-bold">!</span>;
-                  }
-
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        if (boxNum <= 5) {
-                          handleHumanityClick(boxNum);
-                        } else {
-                          handleStainsClick(10 - boxNum + 1);
-                        }
-                      }}
-                      className={`w-6 h-6 border rounded-sm flex items-center justify-center cursor-pointer transition-all duration-150 ${bgClass}`}
-                    >
-                      {content}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <HumanityTracker
+              humanity={character.status.humanity}
+              stains={character.status.stains}
+              onHumanityChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, humanity: val } }))}
+              onStainsChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, stains: val } }))}
+            />
 
           </div>
 
@@ -994,77 +819,4 @@ export default function CharacterPage({ params }: PageProps) {
   );
 }
 
-// ========================================================
-// COMPONENTE AUXILIAR: DotSlider (SLIDER DE PONTOS COM CONTROLE DE OVERFLOW NO MOBILE)
-// ========================================================
-interface DotSliderProps {
-  label: string;
-  value: number;
-  onChange: (val: number) => void;
-  allowZero?: boolean;
-  specialties?: Specialty[];
-}
 
-function DotSlider({ label, value, onChange, allowZero = false, specialties = [] }: DotSliderProps) {
-  
-  // A área inteira da linha tem altura física de 44px (h-11) para touch target ideal no mobile
-  // A área de bolinhas tem tamanho fixo de 110px de largura para evitar overflow em telas de 375px
-  const handleTouchOrClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = x / rect.width;
-    
-    // Divide a largura em 5 partes
-    let newValue = Math.ceil(percentage * 5);
-    if (newValue < 0) newValue = 0;
-    if (newValue > 5) newValue = 5;
-
-    // Se permitir zero e clicar na primeira bolinha já ativa, permite zerar
-    if (allowZero && newValue === 1 && value === 1) {
-      onChange(0);
-    } else {
-      onChange(newValue === 0 ? 1 : newValue); // se não permitir zero, o valor mínimo é 1
-    }
-  };
-
-  return (
-    <div className="flex justify-between items-center h-11 border-b border-white/5 hover:bg-white/5 px-2 rounded-sm transition-colors group">
-      
-      {/* NOME DA HABILIDADE / ATRIBUTO */}
-      <div className="flex flex-col justify-center leading-none">
-        <span className="font-data uppercase tracking-wider text-xs text-text-muted group-hover:text-text-primary transition-colors">
-          {label}
-        </span>
-        
-        {/* ESPECIALIZAÇÃO SE HOUVER */}
-        {specialties.length > 0 && (
-          <span className="text-[9px] text-gold-accent italic tracking-wide font-sans leading-tight">
-            ({specialties.map(s => s.name).join(", ")})
-          </span>
-        )}
-      </div>
-
-      {/* ÁREA INTERATIVA DO SLIDER (TOQUE CONTÍNUO DE LARGURA FIXA 110px) */}
-      <div 
-        onClick={handleTouchOrClick}
-        className="flex items-center justify-between space-x-1.5 cursor-pointer h-full px-2"
-        style={{ width: "110px" }}
-      >
-        {Array.from({ length: 5 }).map((_, idx) => {
-          const isActive = idx < value;
-          return (
-            <div
-              key={idx}
-              className={`w-3 h-3 rounded-full transition-all duration-150 ${
-                isActive 
-                  ? "bg-gold-accent ring-1 ring-gold-accent/40 shadow-[0_0_8px_rgba(255,216,77,0.5)]" 
-                  : "bg-bg-main border border-text-dim/80 hover:border-gold-accent"
-              }`}
-            />
-          );
-        })}
-      </div>
-
-    </div>
-  );
-}
