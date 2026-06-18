@@ -1,26 +1,33 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Cores Base */
+  --color-bg-main: #060606;
+  --color-bg-card: #202020;
+  --color-bg-card-dark: #101014;
+  --color-bg-input: #111111;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Cores Temáticas */
+  --color-blood-red: #c82434;
+  --color-burgundy: #68111a;
+  --color-deep-crimson: #800008;
+  --color-hunger-red: #ff5c5c;
+  --color-willpower-blue: #244666;
+  --color-gold-accent: #ffd84d;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Cores de Texto */
+  --color-text-primary: #ffffff;
+  --color-text-muted: #b7b7b7;
+  --color-text-dim: #666666;
+
+  /* Fontes Customizadas mapeadas para as variáveis injetadas pelo layout */
+  --font-gothic: var(--font-gin), serif;
+  --font-data: var(--font-barlow), sans-serif;
+  --font-reading: var(--font-nunito), sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg-main);
+  color: var(--color-text-primary);
+  font-family: var(--font-reading);
 }

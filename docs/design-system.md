@@ -34,7 +34,10 @@ O sistema de cores do ChronicleOS é profundamente temático, utilizando tons es
 | :--- | :--- | :--- | :--- |
 | `color-text-primary`| `#ffffff` | `rgb(255, 255, 255)`| Texto principal, valores e nomes importantes |
 | `color-text-muted` | `#b7b7b7` | `rgb(183, 183, 183)`| Texto secundário, rótulos de atributos, descrições breves |
-| `color-text-dim` | `#666666` | `rgb(102, 102, 102)`| Texto desabilitado ou placeholders |
+| `color-text-dim` | `#666666` | `rgb(102, 102, 102)`| Texto desabilitado ou decorativo |
+
+> [!WARNING]
+> **Contraste de Acessibilidade:** O token `color-text-dim` possui contraste muito baixo contra fundos escuros (`2.5:1`). Não utilize esta cor para textos informativos ou rótulos importantes. Restrinja o uso a placeholders de entrada e estados puramente inativos.
 
 ---
 
@@ -42,57 +45,21 @@ O sistema de cores do ChronicleOS é profundamente temático, utilizando tons es
 
 A tipografia do Demiplane equilibra a estética rústica e gótica medieval de *Vampiro* com a legibilidade exigida em aplicativos mobile e desktop de alta performance.
 
-### Importação de Fontes Customizadas
+### Gerenciamento de Fontes no Next.js (Zero FOUT & Sem Erros de CORS)
 
-As fontes oficiais do Demiplane devem ser importadas no arquivo global de estilos:
-
-```css
-/* Fontes Góticas e Especiais (Demiplane Assets) */
-@font-face {
-  font-family: 'Gin';
-  src: url('https://content.demiplane.com/fonts/Gin.otf') format('opentype');
-  font-style: normal;
-  font-weight: normal;
-}
-
-@font-face {
-  font-family: 'GoodOT';
-  src: url('https://content.demiplane.com/fonts/GoodOT.otf') format('opentype');
-  font-style: normal;
-  font-weight: normal;
-}
-
-@font-face {
-  font-family: 'GoodOTCondBold';
-  src: url('https://content.demiplane.com/fonts/GoodOT-CondBold.otf') format('opentype');
-  font-style: normal;
-  font-weight: bold;
-}
-
-@font-face {
-  font-family: 'Taroca';
-  src: url('https://content.demiplane.com/fonts/Taroca.ttf') format('truetype');
-  font-style: normal;
-  font-weight: normal;
-}
-```
-
-E para fontes de leitura fluida complementares (Google Fonts):
-```html
-<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,700;0,900;1,400;1,500&family=Nunito:ital,wght@0,400;0,700&display=swap" rel="stylesheet" />
-```
+Para garantir segurança contra CORS e o melhor desempenho possível, as fontes góticas oficiais do Demiplane são salvas localmente na pasta `public/fonts/` e inicializadas via **`next/font/local`** no arquivo `src/app/layout.tsx` usando o caminho relativo (ex: `../../public/fonts/Gin.otf`), enquanto as fontes Barlow e Nunito são carregadas do Google Fonts via **`next/font/google`** diretamente no arquivo `src/app/layout.tsx`.
 
 ### Regras de Uso de Fontes
 
-1. **`font-family: 'Gin', serif`**
+1. **`font-family: var(--font-gothic)`** (Injeta a fonte `Gin`)
    - **Onde usar**: Nome do Personagem, Clã, Conceito, Títulos Principais (`h1`, `h2`) e cabeçalhos de seções críticas (ex: ATRIBUTOS, HABILIDADES, DISCIPLINAS).
    - **Características**: Serifada gótica de época, transmite o tom dramático do jogo.
-2. **`font-family: 'Barlow', sans-serif` / `'GoodOT', sans-serif`**
+2. **`font-family: var(--font-data)`** (Injeta a fonte `Barlow`)
    - **Onde usar**: Nomes de Atributos, Habilidades, botões de rolagem, contadores numéricos rápidos.
    - **Características**: Sem serifa condensada, excelente para layouts compactos onde o texto precisa caber em colunas apertadas no mobile.
-3. **`font-family: 'Nunito', sans-serif` / `'Roboto', sans-serif`**
+3. **`font-family: var(--font-reading)`** (Injeta a fonte `Nunito`)
    - **Onde usar**: Textos de histórico (Lore), anotações do jogador/narrador, descrições detalhadas de poderes de disciplinas e vantagens.
-   - **Características**: Sem serifa arredondada e suave, de leitura cansativa reduzida em fundos pretos.
+   - **Características**: Sem serifa arredondada e suave, de leitura agradável em fundos pretos.
 
 ---
 
@@ -142,6 +109,14 @@ Usadas para Atributos (Força, Destreza, etc.) e Habilidades (Prontidão, Luta, 
     - Borda: `1px solid var(--color-text-dim)` (`#666666`).
 *   **Hover Estado**: Ao passar o mouse, a bolinha deve brilhar levemente com um contorno de opacidade (`rgba(255, 216, 77, 0.4)`).
 
+> [!IMPORTANT]
+> **Prevenção de Overflow no Mobile (Métrica Touch Target):**
+> Em telas de `375px`, cinco botões individuais de `44px` geram `220px` de largura horizontal, quebrando o layout da linha. 
+> - **Solução:** As bolinhas de pontuação devem funcionar como um **Slider Contínuo**.
+> - O contêiner de 5 bolinhas deve possuir tamanho fixo e compacto (ex: `100px` a `120px` de largura total).
+> - O contêiner pai inteiro terá uma altura física de **`44px`** (garantindo touch target vertical para fácil alcance do polegar).
+> - Ao clicar na linha das bolinhas, calcula-se a posição horizontal relativa do toque para definir a pontuação (ex: toque ao centro preenche 3, toque à direita preenche 5), eliminando colisões de layout.
+
 ### B. Rastreador de Dano (Health & Willpower Boxes)
 A Vitalidade e a Força de Vontade são controladas por quadradinhos reativos (`16px x 16px`).
 
@@ -182,12 +157,14 @@ Os botões de macro geram rolagens de dados que combinam dados normais e dados d
 
 ## 6. Guia de Configuração no Tailwind CSS v4
 
-Como o projeto está utilizando Tailwind CSS v4 (`@import "tailwindcss"` com `@theme inline` em `globals.css`), aqui está o mapeamento exato sugerido para declarar e utilizar esses tokens na folha de estilos global:
+No Tailwind CSS v4, a configuração baseia-se em CSS e os tokens são estendidos diretamente no bloco `@theme` no arquivo global de estilos.
+
+### Configuração no `src/app/globals.css`
 
 ```css
 @import "tailwindcss";
 
-:root {
+@theme {
   /* Cores Base */
   --color-bg-main: #060606;
   --color-bg-card: #202020;
@@ -206,33 +183,11 @@ Como o projeto está utilizando Tailwind CSS v4 (`@import "tailwindcss"` com `@t
   --color-text-primary: #ffffff;
   --color-text-muted: #b7b7b7;
   --color-text-dim: #666666;
-}
 
-@theme inline {
-  /* Estendendo cores no Tailwind v4 */
-  --color-background: var(--color-bg-main);
-  --color-foreground: var(--color-text-primary);
-  
-  --color-bg-main: var(--color-bg-main);
-  --color-bg-card: var(--color-bg-card);
-  --color-bg-card-dark: var(--color-bg-card-dark);
-  --color-bg-input: var(--color-bg-input);
-
-  --color-blood-red: var(--color-blood-red);
-  --color-burgundy: var(--color-burgundy);
-  --color-deep-crimson: var(--color-deep-crimson);
-  --color-hunger-red: var(--color-hunger-red);
-  --color-willpower-blue: var(--color-willpower-blue);
-  --color-gold-accent: var(--color-gold-accent);
-
-  --color-text-primary: var(--color-text-primary);
-  --color-text-muted: var(--color-text-muted);
-  --color-text-dim: var(--color-text-dim);
-
-  /* Configuração das Fontes Customizadas */
-  --font-gothic: 'Gin', serif;
-  --font-data: 'Barlow', 'GoodOT', sans-serif;
-  --font-reading: 'Nunito', 'Roboto', sans-serif;
+  /* Famílias de Fontes mapeadas para as variáveis carregadas no Layout */
+  --font-gothic: var(--font-gin), serif;
+  --font-data: var(--font-barlow), sans-serif;
+  --font-reading: var(--font-nunito), sans-serif;
 }
 
 body {
@@ -242,7 +197,7 @@ body {
 }
 ```
 
-Com esta configuração, o desenvolvedor poderá estilizar os componentes de Vampire 5e de forma extremamente limpa no HTML do Next.js:
-- `class="bg-bg-card border border-white/10 p-4 rounded"`
-- `class="font-gothic text-2xl text-blood-red"`
-- `class="text-gold-accent font-data font-bold"`
+### Classes de Utilitários Temáticos no HTML:
+- Fundo de painéis e cards: `class="bg-bg-card border border-white/10 p-4 rounded"`
+- Cabeçalhos de seção góticos: `class="font-gothic text-2xl text-blood-red"`
+- Dados, Atributos e Números rápidos: `class="font-data text-gold-accent font-bold"`
