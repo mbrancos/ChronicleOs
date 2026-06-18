@@ -385,7 +385,7 @@ export default function CharacterPage({ params }: PageProps) {
               <svg className="w-16 h-16 text-text-dim/40 group-hover:text-blood-red/40 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
               </svg>
-              <div className="absolute inset-0 bg-gradient-to-t from-bg-main/80 via-transparent to-transparent flex items-end justify-center pb-1">
+              <div className="absolute inset-0 bg-linear-to-t from-bg-main/80 via-transparent to-transparent flex items-end justify-center pb-1">
                 <span className="text-[10px] uppercase tracking-wider text-text-muted">Marcus</span>
               </div>
             </div>
