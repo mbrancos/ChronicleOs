@@ -23,6 +23,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O 
 - **Documentação de Design:**
   - Atualização do [design-system.md](file:///d:/Etna/Projetos/ChronicleOS/docs/design-system.md) documentando a localização física de fontes e a regra de prevenção de overflow no mobile para os seletores de bolinha (dots) usando a lógica de Slider Contínuo (Opção B) com área de toque vertical de 44px.
 
+### Corrigido
+- **Materialização de Tabelas no Banco de Dados (Neon):**
+  - Sincronização inicial do banco de dados executando `npx drizzle-kit push` para materializar as tabelas `users`, `campaigns` e `characters` diretamente no Neon Database com base nas credenciais corrigidas.
+
 ---
 
 ## [0.2.0] - 2026-06-18

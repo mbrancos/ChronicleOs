@@ -4,6 +4,31 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O 
 
 ---
 
+## [0.3.0] - 2026-06-18
+
+### Adicionado
+- **Fontes Góticas Oficiais do Demiplane:**
+  - Inclusão dos arquivos físicos das fontes `Gin`, `GoodOT`, `GoodOT-CondBold` e `Taroca` na pasta `public/fonts/`.
+  - Configuração do carregamento local via `next/font/local` no [layout.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/app/layout.tsx).
+- **Estilização de Autenticação Gótica:**
+  - Aplicação do visual gótico de alto contraste na página de Login (`src/app/page.tsx`) e Cadastro (`src/app/cadastro/page.tsx`) com foco temático em vermelho sangue e dourado.
+
+### Modificado
+- **Caminho e Otimização de Fontes:**
+  - Configuração no [layout.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/app/layout.tsx) para carregar `Barlow` e `Nunito` via Google Fonts (`next/font/google`).
+  - Atualização dos caminhos de fontes góticas para apontar para a pasta `/public`.
+- **Tema Global no Tailwind CSS v4:**
+  - Correção de sintaxe no arquivo [globals.css](file:///d:/Etna/Projetos/ChronicleOS/src/app/globals.css) removendo a diretiva inline do bloco `@theme`.
+  - Mapeamento das variáveis de cores e fontes oficiais góticas e de dados.
+- **Documentação de Design:**
+  - Atualização do [design-system.md](file:///d:/Etna/Projetos/ChronicleOS/docs/design-system.md) documentando a localização física de fontes e a regra de prevenção de overflow no mobile para os seletores de bolinha (dots) usando a lógica de Slider Contínuo (Opção B) com área de toque vertical de 44px.
+
+### Corrigido
+- **Materialização de Tabelas no Banco de Dados (Neon):**
+  - Sincronização inicial do banco de dados executando `npx drizzle-kit push` para materializar as tabelas `users`, `campaigns` e `characters` diretamente no Neon Database com base nas credenciais corrigidas.
+
+---
+
 ## [0.2.0] - 2026-06-18
 
 ### Adicionado
