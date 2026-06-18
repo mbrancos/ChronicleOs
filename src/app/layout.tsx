@@ -49,8 +49,12 @@ export default function RootLayout({
     <html
       lang="pt-BR"
       className={`${barlow.variable} ${nunito.variable} ${gin.variable} ${goodOT.variable} ${goodOTCondBold.variable} ${taroca.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-bg-main text-text-primary">
+      <body 
+        className="min-h-full flex flex-col bg-bg-main text-text-primary"
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>
