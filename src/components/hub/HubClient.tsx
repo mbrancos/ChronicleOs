@@ -260,7 +260,7 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
                     >
                       <div className="flex items-center space-x-4">
                         {/* Avatar temático minimalista */}
-                        <div className="w-12 h-12 rounded-full bg-bg-main border border-gold-accent/30 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:border-gold-accent transition-colors">
+                        <div className="w-12 h-12 rounded-full bg-bg-main border border-gold-accent/30 flex items-center justify-center overflow-hidden shrink-0 group-hover:border-gold-accent transition-colors">
                           <svg className="w-7 h-7 text-text-dim/40 group-hover:text-blood-red/40 transition-colors" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                           </svg>
