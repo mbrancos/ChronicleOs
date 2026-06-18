@@ -23,6 +23,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O 
   - Migração de `DEFAULT_CHARACTER_DATA` de `CharacterSheetClient.tsx` para `src/types/character.ts` a fim de compartilhá-la de forma limpa entre o lado do cliente e o lado do servidor.
 - **Correção de Classe do Tailwind:**
   - Substituição da classe legada `flex-shrink-0` por `shrink-0` no avatar de personagens do HubClient.tsx para sanar o warning da IDE.
+- **Resiliência da Ficha (Deep Merge):**
+  - Implementação do helper `deepMerge` na inicialização do estado de [CharacterSheetClient.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/sheet/CharacterSheetClient.tsx) para evitar quebras de runtime (`TypeError`) caso os personagens possuam dados parciais ou desatualizados salvos no banco.
 
 ---
 

@@ -38,6 +38,24 @@ const TECHNICAL_NAMES: Record<string, string> = {
   politics: "Política", science: "Ciência", technology: "Tecnologia"
 };
 
+// Helper de mesclagem recursiva para garantir resiliência da ficha contra dados parciais no banco
+function deepMerge<T extends object>(target: T, source: any): T {
+  if (!source || typeof source !== "object") return target;
+  const output = { ...target };
+  Object.keys(target).forEach((key) => {
+    const targetVal = (target as any)[key];
+    const sourceVal = source[key];
+    if (sourceVal === undefined) return;
+    
+    if (targetVal && typeof targetVal === "object" && !Array.isArray(targetVal)) {
+      (output as any)[key] = deepMerge(targetVal, sourceVal);
+    } else {
+      (output as any)[key] = sourceVal;
+    }
+  });
+  return output;
+}
+
 interface CharacterSheetClientProps {
   characterId: string;
   campaignId: string;
@@ -52,7 +70,9 @@ export default function CharacterSheetClient({
   
   // ESTADO LOCAL DA FICHA (Mescla com os dados padrão Brujah se for novo personagem no banco)
   const [character, setCharacter] = useState<CharacterSheetData>(() => {
-    if (initialData) return initialData;
+    if (initialData) {
+      return deepMerge(DEFAULT_CHARACTER_DATA, initialData);
+    }
     return DEFAULT_CHARACTER_DATA;
   });
 
