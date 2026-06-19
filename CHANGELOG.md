@@ -2,6 +2,23 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.11.0] - 2026-06-19
+
+### Adicionado
+- **CRUD e Interatividade Dinâmica de Ficha (Abas Sangue, Vantagens e Núcleo):**
+  - Implementação de criação (+ Adicionar) e exclusão (lixeira) de Disciplinas e Poderes na aba **Sangue**, integradas de forma reativa ao Autosave.
+  - Implementação de criação e exclusão de Qualidades, Defeitos, Antecedentes e Fichas de Saber na aba **Vantagens**.
+  - Adição de seção de Especializações na aba **Núcleo**, listando as especializações como badges interativos com botão de remoção rápida "✕" e mini-formulário para adicionar novas especializações vinculadas a Habilidades específicas.
+  - Adição de bloco reativo de Pontos de Experiência (XP Gasto / XP Total) na aba **Sistema**, integrando os campos com o componente de edição inline `InlineEdit` com validação de número e persistência de dados.
+
+### Modificado
+- **Potência do Sangue Clicável:**
+  - Substituição da exibição de texto estática da Potência do Sangue por um seletor `DotSlider` interativo na aba **Sangue**, com controle reativo e persistência de 0 a 5 bolinhas.
+- **Proteção Contra o "Vazio Inalcançável":**
+  - Reforço do componente `InlineEdit` para forçar `min-w-[60px]` e `min-h-[1.25rem]` no elemento `span` físico de clique, com fallbacks visuais limpos em baixa opacidade (`text-text-muted/40 italic`) caso o usuário apague e salve valores nulos.
+
+---
+
 ## [0.10.0] - 2026-06-19
 
 ### Adicionado

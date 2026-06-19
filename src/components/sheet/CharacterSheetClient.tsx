@@ -109,6 +109,10 @@ export default function CharacterSheetClient({
 
   const [activeTab, setActiveTab] = useState<"nucleo" | "sangue" | "vantagens" | "sistema">("nucleo");
   
+  // ESTADOS DO MINI-FORMULÁRIO DE ESPECIALIZAÇÕES (ABA NÚCLEO)
+  const [selectedSkill, setSelectedSkill] = useState<keyof CharacterSkills | "">("");
+  const [newSpecialtyName, setNewSpecialtyName] = useState("");
+  
   // ESTADO DE SINCRONIZAÇÃO (Optimistic UI Autosave)
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const savedTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -182,6 +186,168 @@ export default function CharacterSheetClient({
         ...prev.profile,
         [field]: value
       }
+    }));
+  };
+
+  // ========================================================
+  // CALLBACKS DE DISCIPLINAS E PODERES (ABA SANGUE)
+  // ========================================================
+  const handleAddDiscipline = () => {
+    const newDisc: Discipline = {
+      id: `disc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      name: "Nova Disciplina",
+      level: 1,
+      powers: ["Novo Poder"]
+    };
+    setCharacter(prev => ({
+      ...prev,
+      disciplines: [...prev.disciplines, newDisc]
+    }));
+  };
+
+  const handleDisciplineNameChange = (id: string, name: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      disciplines: prev.disciplines.map(d => d.id === id ? { ...d, name } : d)
+    }));
+  };
+
+  const handleDisciplineLevelChange = (id: string, level: number) => {
+    setCharacter(prev => ({
+      ...prev,
+      disciplines: prev.disciplines.map(d => d.id === id ? { ...d, level } : d)
+    }));
+  };
+
+  const handleDeleteDiscipline = (id: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      disciplines: prev.disciplines.filter(d => d.id !== id)
+    }));
+  };
+
+  const handleAddPower = (disciplineId: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      disciplines: prev.disciplines.map(d => {
+        if (d.id === disciplineId) {
+          return {
+            ...d,
+            powers: [...d.powers, "Novo Poder"]
+          };
+        }
+        return d;
+      })
+    }));
+  };
+
+  const handlePowerChange = (disciplineId: string, powerIdx: number, newText: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      disciplines: prev.disciplines.map(d => {
+        if (d.id === disciplineId) {
+          const updatedPowers = [...d.powers];
+          updatedPowers[powerIdx] = newText;
+          return { ...d, powers: updatedPowers };
+        }
+        return d;
+      })
+    }));
+  };
+
+  const handleDeletePower = (disciplineId: string, powerIdx: number) => {
+    setCharacter(prev => ({
+      ...prev,
+      disciplines: prev.disciplines.map(d => {
+        if (d.id === disciplineId) {
+          return {
+            ...d,
+            powers: d.powers.filter((_, idx) => idx !== powerIdx)
+          };
+        }
+        return d;
+      })
+    }));
+  };
+
+  // ========================================================
+  // CALLBACKS DE VANTAGENS (ABA VANTAGENS)
+  // ========================================================
+  const handleAddAdvantage = (type: "background" | "merit" | "flaw" | "loresheet") => {
+    const isPositive = type === "background" || type === "merit";
+    const newAdv: Advantage = {
+      id: `adv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      name: isPositive ? "Nova Qualidade / Antecedente" : "Novo Defeito / Ficha de Saber",
+      type,
+      level: 1,
+      description: "Descrição da vantagem..."
+    };
+    setCharacter(prev => ({
+      ...prev,
+      advantages: [...prev.advantages, newAdv]
+    }));
+  };
+
+  const handleAdvantageNameChange = (id: string, name: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      advantages: prev.advantages.map(a => a.id === id ? { ...a, name } : a)
+    }));
+  };
+
+  const handleAdvantageDescriptionChange = (id: string, description: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      advantages: prev.advantages.map(a => a.id === id ? { ...a, description } : a)
+    }));
+  };
+
+  const handleAdvantageLevelChange = (id: string, level: number) => {
+    setCharacter(prev => ({
+      ...prev,
+      advantages: prev.advantages.map(a => a.id === id ? { ...a, level } : a)
+    }));
+  };
+
+  const handleAdvantageTypeChange = (id: string, type: "background" | "merit" | "flaw" | "loresheet") => {
+    setCharacter(prev => ({
+      ...prev,
+      advantages: prev.advantages.map(a => a.id === id ? { ...a, type } : a)
+    }));
+  };
+
+  const handleDeleteAdvantage = (id: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      advantages: prev.advantages.filter(a => a.id !== id)
+    }));
+  };
+
+  // ========================================================
+  // CALLBACKS DE ESPECIALIZAÇÕES (ABA NÚCLEO)
+  // ========================================================
+  const handleAddSpecialty = () => {
+    if (!selectedSkill || !newSpecialtyName.trim()) return;
+    
+    const newSpec: Specialty = {
+      id: `spec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      skill: selectedSkill,
+      name: newSpecialtyName.trim()
+    };
+    
+    setCharacter(prev => ({
+      ...prev,
+      specialties: [...(prev.specialties || []), newSpec]
+    }));
+    
+    setNewSpecialtyName("");
+    setSelectedSkill("");
+  };
+
+  const handleDeleteSpecialty = (id: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      specialties: (prev.specialties || []).filter(s => s.id !== id)
     }));
   };
 
@@ -563,45 +729,196 @@ export default function CharacterSheetClient({
                 </div>
               </div>
 
+              {/* SEÇÃO DE ESPECIALIZAÇÕES */}
+              <div className="mt-8 pt-6 border-t border-white/10 space-y-4 shadow-none">
+                <div>
+                  <h3 className="text-lg font-gothic tracking-wider text-gold-accent uppercase">
+                    Especializações de Habilidades
+                  </h3>
+                  <p className="text-xs text-text-muted font-reading">
+                    Defina especializações para obter dados de bônus em testes específicos vinculados a Habilidades.
+                  </p>
+                </div>
+
+                {/* LISTAGEM DE BADGES */}
+                <div className="flex flex-wrap gap-2">
+                  {character.specialties && character.specialties.map(spec => (
+                    <span 
+                      key={spec.id} 
+                      className="bg-bg-main/60 border border-gold-accent/30 text-gold-accent text-xs px-3 py-1 rounded-sm flex items-center space-x-2 font-data uppercase tracking-wider shadow-none"
+                    >
+                      <span>
+                        <strong className="text-text-primary mr-1">{TECHNICAL_NAMES[spec.skill] || spec.skill}:</strong> 
+                        {spec.name}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteSpecialty(spec.id)}
+                        className="text-hunger-red hover:text-white cursor-pointer select-none text-[10px] font-bold"
+                        title="Excluir Especialização"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                  {(!character.specialties || character.specialties.length === 0) && (
+                    <span className="text-xs text-text-muted/60 italic font-reading">Nenhuma especialização cadastrada.</span>
+                  )}
+                </div>
+
+                {/* MINI-FORMULÁRIO DE CADASTRO */}
+                <div className="flex flex-wrap items-center gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-2xl shadow-none">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Habilidade Base</label>
+                    <select
+                      value={selectedSkill}
+                      onChange={(e) => setSelectedSkill(e.target.value as keyof CharacterSkills)}
+                      className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9"
+                    >
+                      <option value="" className="bg-bg-card">Selecione...</option>
+                      {Object.entries(TECHNICAL_NAMES)
+                        .filter(([key]) => ![
+                          "strength", "dexterity", "stamina",
+                          "charisma", "manipulation", "composure",
+                          "intelligence", "wits", "resolve"
+                        ].includes(key))
+                        .map(([key, label]) => (
+                          <option key={key} value={key} className="bg-bg-card">{label}</option>
+                        ))
+                      }
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col space-y-1 flex-1 min-w-[200px]">
+                    <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nome da Especialização</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Briga de Rua, Machados..."
+                      value={newSpecialtyName}
+                      onChange={(e) => setNewSpecialtyName(e.target.value)}
+                      className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 font-reading"
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-1 pt-5">
+                    <button
+                      onClick={handleAddSpecialty}
+                      disabled={!selectedSkill || !newSpecialtyName.trim()}
+                      className="bg-burgundy border border-blood-red hover:bg-blood-red text-text-primary disabled:opacity-40 disabled:hover:bg-burgundy text-xs px-4 rounded-sm transition-colors cursor-pointer disabled:cursor-not-allowed font-data uppercase font-bold h-9 flex items-center justify-center select-none"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 
           {/* TAB 2: SANGUE */}
           {activeTab === "sangue" && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center border-b border-white/5 pb-2 mb-4">
-                <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
-                  Disciplinas Vampíricas (Poderes do Sangue)
-                </h3>
-                <span className="text-xs text-text-muted font-data uppercase">Potência do Sangue: {character.status.blood_potency}</span>
+              <div className="flex justify-between items-center flex-wrap gap-4 border-b border-white/5 pb-2 mb-4">
+                <div className="flex items-center space-x-4">
+                  <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
+                    Disciplinas Vampíricas (Poderes do Sangue)
+                  </h3>
+                  <button
+                    onClick={handleAddDiscipline}
+                    className="text-xs uppercase tracking-wider font-bold text-gold-accent bg-burgundy/40 hover:bg-burgundy px-3 py-1 border border-blood-red/30 hover:border-blood-red rounded-sm transition-all duration-150 cursor-pointer shadow-none opacity-80 hover:opacity-100"
+                  >
+                    + Adicionar Disciplina
+                  </button>
+                </div>
+                <div className="w-56 bg-bg-main/30 px-3 py-0.5 rounded border border-white/5">
+                  <DotSlider
+                    label="Potência do Sangue"
+                    value={character.status.blood_potency}
+                    onChange={(val) => setCharacter(prev => ({
+                      ...prev,
+                      status: { ...prev.status, blood_potency: val }
+                    }))}
+                    allowZero
+                    variant="gold"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {character.disciplines.map(disc => (
-                  <div key={disc.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-gothic text-xl text-text-primary tracking-wide">{disc.name}</span>
+                  <div key={disc.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-3 relative group">
+                    {/* BOTÃO EXCLUIR DISCIPLINA */}
+                    <button
+                      onClick={() => handleDeleteDiscipline(disc.id)}
+                      className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                      title="Excluir Disciplina"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+
+                    <div className="flex justify-between items-center pr-6">
+                      <InlineEdit
+                        value={disc.name}
+                        onChange={(val) => handleDisciplineNameChange(disc.id, val)}
+                        placeholder="Nova Disciplina"
+                        className="font-gothic text-xl text-text-primary tracking-wide"
+                      />
                       
-                      <div className="flex space-x-1">
-                        {Array.from({ length: 5 }).map((_, idx) => (
-                          <div
-                            key={idx}
-                            className={`w-3 h-3 rounded-full ${
-                              idx < disc.level ? "bg-blood-red ring-1 ring-blood-red/30 shadow-[0_0_6px_rgba(200,36,52,0.4)]" : "bg-bg-input border border-text-dim"
-                            }`}
-                          />
-                        ))}
+                      <div className="flex space-x-1 items-center h-6">
+                        {Array.from({ length: 5 }).map((_, idx) => {
+                          const isActive = idx < disc.level;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleDisciplineLevelChange(disc.id, idx + 1)}
+                              className={`w-3.5 h-3.5 rounded-full transition-all duration-150 cursor-pointer ${
+                                isActive 
+                                  ? "bg-blood-red ring-1 ring-blood-red/30 shadow-[0_0_6px_rgba(200,36,52,0.4)]" 
+                                  : "bg-bg-input border border-text-dim/80 hover:border-blood-red"
+                              }`}
+                              title={`Nível ${idx + 1}`}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
 
                     <div className="space-y-1.5 pt-2 border-t border-white/5">
                       <span className="text-[10px] uppercase tracking-wider font-semibold text-text-muted block">Poderes Adquiridos:</span>
-                      {disc.powers.map((pow, pIdx) => (
-                        <div key={pIdx} className="flex items-center space-x-2 text-sm text-text-primary font-reading pl-2 py-0.5 border-l border-blood-red/40 bg-white/5 rounded-r-sm">
-                          <span className="text-blood-red font-bold select-none">•</span>
-                          <span>{pow}</span>
-                        </div>
-                      ))}
+                      
+                      <div className="space-y-1.5">
+                        {disc.powers.map((pow, pIdx) => (
+                          <div 
+                            key={pIdx} 
+                            className="flex items-center justify-between text-sm text-text-primary font-reading pl-2 py-0.5 border-l border-blood-red/40 bg-white/5 rounded-r-sm group/power"
+                          >
+                            <div className="flex items-center space-x-2 flex-1 mr-2">
+                              <span className="text-blood-red font-bold select-none">•</span>
+                              <InlineEdit
+                                value={pow}
+                                onChange={(val) => handlePowerChange(disc.id, pIdx, val)}
+                                placeholder="Novo Poder"
+                                className="text-sm font-reading text-text-primary flex-1"
+                              />
+                            </div>
+                            <button
+                              onClick={() => handleDeletePower(disc.id, pIdx)}
+                              className="text-text-muted/40 hover:text-hunger-red opacity-0 group-hover/power:opacity-100 transition-opacity duration-150 cursor-pointer pr-1 select-none text-[10px] font-bold"
+                              title="Remover Poder"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => handleAddPower(disc.id)}
+                        className="text-[10px] uppercase tracking-wider font-bold text-gold-accent/40 hover:text-gold-accent transition-colors duration-150 cursor-pointer pt-1.5 flex items-center space-x-1 select-none"
+                      >
+                        <span>+ Adicionar Poder</span>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -618,71 +935,155 @@ export default function CharacterSheetClient({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
+                {/* COLUNA 1: QUALIDADES & ANTECEDENTES */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Qualidades & Antecedentes</h4>
                   <div className="space-y-3">
                     {character.advantages.filter(a => a.type === "background" || a.type === "merit").map(adv => (
-                      <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5">
-                        <div className="flex justify-between items-center">
-                          <span className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide">
-                            {adv.name} <span className="text-[10px] text-gold-accent font-normal italic">({adv.type === "background" ? "Antecedente" : "Qualidade"})</span>
-                          </span>
-                          <div className="flex space-x-1">
-                            {Array.from({ length: 5 }).map((_, idx) => (
-                              <div
-                                key={idx}
-                                className={`w-2.5 h-2.5 rounded-full ${
-                                  idx < adv.level ? "bg-gold-accent" : "bg-bg-input border border-text-dim"
-                                }`}
+                      <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5 relative group">
+                        {/* BOTÃO EXCLUIR VANTAGEM */}
+                        <button
+                          onClick={() => handleDeleteAdvantage(adv.id)}
+                          className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                          title="Excluir Vantagem"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+
+                        <div className="flex justify-between items-center pr-6 flex-wrap gap-2">
+                          <div className="flex items-center space-x-1.5 flex-wrap">
+                            <InlineEdit
+                              value={adv.name}
+                              onChange={(val) => handleAdvantageNameChange(adv.id, val)}
+                              placeholder="Nome da Vantagem"
+                              className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide"
+                            />
+                            <span className="text-[10px] text-gold-accent font-normal italic">
+                              (
+                              <InlineEdit
+                                value={adv.type}
+                                onChange={(val) => handleAdvantageTypeChange(adv.id, val as any)}
+                                type="select"
+                                options={["background", "merit"]}
+                                className="hover:bg-white/5 text-[10px] text-gold-accent italic border-none py-0 px-0.5"
                               />
-                            ))}
+                              )
+                            </span>
+                          </div>
+                          
+                          <div className="flex space-x-1">
+                            {Array.from({ length: 5 }).map((_, idx) => {
+                              const isActive = idx < adv.level;
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
+                                  className={`w-3.5 h-3.5 rounded-full transition-all duration-150 cursor-pointer ${
+                                    isActive ? "bg-gold-accent" : "bg-bg-input border border-text-dim"
+                                  }`}
+                                  title={`Nível ${idx + 1}`}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
-                        {adv.description && (
-                          <p className="text-xs text-text-muted font-reading leading-relaxed">
-                            {adv.description}
-                          </p>
-                        )}
+                        
+                        <InlineEdit
+                          value={adv.description || ""}
+                          onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
+                          placeholder="Adicionar descrição..."
+                          className="text-xs text-text-muted font-reading leading-relaxed w-full block"
+                        />
                       </div>
                     ))}
                   </div>
+
+                  <button
+                    onClick={() => handleAddAdvantage("background")}
+                    className="text-xs uppercase tracking-wider font-bold text-gold-accent/60 hover:text-gold-accent bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
+                  >
+                    + Adicionar Qualidade / Antecedente
+                  </button>
                 </div>
 
+                {/* COLUNA 2: DEFEITOS & FICHAS DE SABER */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold">Defeitos & Fichas de Saber</h4>
                   <div className="space-y-3">
                     {character.advantages.filter(a => a.type === "flaw" || a.type === "loresheet").map(adv => {
                       const isLoresheet = adv.type === "loresheet";
                       return (
-                        <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5">
-                          <div className="flex justify-between items-center">
-                            <span className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide">
-                              {adv.name} <span className={`text-[10px] font-normal italic ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}>
-                                ({isLoresheet ? "Ficha de Saber" : "Defeito"})
-                              </span>
-                            </span>
-                            <div className="flex space-x-1">
-                              {Array.from({ length: 5 }).map((_, idx) => (
-                                <div
-                                  key={idx}
-                                  className={`w-2.5 h-2.5 rounded-full ${
-                                    idx < adv.level 
-                                      ? (isLoresheet ? "bg-gold-accent" : "bg-hunger-red shadow-[0_0_4px_rgba(255,92,92,0.4)]") 
-                                      : "bg-bg-input border border-text-dim"
-                                  }`}
+                        <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5 relative group">
+                          {/* BOTÃO EXCLUIR VANTAGEM */}
+                          <button
+                            onClick={() => handleDeleteAdvantage(adv.id)}
+                            className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                            title="Excluir Vantagem"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+
+                          <div className="flex justify-between items-center pr-6 flex-wrap gap-2">
+                            <div className="flex items-center space-x-1.5 flex-wrap">
+                              <InlineEdit
+                                value={adv.name}
+                                onChange={(val) => handleAdvantageNameChange(adv.id, val)}
+                                placeholder="Nome da Vantagem"
+                                className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide"
+                              />
+                              <span className={`text-[10px] font-normal italic ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}>
+                                (
+                                <InlineEdit
+                                  value={adv.type}
+                                  onChange={(val) => handleAdvantageTypeChange(adv.id, val as any)}
+                                  type="select"
+                                  options={["flaw", "loresheet"]}
+                                  className={`hover:bg-white/5 text-[10px] italic border-none py-0 px-0.5 ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}
                                 />
-                              ))}
+                                )
+                              </span>
+                            </div>
+                            
+                            <div className="flex space-x-1">
+                              {Array.from({ length: 5 }).map((_, idx) => {
+                                const isActive = idx < adv.level;
+                                return (
+                                  <button
+                                    key={idx}
+                                    onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
+                                    className={`w-3.5 h-3.5 rounded-full transition-all duration-150 cursor-pointer ${
+                                      isActive 
+                                        ? (isLoresheet ? "bg-gold-accent" : "bg-hunger-red shadow-[0_0_4px_rgba(255,92,92,0.4)]") 
+                                        : "bg-bg-input border border-text-dim"
+                                    }`}
+                                    title={`Nível ${idx + 1}`}
+                                  />
+                                );
+                              })}
                             </div>
                           </div>
-                          {adv.description && (
-                            <p className="text-xs text-text-muted font-reading leading-relaxed">
-                              {adv.description}
-                            </p>
-                          )}
+                          
+                          <InlineEdit
+                            value={adv.description || ""}
+                            onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
+                            placeholder="Adicionar descrição..."
+                            className="text-xs text-text-muted font-reading leading-relaxed w-full block"
+                          />
                         </div>
                       );
                     })}
                   </div>
+
+                  <button
+                    onClick={() => handleAddAdvantage("flaw")}
+                    className="text-xs uppercase tracking-wider font-bold text-blood-red/60 hover:text-blood-red bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
+                  >
+                    + Adicionar Defeito / Ficha de Saber
+                  </button>
                 </div>
 
               </div>
@@ -694,6 +1095,43 @@ export default function CharacterSheetClient({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
               <div className="lg:col-span-6 space-y-4">
+                {/* GESTÃO DE EXPERIÊNCIA (XP) */}
+                <div className="bg-bg-main/30 border border-white/5 rounded-sm p-4 flex justify-between items-center shadow-none">
+                  <div>
+                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Pontos de Experiência (XP)</h4>
+                    <p className="text-[10px] text-text-muted font-reading">Clique nos números para editar o gasto e o total.</p>
+                  </div>
+                  <div className="flex items-center space-x-2 font-data text-sm">
+                    <span className="text-text-muted">Gasto:</span>
+                    <InlineEdit
+                      value={String(character.status.experience.spent)}
+                      onChange={(val) => setCharacter(prev => ({
+                        ...prev,
+                        status: {
+                          ...prev.status,
+                          experience: { ...prev.status.experience, spent: Math.max(0, Number(val) || 0) }
+                        }
+                      }))}
+                      type="number"
+                      className="font-bold text-blood-red hover:bg-white/5 text-center w-12 border-b border-white/10"
+                    />
+                    <span className="text-text-muted">/</span>
+                    <span className="text-text-muted">Total:</span>
+                    <InlineEdit
+                      value={String(character.status.experience.total)}
+                      onChange={(val) => setCharacter(prev => ({
+                        ...prev,
+                        status: {
+                          ...prev.status,
+                          experience: { ...prev.status.experience, total: Math.max(0, Number(val) || 0) }
+                        }
+                      }))}
+                      type="number"
+                      className="font-bold text-gold-accent hover:bg-white/5 text-center w-12 border-b border-white/10"
+                    />
+                  </div>
+                </div>
+
                 <h3 className="text-sm font-data uppercase tracking-wider text-gold-accent font-semibold border-b border-white/5 pb-2">
                   Macros de Dados Disponíveis
                 </h3>
