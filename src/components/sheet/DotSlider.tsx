@@ -10,6 +10,8 @@ interface DotSliderProps {
   allowZero?: boolean;
   specialties?: Specialty[];
   variant?: "gold" | "red";
+  onLabelClick?: () => void;
+  isSelected?: boolean;
 }
 
 export default function DotSlider({
@@ -18,7 +20,9 @@ export default function DotSlider({
   onChange,
   allowZero = false,
   specialties = [],
-  variant = "gold"
+  variant = "gold",
+  onLabelClick,
+  isSelected = false
 }: DotSliderProps) {
   
   // A área inteira da linha tem altura física de 44px (h-11) para touch target ideal no mobile.
@@ -53,8 +57,18 @@ export default function DotSlider({
       aria-valuenow={value}
     >
       {/* NOME DA HABILIDADE / ATRIBUTO */}
-      <div className="flex flex-col justify-center leading-none">
-        <span className="font-data uppercase tracking-wider text-xs text-text-muted group-hover:text-text-primary transition-colors">
+      <div 
+        className={`flex flex-col justify-center leading-none ${onLabelClick ? "cursor-pointer select-none" : ""}`}
+        onClick={onLabelClick ? (e) => {
+          e.stopPropagation();
+          onLabelClick();
+        } : undefined}
+      >
+        <span className={`font-data uppercase tracking-wider text-xs transition-colors ${
+          isSelected 
+            ? "text-hunger-red font-bold animate-pulse-subtle" 
+            : "text-text-muted group-hover:text-text-primary"
+        }`}>
           {label}
         </span>
         

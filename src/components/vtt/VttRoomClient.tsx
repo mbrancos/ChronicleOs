@@ -19,13 +19,38 @@ interface VttRoomClientProps {
 export default function VttRoomClient({ character }: VttRoomClientProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [localCharacter, setLocalCharacter] = useState(character);
+  const [dicePool, setDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
+
+  const handleTraitClick = (trait: { id: string, label: string, value: number }) => {
+    setDicePool(prev => {
+      // Se o trait já estiver no array, removemos (comportamento de toggle)
+      if (prev.some(p => p.id === trait.id)) {
+        return prev.filter(p => p.id !== trait.id);
+      }
+      
+      // Se não estiver:
+      // Se o array tiver menos de 2 itens, adicionamos.
+      if (prev.length < 2) {
+        return [...prev, trait];
+      }
+      
+      // Se já tiver 2 itens, substituímos o segundo item (índice 1)
+      const newPool = [...prev];
+      newPool[1] = trait;
+      return newPool;
+    });
+  };
+
+  const clearPool = () => {
+    setDicePool([]);
+  };
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary">
       
       {/* O PALCO (z-0) - BACKGROUND ATMOSFÉRICO */}
       <div 
-        className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-burgundy/15 via-bg-main to-bg-main flex flex-col items-center justify-center select-none p-4"
+        className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-burgundy/15 via-bg-main to-bg-main flex flex-col items-center justify-center select-none p-4"
         style={{ height: "calc(100vh - 5rem)" }} // Descontar a altura do dock (20 / h-20 = 5rem)
       >
         <div className="text-center space-y-4 max-w-lg">
@@ -46,6 +71,8 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
       <PlayerDock 
         character={localCharacter} 
         onOpenSheet={() => setIsSheetOpen(true)} 
+        dicePool={dicePool}
+        clearPool={clearPool}
       />
 
       {/* GAVETA DA FICHA (z-50) */}
@@ -55,10 +82,47 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
           campaignId={character.campaignId}
           initialData={localCharacter.sheetData}
           initialName={character.name}
-          onDataChange={(newData) => setLocalCharacter(prev => ({
-            ...prev,
-            sheetData: newData
-          }))}
+          dicePool={dicePool}
+          onTraitClick={handleTraitClick}
+          onDataChange={(newData) => {
+            setLocalCharacter(prev => ({
+              ...prev,
+              sheetData: newData
+            }));
+
+            // Sincronizar reativamente os valores da pool se houver alterações de nível na ficha
+            setDicePool(currentPool => {
+              return currentPool.map(item => {
+                let newValue = item.value;
+                
+                const physical = (newData.attributes?.physical as unknown) as Record<string, number> | undefined;
+                const social = (newData.attributes?.social as unknown) as Record<string, number> | undefined;
+                const mental = (newData.attributes?.mental as unknown) as Record<string, number> | undefined;
+                const skills = (newData.skills as unknown) as Record<string, number> | undefined;
+
+                // Verificar se é atributo
+                if (physical && physical[item.id] !== undefined) {
+                  newValue = physical[item.id];
+                } else if (social && social[item.id] !== undefined) {
+                  newValue = social[item.id];
+                } else if (mental && mental[item.id] !== undefined) {
+                  newValue = mental[item.id];
+                }
+                // Verificar se é habilidade
+                else if (skills && skills[item.id] !== undefined) {
+                  newValue = skills[item.id];
+                }
+                // Verificar se é disciplina
+                else {
+                  const disc = newData.disciplines?.find((d: any) => d.id === item.id);
+                  if (disc) {
+                    newValue = disc.level;
+                  }
+                }
+                return { ...item, value: newValue };
+              });
+            });
+          }}
         />
       </SheetDrawer>
     </div>

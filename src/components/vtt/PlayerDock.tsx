@@ -13,9 +13,16 @@ interface PlayerDockProps {
     sheetData: any; // jsonb
   };
   onOpenSheet: () => void;
+  dicePool?: Array<{ id: string, label: string, value: number }>;
+  clearPool?: () => void;
 }
 
-export default function PlayerDock({ character, onOpenSheet }: PlayerDockProps) {
+export default function PlayerDock({ 
+  character, 
+  onOpenSheet,
+  dicePool = [],
+  clearPool
+}: PlayerDockProps) {
   const sheet = character.sheetData as CharacterSheetData;
   
   const health = sheet?.status?.health || { max: 6, superficial: 0, aggravated: 0 };
@@ -55,14 +62,65 @@ export default function PlayerDock({ character, onOpenSheet }: PlayerDockProps) 
         </div>
       </div>
 
-      {/* CENTRO: CARRINHO DE ROLAGENS (FUTURO VTT) */}
-      <div className="hidden md:flex flex-col items-center justify-center text-center">
-        <span className="text-[9px] text-text-dim uppercase tracking-widest font-data font-semibold">
-          Mesa de Crônica
-        </span>
-        <span className="text-[10px] text-text-muted/50 font-reading italic">
-          Motor de Sangue inativo...
-        </span>
+      {/* CENTRO: CARRINHO DE ROLAGENS (VTT) */}
+      <div className="hidden md:flex items-center space-x-4">
+        {/* Badges de Seleção */}
+        <div className="flex flex-col items-center">
+          <span className="text-[9px] text-text-dim uppercase tracking-widest font-data font-semibold">
+            Carrinho de Dados
+          </span>
+          <div className="flex items-center space-x-2 mt-1 min-h-6">
+            {dicePool.length === 0 ? (
+              <span className="text-[10px] text-text-muted/40 font-reading italic">
+                Selecione Atributo / Habilidade
+              </span>
+            ) : (
+              <>
+                <div className="flex space-x-1.5">
+                  {dicePool.map((trait) => (
+                    <span 
+                      key={trait.id}
+                      className="bg-burgundy/40 border border-blood-red/40 text-text-primary text-[10px] uppercase font-data tracking-wider px-2 py-0.5 rounded-sm flex items-center shadow-none animate-pulse-subtle"
+                    >
+                      <span className="font-semibold">{trait.label}</span>
+                      <span className="text-gold-accent ml-1 font-bold">({trait.value})</span>
+                    </span>
+                  ))}
+                </div>
+                {clearPool && (
+                  <button
+                    onClick={clearPool}
+                    className="text-hunger-red hover:text-white cursor-pointer select-none text-sm font-bold w-7 h-7 rounded-full hover:bg-white/10 border border-hunger-red/30 hover:border-hunger-red flex items-center justify-center transition-all duration-150"
+                    title="Limpar Seleção"
+                  >
+                    ✕
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Separador */}
+        <div className="h-8 w-px bg-white/10" />
+
+        {/* Botão de Ação Primária */}
+        <div>
+          <button
+            disabled={dicePool.length === 0}
+            onClick={() => {
+              const totalDice = dicePool.reduce((sum, trait) => sum + trait.value, 0);
+              alert(`Rolando ${totalDice} dados! (${dicePool.map(d => `${d.label} ${d.value}`).join(" + ")})`);
+            }}
+            className={`h-9 px-4 rounded-sm border uppercase font-data font-bold text-xs tracking-wider select-none transition-all duration-150 ${
+              dicePool.length > 0
+                ? "bg-blood-red hover:bg-hunger-red text-text-primary border-hunger-red hover:scale-102 cursor-pointer shadow-[0_0_12px_rgba(200,36,52,0.4)] hover:shadow-[0_0_16px_rgba(255,92,92,0.6)]"
+                : "bg-bg-main text-text-dim border-white/10 opacity-40 cursor-not-allowed"
+            }`}
+          >
+            Rolar {dicePool.reduce((sum, trait) => sum + trait.value, 0)} {dicePool.reduce((sum, trait) => sum + trait.value, 0) === 1 ? "Dado" : "Dados"}
+          </button>
+        </div>
       </div>
 
       {/* LADO DIREITO: STATUS VITAS COMPACTOS */}

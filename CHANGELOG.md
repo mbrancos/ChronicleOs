@@ -2,6 +2,27 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.13.0] - 2026-06-19
+
+### Adicionado
+- **Carrinho de Dados (Interface de Seleção de Pool no VTT):**
+  - Estado global `dicePool` no `VttRoomClient.tsx` com lógica de toggle e limite estrito de 2 slots (Atributo + Habilidade/Disciplina), seguindo o sistema V5.
+  - Extensão do componente `DotSlider.tsx` com as props opcionais `onLabelClick` e `isSelected` para permitir interatividade de seleção nos rótulos de atributos e habilidades.
+  - Destaque visual animado (vermelho fome + `animate-pulse-subtle`) nos labels selecionados na ficha reativa.
+  - Ícone de dado `🎲` ao lado dos títulos de disciplinas na aba Sangue, resolvendo o conflito de clique com a edição inline.
+  - Painel central dinâmico no `PlayerDock.tsx` com mini-badges das seleções (`Nome (Valor)`), botão de limpeza `✕` e botão primário **"ROLAR X DADOS"** com cálculo reativo da soma.
+  - Animação CSS customizada `pulse-subtle` no `globals.css` para micro-animações premium no carrinho.
+
+### Modificado
+- **Sincronização Reativa dos Valores da Pool:**
+  - O `VttRoomClient.tsx` agora sincroniza automaticamente os valores numéricos dos traços selecionados no carrinho quando o jogador altera níveis de atributos, habilidades ou disciplinas na ficha.
+  - Correção de loop infinito de renderização no `CharacterSheetClient.tsx` ao usar `useRef` para estabilizar o callback `onDataChange`.
+- **Melhorias de Lint e Qualidade:**
+  - Correção de `min-h-[1.25rem]` para `min-h-5` no `InlineEdit.tsx`.
+  - Correção de underscore desnecessário na classe CSS radial-gradient do `VttRoomClient.tsx`.
+
+---
+
 ## [0.12.0] - 2026-06-19
 
 ### Adicionado

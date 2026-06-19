@@ -87,6 +87,8 @@ interface CharacterSheetClientProps {
   initialData: CharacterSheetData | null;
   initialName?: string;
   onDataChange?: (data: CharacterSheetData) => void;
+  dicePool?: Array<{ id: string, label: string, value: number }>;
+  onTraitClick?: (trait: { id: string, label: string, value: number }) => void;
 }
 
 export default function CharacterSheetClient({
@@ -94,7 +96,9 @@ export default function CharacterSheetClient({
   campaignId,
   initialData,
   initialName = "",
-  onDataChange
+  onDataChange,
+  dicePool = [],
+  onTraitClick
 }: CharacterSheetClientProps) {
   
   // ESTADO LOCAL DA FICHA (Mescla com os dados padrão Brujah se for novo personagem no banco)
@@ -144,12 +148,17 @@ export default function CharacterSheetClient({
   // INVOCAR O HOOK DE AUTOSAVE DEBOUNCED (1000ms de delay)
   useAutosave(character, 1000, triggerSave);
 
-  // Notificar pai sobre alterações do estado do personagem
+  // Notificar pai sobre alterações do estado do personagem de forma segura sem loops infinitos
+  const onDataChangeRef = useRef(onDataChange);
   useEffect(() => {
-    if (onDataChange) {
-      onDataChange(character);
+    onDataChangeRef.current = onDataChange;
+  }, [onDataChange]);
+
+  useEffect(() => {
+    if (onDataChangeRef.current) {
+      onDataChangeRef.current(character);
     }
-  }, [character, onDataChange]);
+  }, [character]);
 
   // ESTADO DO SIMULADOR DE DADOS
   const [rollResult, setRollResult] = useState<{
@@ -650,6 +659,8 @@ export default function CharacterSheetClient({
                         label={TECHNICAL_NAMES[key] || key}
                         value={val}
                         onChange={(newVal) => handleAttributeChange("physical", key, newVal)}
+                        isSelected={dicePool.some(p => p.id === key)}
+                        onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                       />
                     ))}
                   </div>
@@ -663,6 +674,8 @@ export default function CharacterSheetClient({
                         label={TECHNICAL_NAMES[key] || key}
                         value={val}
                         onChange={(newVal) => handleAttributeChange("social", key, newVal)}
+                        isSelected={dicePool.some(p => p.id === key)}
+                        onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                       />
                     ))}
                   </div>
@@ -676,6 +689,8 @@ export default function CharacterSheetClient({
                         label={TECHNICAL_NAMES[key] || key}
                         value={val}
                         onChange={(newVal) => handleAttributeChange("mental", key, newVal)}
+                        isSelected={dicePool.some(p => p.id === key)}
+                        onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                       />
                     ))}
                   </div>
@@ -701,6 +716,8 @@ export default function CharacterSheetClient({
                         onChange={(newVal) => handleSkillChange(skill, newVal)}
                         specialties={character.specialties.filter(s => s.skill === skill)}
                         allowZero
+                        isSelected={dicePool.some(p => p.id === skill)}
+                        onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                       />
                     ))}
                   </div>
@@ -716,6 +733,8 @@ export default function CharacterSheetClient({
                         onChange={(newVal) => handleSkillChange(skill, newVal)}
                         specialties={character.specialties.filter(s => s.skill === skill)}
                         allowZero
+                        isSelected={dicePool.some(p => p.id === skill)}
+                        onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                       />
                     ))}
                   </div>
@@ -731,6 +750,8 @@ export default function CharacterSheetClient({
                         onChange={(newVal) => handleSkillChange(skill, newVal)}
                         specialties={character.specialties.filter(s => s.skill === skill)}
                         allowZero
+                        isSelected={dicePool.some(p => p.id === skill)}
+                        onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                       />
                     ))}
                   </div>
@@ -867,12 +888,27 @@ export default function CharacterSheetClient({
                     </button>
 
                     <div className="flex justify-between items-center pr-6">
-                      <InlineEdit
-                        value={disc.name}
-                        onChange={(val) => handleDisciplineNameChange(disc.id, val)}
-                        placeholder="Nova Disciplina"
-                        className="font-gothic text-xl text-text-primary tracking-wide"
-                      />
+                      <div className="flex items-center space-x-2">
+                        {onTraitClick && (
+                          <button
+                            onClick={() => onTraitClick({ id: disc.id, label: disc.name, value: disc.level })}
+                            className={`cursor-pointer select-none text-base transition-all duration-150 hover:scale-125 hover:text-hunger-red ${
+                              dicePool.some(p => p.id === disc.id)
+                                ? "text-hunger-red font-bold scale-115 animate-pulse"
+                                : "text-text-muted hover:text-text-primary"
+                            }`}
+                            title="Selecionar para o Carrinho de Dados"
+                          >
+                            🎲
+                          </button>
+                        )}
+                        <InlineEdit
+                          value={disc.name}
+                          onChange={(val) => handleDisciplineNameChange(disc.id, val)}
+                          placeholder="Nova Disciplina"
+                          className="font-gothic text-xl text-text-primary tracking-wide"
+                        />
+                      </div>
                       
                       <div className="flex space-x-1 items-center h-6">
                         {Array.from({ length: 5 }).map((_, idx) => {

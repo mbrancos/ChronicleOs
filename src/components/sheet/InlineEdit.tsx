@@ -87,7 +87,7 @@ export default function InlineEdit({
   return (
     <span
       onClick={() => setIsEditing(true)}
-      className={`hover:bg-white/5 hover:text-white px-1.5 py-0.5 rounded-sm transition-colors duration-150 cursor-pointer inline-block max-w-full truncate min-w-[60px] min-h-[1.25rem] ${
+      className={`hover:bg-white/5 hover:text-white px-1.5 py-0.5 rounded-sm transition-colors duration-150 cursor-pointer inline-block max-w-full truncate min-w-[60px] min-h-5 ${
         !value.trim() ? "text-text-muted/40 italic" : ""
       } ${className}`}
       title="Clique para editar"
