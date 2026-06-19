@@ -103,16 +103,16 @@ export async function createCharacterAction(name: string, campaignId: string) {
       return { success: false, error: "ID de campanha inválido." };
     }
 
-    await db.insert(characters).values({
+    const newChar = await db.insert(characters).values({
       campaignId,
       userId: session.user.id,
       name: trimmedName,
       type: "jogador",
       sheetData: DEFAULT_CHARACTER_DATA,
-    });
+    }).returning({ id: characters.id });
 
     revalidatePath("/hub");
-    return { success: true };
+    return { success: true, characterId: newChar[0].id };
   } catch (err: any) {
     console.error("Erro em createCharacterAction:", err);
     return { success: false, error: err?.message || "Erro ao criar o personagem." };

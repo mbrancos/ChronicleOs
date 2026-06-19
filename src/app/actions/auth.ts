@@ -10,6 +10,7 @@ export async function signUpAction(prevState: any, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const name = formData.get("name") as string;
+  const callbackUrl = formData.get("callbackUrl") as string;
 
   if (!email || !password || !name) {
     return { error: "Todos os campos são obrigatórios." };
@@ -70,12 +71,13 @@ export async function signUpAction(prevState: any, formData: FormData) {
     return { error: "Ocorreu um erro inesperado. Tente novamente." };
   }
 
-  redirect("/hub");
+  redirect(callbackUrl || "/hub");
 }
 
 export async function signInAction(prevState: any, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const callbackUrl = formData.get("callbackUrl") as string;
 
   if (!email || !password) {
     return { error: "E-mail e senha são obrigatórios." };
@@ -95,7 +97,7 @@ export async function signInAction(prevState: any, formData: FormData) {
     return { error: "Ocorreu um erro inesperado. Tente novamente." };
   }
 
-  redirect("/hub");
+  redirect(callbackUrl || "/hub");
 }
 
 export async function signOutAction() {

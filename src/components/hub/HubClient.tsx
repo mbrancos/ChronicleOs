@@ -38,12 +38,27 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
   const [campaignName, setCampaignName] = useState("");
   const [campaignDesc, setCampaignDesc] = useState("");
   
+  // Estado para feedback de cópia de convite
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
   const [characterName, setCharacterName] = useState("");
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
 
   // Feedbacks visuais
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Função para copiar o link de convite da crônica
+  const handleCopyInvite = (campaignId: string) => {
+    if (typeof window !== "undefined") {
+      const inviteUrl = `${window.location.origin}/convite/${campaignId}`;
+      navigator.clipboard.writeText(inviteUrl);
+      setCopiedId(campaignId);
+      setTimeout(() => {
+        setCopiedId(null);
+      }, 2000);
+    }
+  };
 
   // Abertura do modal de personagem resetando seleção
   const openCharacterModal = () => {
@@ -183,12 +198,20 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
                       <span className="text-[10px] uppercase tracking-wider text-text-dim font-data">
                         ID: {camp.id.slice(0, 8)}
                       </span>
-                      <Link
-                        href={`/campanhas/${camp.id}/narrador`}
-                        className="text-xs uppercase tracking-widest font-data font-bold text-gold-accent hover:text-white transition-colors"
-                      >
-                        Painel do Narrador →
-                      </Link>
+                      <div className="flex items-center space-x-4">
+                        <button
+                          onClick={() => handleCopyInvite(camp.id)}
+                          className="text-xs uppercase tracking-widest font-data text-text-muted hover:text-gold-accent transition-colors cursor-pointer"
+                        >
+                          {copiedId === camp.id ? "Copiado! 🩸" : "Copiar Convite 🔗"}
+                        </button>
+                        <Link
+                          href={`/campanhas/${camp.id}/narrador`}
+                          className="text-xs uppercase tracking-widest font-data font-bold text-gold-accent hover:text-white transition-colors"
+                        >
+                          Painel do Narrador →
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}

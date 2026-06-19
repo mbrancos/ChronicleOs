@@ -1,11 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, Suspense } from "react";
 import { signInAction } from "@/app/actions/auth";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginContent() {
   const [state, formAction, isPending] = useActionState(signInAction, null);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "";
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-bg-main text-text-primary">
@@ -21,6 +24,9 @@ export default function LoginPage() {
         </div>
 
         <form action={formAction} className="mt-8 space-y-6">
+          {/* Campo oculto para passar o callbackUrl para a Server Action */}
+          <input type="hidden" name="callbackUrl" value={callbackUrl} />
+
           {state?.error && (
             <div className="p-3 text-sm text-blood-red bg-burgundy/10 rounded border border-blood-red/30 font-reading">
               {state.error}
@@ -75,7 +81,7 @@ export default function LoginPage() {
         <div className="text-center text-sm text-text-muted mt-6 font-sans">
           Não possui uma conta?{" "}
           <Link 
-            href="/cadastro" 
+            href={callbackUrl ? `/cadastro?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/cadastro"} 
             className="text-text-primary hover:text-gold-accent underline transition-colors duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-gold-accent outline-none rounded px-1"
           >
             Crie sua conta
@@ -85,3 +91,16 @@ export default function LoginPage() {
     </main>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center bg-bg-main text-text-muted font-data uppercase tracking-widest text-xs">
+        Carregando...
+      </main>
+    }>
+      <LoginContent />
+    </Suspense>
+  );
+}
+

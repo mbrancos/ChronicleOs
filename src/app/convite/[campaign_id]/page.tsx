@@ -1,16 +1,85 @@
+import { db } from "@/db";
+import { campaigns } from "@/db/schema";
+import { auth } from "@/lib/auth/server";
+import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import InviteClient from "@/components/invite/InviteClient";
+
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ campaign_id: string }>;
 }
 
+// Interface gótica amigável para quando o convite não existe
+function InviteNotFound() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center bg-bg-main text-text-primary p-6 font-reading">
+      <div className="w-full max-w-md border border-blood-red/30 bg-bg-card p-8 text-center space-y-6 rounded-sm shadow-[0_0_20px_rgba(200,36,52,0.1)] animate-fade-in">
+        <h1 className="text-3xl font-gothic tracking-wider text-blood-red">
+          O CONVITE SE DESFEZ NA NÉVOA
+        </h1>
+        <div className="h-px w-16 bg-blood-red/40 mx-auto" />
+        <p className="text-sm text-text-muted leading-relaxed">
+          Esta crônica não foi encontrada nas sombras do templo. O elo de convite pode estar corrompido ou a campanha foi apagada pelo Narrador.
+        </p>
+        <div className="pt-2">
+          <Link
+            href="/hub"
+            className="inline-block px-5 py-2.5 bg-bg-main border border-white/10 hover:border-blood-red text-xs uppercase tracking-widest font-data text-text-muted hover:text-white transition-all duration-250 rounded-sm cursor-pointer"
+          >
+            Retornar ao Hub
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 export default async function InvitePage({ params }: PageProps) {
+  // A Promise params deve ser resolvida com await no Next.js 15
   const { campaign_id } = await params;
 
+  // 1. Validar se o ID da campanha segue um formato UUID válido para evitar erros de query no Postgres
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(campaign_id)) {
+    return <InviteNotFound />;
+  }
+
+  // 2. Buscar a crônica no Neon Database
+  const result = await db
+    .select()
+    .from(campaigns)
+    .where(eq(campaigns.id, campaign_id))
+    .limit(1);
+
+  if (result.length === 0) {
+    return <InviteNotFound />;
+  }
+
+  const campaign = result[0];
+
+  // 3. Verificar se o jogador já possui sessão de Better Auth ativa
+  const { data: session } = await auth.getSession();
+
+  if (!session || !session.user) {
+    // Redireciona o jogador deslogado passando o callbackUrl
+    redirect(`/cadastro?callbackUrl=/convite/${campaign_id}`);
+  }
+
+  // 4. Renderizar a interface cliente de onboarding do jogador
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold tracking-tight">ChronicleOS - Convite</h1>
-      <p className="mt-4 text-zinc-500">
-        Processando convite de entrada para a campanha: <span className="font-mono text-zinc-800 dark:text-zinc-200">{campaign_id}</span>
-      </p>
-    </main>
+    <InviteClient
+      campaign={{
+        id: campaign.id,
+        name: campaign.name,
+      }}
+      user={{
+        id: session.user.id,
+        name: session.user.name ?? "Membro da Camarilla",
+        email: session.user.email,
+      }}
+    />
   );
 }
