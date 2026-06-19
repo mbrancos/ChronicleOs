@@ -2,6 +2,27 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.8.0] - 2026-06-19
+
+### Adicionado
+- **Sistema de Convites Mágicos e Onboarding:**
+  - Criação do Server Component `/convite/[campaign_id]/page.tsx` para tratamento de parâmetros assíncronos (Next.js 15), validação de UUID no Drizzle Postgres e redirecionamento dinâmico.
+  - Criação do Client Component `InviteClient.tsx` sob `src/components/invite/` com interface premium temática gótica para adesão à crônica e criação de personagem.
+  - Tela 404 gótica customizada para convites corrompidos ou inexistentes ("O convite se desfez na névoa...").
+
+### Modificado
+- **Redirecionamento Inteligente com callbackUrl:**
+  - Adaptação das Server Actions de login e cadastro em `src/app/actions/auth.ts` para ler o campo `callbackUrl` e redirecionar o usuário após a autenticação.
+  - Refatoração de `src/app/page.tsx` (Login) e `src/app/cadastro/page.tsx` (Cadastro) sob blocos `<Suspense>` para leitura de searchParams segura do App Router.
+  - Repasse do `callbackUrl` por inputs ocultos nos formulários de autenticação e nos links alternadores de tela.
+- **Botão de Cópia de Convite no Hub:**
+  - Adição do botão "Copiar Convite" na lista de crônicas do Narrador no [HubClient.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/hub/HubClient.tsx) usando Clipboard API.
+  - Implementação de feedback visual reativo temporário ("Copiado! 🩸") de 2 segundos para o ID da crônica copiada.
+- **Retorno do ID de Criação do Personagem:**
+  - Ajuste na Server Action `createCharacterAction` em `src/app/actions/hubActions.ts` para retornar o ID gerado usando a cláusula `.returning()` do Drizzle.
+
+---
+
 ## [0.7.0] - 2026-06-18
 
 ### Adicionado
