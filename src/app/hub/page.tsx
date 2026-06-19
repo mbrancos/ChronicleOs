@@ -1,44 +1,29 @@
-import { auth } from "@/lib/auth/server";
-import { db } from "@/db";
-import { campaigns, characters } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import HubClient from "@/components/hub/HubClient";
+import { getUserHubData } from "@/app/actions/hubActions";
 
 export const dynamic = "force-dynamic";
 
 export default async function HubPage() {
-  // 1. Validar sessão ativa no servidor
-  const { data: session } = await auth.getSession();
+  // 1. Carregar dados do Hub do usuário autenticado via Server Action consolidada
+  const result = await getUserHubData();
 
-  if (!session || !session.user) {
-    redirect("/");
+  if (!result.success || !result.data) {
+    if (result.error === "Usuário não autenticado.") {
+      redirect("/");
+    }
+    throw new Error(result.error || "Erro ao carregar os dados do Hub.");
   }
 
-  const userId = session.user.id;
+  const { campaigns, characters, user } = result.data;
 
-  // 2. Buscar as campanhas narradas pelo usuário
-  const userCampaigns = await db
-    .select()
-    .from(campaigns)
-    .where(eq(campaigns.narratorId, userId));
-
-  // 3. Buscar os personagens pertencentes ao usuário
-  const userCharacters = await db
-    .select()
-    .from(characters)
-    .where(eq(characters.userId, userId));
-
-  // 4. Renderizar o Client Component passando os dados
+  // 2. Renderizar o Client Component passando os dados carregados
   return (
     <HubClient
-      user={{
-        id: session.user.id,
-        name: session.user.name ?? "Membro da Camarilla",
-        email: session.user.email,
-      }}
-      campaigns={userCampaigns}
-      characters={userCharacters}
+      user={user}
+      campaigns={campaigns}
+      characters={characters}
     />
   );
 }
+

@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createCampaignAction } from "@/app/actions/campaignActions";
-import { createCharacterAction } from "@/app/actions/characterActions";
-import { signOutAction } from "@/app/actions/auth";
+import { createCampaignAction, createCharacterAction, signOutAction } from "@/app/actions/hubActions";
 
 interface Campaign {
   id: string;
@@ -16,6 +14,7 @@ interface Character {
   id: string;
   name: string;
   campaignId: string;
+  campaignName: string | null;
   type: string;
   sheetData: any; // Ficha JSONB
 }
@@ -280,7 +279,7 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
 
                       <div className="text-right flex flex-col items-end gap-1">
                         <span className="text-[9px] uppercase tracking-wider text-text-dim font-data">
-                          Crônica: {char.campaignId.slice(0, 8)}
+                          Crônica: {char.campaignName || char.campaignId.slice(0, 8)}
                         </span>
                         <Link
                           href={`/campanhas/${char.campaignId}/personagens/${char.id}`}
