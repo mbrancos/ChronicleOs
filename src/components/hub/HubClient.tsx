@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createCampaignAction } from "@/app/actions/campaignActions";
 import { createCharacterAction } from "@/app/actions/characterActions";
+import { signOutAction } from "@/app/actions/auth";
 
 interface Campaign {
   id: string;
@@ -111,12 +112,14 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
             <span className="text-xs font-data uppercase tracking-wider text-text-dim">
               Sessão: {user.email}
             </span>
-            <a 
-              href="/api/auth/sign-out"
-              className="px-3 py-1 border border-white/10 hover:border-blood-red hover:text-hunger-red text-xs uppercase tracking-widest font-data transition-colors rounded-sm bg-bg-card/40"
+            <button 
+              onClick={async () => {
+                await signOutAction();
+              }}
+              className="px-3 py-1 border border-white/10 hover:border-blood-red hover:text-hunger-red text-xs uppercase tracking-widest font-data transition-colors rounded-sm bg-bg-card/40 cursor-pointer"
             >
               Sair da Névoa
-            </a>
+            </button>
           </div>
         </header>
 

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 export async function signUpAction(prevState: any, formData: FormData) {
   const email = formData.get("email") as string;
@@ -95,4 +96,17 @@ export async function signInAction(prevState: any, formData: FormData) {
   }
 
   redirect("/hub");
+}
+
+export async function signOutAction() {
+  try {
+    await auth.signOut({
+      fetchOptions: {
+        headers: await headers(),
+      },
+    });
+  } catch (error) {
+    console.error("Erro no signOut:", error);
+  }
+  redirect("/");
 }

@@ -27,6 +27,9 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O 
   - Implementação do helper `deepMerge` na inicialização do estado de [CharacterSheetClient.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/sheet/CharacterSheetClient.tsx) para evitar quebras de runtime (`TypeError`) caso os personagens possuam dados parciais ou desatualizados salvos no banco.
 - **Resolução de Hydration Mismatch:**
   - Adição de `suppressHydrationWarning` no layout raiz [layout.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/app/layout.tsx) para tolerar extensões do browser do usuário que modificam tags superiores (`<html>` ou `<body>`).
+- **Correção da Rota de Logout (Sign-Out):**
+  - Criação da Server Action `signOutAction` em [auth.ts](file:///d:/Etna/Projetos/ChronicleOS/src/app/actions/auth.ts) utilizando o método `auth.signOut` do Neon Auth com cookies e headers passados por meio de `fetchOptions.headers` para garantir a conformidade de tipos do TypeScript e a exclusão da sessão no servidor.
+  - Substituição da tag `<a>` com requisição GET em `HubClient.tsx` por um `<button>` associado à nova Server Action de logout.
 
 ---
 
