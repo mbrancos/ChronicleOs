@@ -1,16 +1,38 @@
+import { redirect } from "next/navigation";
+import { getCampaignDashboard } from "@/app/actions/narratorActions";
+import NarratorDashboardClient from "@/components/narrator/NarratorDashboardClient";
+
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ campaign_id: string }>;
 }
 
 export default async function NarratorPage({ params }: PageProps) {
+  // 1. Resolver params de forma assíncrona no Next.js 15
   const { campaign_id } = await params;
 
+  // 2. Chamar a Server Action de busca e segurança do painel
+  const result = await getCampaignDashboard(campaign_id);
+
+  if (!result.success || !result.data) {
+    if (result.isForbidden) {
+      // Segurança: se não for o narrador, redireciona silenciosamente para o Hub
+      redirect("/hub");
+    }
+    // Caso a crônica não exista ou outro erro de banco, lança erro
+    throw new Error(result.error || "Erro ao carregar dados do painel do Narrador.");
+  }
+
+  const { campaign, players, npcs } = result.data;
+
+  // 3. Renderizar o painel tático do mestre
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold tracking-tight">ChronicleOS - Painel do Narrador</h1>
-      <p className="mt-4 text-zinc-500">
-        Campanha ID: <span className="font-mono text-zinc-800 dark:text-zinc-200">{campaign_id}</span>
-      </p>
-    </main>
+    <NarratorDashboardClient
+      campaign={campaign}
+      players={players}
+      npcs={npcs}
+    />
   );
 }
+

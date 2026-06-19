@@ -2,6 +2,24 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.9.0] - 2026-06-19
+
+### Adicionado
+- **O Escudo do Narrador (Dashboard da Crônica):**
+  - Criação da Server Action `getCampaignDashboard` em `src/app/actions/narratorActions.ts` para carregar a campanha e seus respectivos personagens de forma isolada e segura.
+  - Criação do componente cliente `CharacterMiniCard.tsx` sob `src/components/narrator/` para exibição tática compacta e somente-leitura dos status vitais (Fome, Vitalidade, Força de Vontade) de cada personagem.
+  - Criação do componente cliente `NarratorDashboardClient.tsx` sob `src/components/narrator/` contendo layout em abas (Matilha e Antagonistas), botão de cópia de convite em tempo real e formulário gótico para criação de NPCs.
+
+### Modificado
+- **Segurança Severa e Trava de Acesso:**
+  - Atualização da rota `/campanhas/[campaign_id]/narrador/page.tsx` para validar a propriedade `narratorId` no servidor. Usuários não autorizados (jogadores comuns) são chutados silenciosamente de volta para `/hub`.
+- **Suporte de Criação de NPCs:**
+  - Ajuste na Server Action `createCharacterAction` em `src/app/actions/hubActions.ts` para aceitar opcionalmente o tipo `"npc"`, salvando o personagem no Drizzle com `userId: null` e revalidando a rota do painel do Narrador.
+- **Classes Literais do Tailwind:**
+  - Correção na lógica de cores do `CharacterMiniCard` para usar classes de bordas e textos literais do Tailwind, permitindo a extração correta pelo compilador estático do framework.
+
+---
+
 ## [0.8.0] - 2026-06-19
 
 ### Adicionado

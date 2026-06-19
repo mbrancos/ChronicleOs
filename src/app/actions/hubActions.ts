@@ -85,7 +85,7 @@ export async function createCampaignAction(name: string, description?: string) {
 }
 
 // Cria um novo personagem inicializando a ficha com dados padrão
-export async function createCharacterAction(name: string, campaignId: string) {
+export async function createCharacterAction(name: string, campaignId: string, type: "jogador" | "npc" = "jogador") {
   try {
     const { data: session } = await auth.getSession();
     if (!session?.user) {
@@ -105,13 +105,14 @@ export async function createCharacterAction(name: string, campaignId: string) {
 
     const newChar = await db.insert(characters).values({
       campaignId,
-      userId: session.user.id,
+      userId: type === "jogador" ? session.user.id : null,
       name: trimmedName,
-      type: "jogador",
+      type,
       sheetData: DEFAULT_CHARACTER_DATA,
     }).returning({ id: characters.id });
 
     revalidatePath("/hub");
+    revalidatePath(`/campanhas/${campaignId}/narrador`);
     return { success: true, characterId: newChar[0].id };
   } catch (err: any) {
     console.error("Erro em createCharacterAction:", err);
