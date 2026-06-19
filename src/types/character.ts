@@ -1,4 +1,5 @@
 export interface CharacterProfile {
+  name?: string; // Nome editável do vampiro
   portrait_url?: string; // Para futura integração com upload ou links de imagens
   concept: string;
   clan: string;
@@ -129,6 +130,7 @@ export interface CharacterSheetData {
 
 export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
   profile: {
+    name: "Marcus Vane",
     portrait_url: "", // SVG fallback será usado
     concept: "Revolucionário Anarquista",
     clan: "Brujah",

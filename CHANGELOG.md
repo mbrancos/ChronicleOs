@@ -2,6 +2,27 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.10.0] - 2026-06-19
+
+### Adicionado
+- **Edição Invisível estilo Notion:**
+  - Criação do componente cliente reusável `InlineEdit.tsx` sob `src/components/sheet/` permitindo alteração instantânea de texto e seletores sem alterar o layout das informações na tela.
+  - Mapeamento estático e dinâmico de opções para os seletores de Clã e Tipo de Predador.
+  - Implementação de novo estado no `CharacterProfile` de tipos para suportar e manipular a propriedade `name`.
+- **Exclusão de Fichas (Hub):**
+  - Implementação do modal gótico "Destruir Criação" para confirmação segura de exclusão de fichas.
+  - Adição da Server Action `deleteCharacterAction` em `src/app/actions/characterActions.ts` para exclusão de personagens no Drizzle.
+
+### Modificado
+- **Refatoração da Ficha Reativa:**
+  - Substituição da renderização estática do Cabeçalho Fixo (Nome, Clã, Conceito, Geração, Predador, Sire) por campos de edição invisível `InlineEdit` conectados ao autosave.
+  - Atualização do Server Component `/personagens/[character_id]/page.tsx` para passar a propriedade `name` na inicialização.
+  - Atualização da Server Action `updateCharacterSheet` para sincronizar a coluna pública `name` do banco automaticamente com a edição inline.
+- **Lixeira nos Cards do Hub:**
+  - Inserção do botão de lixeira no card do HubClient, com efeito de hover reativo (`opacity-0 group-hover:opacity-100`).
+
+---
+
 ## [0.9.0] - 2026-06-19
 
 ### Adicionado

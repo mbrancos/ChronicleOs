@@ -17,6 +17,31 @@ import DamageTracker from "@/components/sheet/DamageTracker";
 import HumanityTracker from "@/components/sheet/HumanityTracker";
 import { useAutosave } from "@/hooks/useAutosave";
 import { updateCharacterSheet } from "@/app/actions/characterActions";
+import InlineEdit from "@/components/sheet/InlineEdit";
+
+const CLAN_OPTIONS = [
+  "Brujah",
+  "Gangrel",
+  "Malkavian",
+  "Nosferatu",
+  "Toreador",
+  "Tremere",
+  "Ventrue",
+  "Caitiff",
+  "Sem Clã"
+];
+
+const PREDATOR_OPTIONS = [
+  "Bagger (Ladrão de Sangue)",
+  "Alleycat (Gato de Beco)",
+  "Cleaver (Cutelo)",
+  "Consensualist (Consensualista)",
+  "Farmer (Fazendeiro)",
+  "Osiris",
+  "Sandman",
+  "Scene Queen (Rainha da Cena)",
+  "Siren (Sereia)"
+];
 
 // Dicionário de tradução de nomes técnicos para exibição
 const TECHNICAL_NAMES: Record<string, string> = {
@@ -60,20 +85,26 @@ interface CharacterSheetClientProps {
   characterId: string;
   campaignId: string;
   initialData: CharacterSheetData | null;
+  initialName?: string;
 }
 
 export default function CharacterSheetClient({
   characterId,
   campaignId,
-  initialData
+  initialData,
+  initialName = ""
 }: CharacterSheetClientProps) {
   
   // ESTADO LOCAL DA FICHA (Mescla com os dados padrão Brujah se for novo personagem no banco)
   const [character, setCharacter] = useState<CharacterSheetData>(() => {
-    if (initialData) {
-      return deepMerge(DEFAULT_CHARACTER_DATA, initialData);
+    const baseData = initialData ? deepMerge(DEFAULT_CHARACTER_DATA, initialData) : { ...DEFAULT_CHARACTER_DATA };
+    if (baseData.profile) {
+      // Sincronizar o nome público da tabela no profile do JSONB
+      if (!baseData.profile.name || baseData.profile.name === "Marcus Vane") {
+        baseData.profile.name = initialName || baseData.profile.name || "Marcus Vane";
+      }
     }
-    return DEFAULT_CHARACTER_DATA;
+    return baseData;
   });
 
   const [activeTab, setActiveTab] = useState<"nucleo" | "sangue" | "vantagens" | "sistema">("nucleo");
@@ -139,6 +170,17 @@ export default function CharacterSheetClient({
       skills: {
         ...prev.skills,
         [skillName]: value
+      }
+    }));
+  };
+
+  // Alterações de Perfil (InlineEdit)
+  const handleProfileChange = (field: keyof typeof character.profile, value: any) => {
+    setCharacter(prev => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        [field]: value
       }
     }));
   };
@@ -278,17 +320,59 @@ export default function CharacterSheetClient({
           </div>
 
           {/* DADOS DE PERFIL */}
-          <div className="lg:col-span-4 space-y-2">
-            <h1 className="text-4xl font-gothic tracking-wider text-blood-red leading-none">
-              {character.profile.concept === "Revolucionário Anarquista" ? "MARCUS VANE" : characterId.slice(0, 8).toUpperCase()}
+          <div className="lg:col-span-4 space-y-2 max-w-full">
+            <h1 className="text-4xl font-gothic tracking-wider text-blood-red leading-none flex items-center gap-1">
+              <InlineEdit
+                value={character.profile.name || "Marcus Vane"}
+                onChange={(val) => handleProfileChange("name", val)}
+                className="text-4xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase"
+              />
             </h1>
-            <p className="text-xs uppercase tracking-widest text-gold-accent font-data font-semibold">
-              Clã {character.profile.clan} • {character.profile.concept}
-            </p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-text-muted font-data uppercase pt-1">
-              <div>Geração: <span className="text-text-primary">{character.profile.generation}ª</span></div>
-              <div>Predador: <span className="text-text-primary">{character.profile.predator_type}</span></div>
-              <div className="col-span-2 truncate">Sire: <span className="text-text-primary">{character.profile.sire}</span></div>
+            <div className="text-xs uppercase tracking-widest text-gold-accent font-data font-semibold flex flex-wrap items-center gap-1.5 leading-none">
+              <span className="text-text-muted">Clã</span>
+              <InlineEdit
+                value={character.profile.clan}
+                onChange={(val) => handleProfileChange("clan", val)}
+                type="select"
+                options={CLAN_OPTIONS}
+                className="text-gold-accent hover:bg-white/5 font-bold"
+              />
+              <span className="text-text-dim">•</span>
+              <InlineEdit
+                value={character.profile.concept}
+                onChange={(val) => handleProfileChange("concept", val)}
+                className="text-text-primary hover:bg-white/5 font-bold"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-text-muted font-data uppercase pt-1.5">
+              <div className="flex items-center gap-1">
+                <span>Geração:</span>
+                <InlineEdit
+                  value={String(character.profile.generation)}
+                  onChange={(val) => handleProfileChange("generation", Number(val) || 11)}
+                  type="number"
+                  className="text-text-primary hover:bg-white/5 font-bold"
+                />
+                <span>ª</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>Predador:</span>
+                <InlineEdit
+                  value={character.profile.predator_type}
+                  onChange={(val) => handleProfileChange("predator_type", val)}
+                  type="select"
+                  options={PREDATOR_OPTIONS}
+                  className="text-text-primary hover:bg-white/5 font-bold"
+                />
+              </div>
+              <div className="col-span-2 flex items-center gap-1 truncate">
+                <span>Sire:</span>
+                <InlineEdit
+                  value={character.profile.sire}
+                  onChange={(val) => handleProfileChange("sire", val)}
+                  className="text-text-primary hover:bg-white/5 font-bold"
+                />
+              </div>
             </div>
           </div>
 

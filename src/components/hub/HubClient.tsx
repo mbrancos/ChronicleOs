@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createCampaignAction, createCharacterAction, signOutAction } from "@/app/actions/hubActions";
+import { deleteCharacterAction } from "@/app/actions/characterActions";
 
 interface Campaign {
   id: string;
@@ -47,6 +48,32 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
   // Feedbacks visuais
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Estados para exclusão de personagens
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [characterToDelete, setCharacterToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const openDeleteConfirmModal = (char: { id: string; name: string }) => {
+    setErrorMsg(null);
+    setCharacterToDelete(char);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteCharacter = async () => {
+    if (!characterToDelete) return;
+    setLoading(true);
+    setErrorMsg(null);
+
+    const response = await deleteCharacterAction(characterToDelete.id);
+
+    if (response.success) {
+      setIsDeleteModalOpen(false);
+      setCharacterToDelete(null);
+    } else {
+      setErrorMsg(response.error || "Erro ao excluir o personagem.");
+    }
+    setLoading(false);
+  };
 
   // Função para copiar o link de convite da crônica
   const handleCopyInvite = (campaignId: string) => {
@@ -281,8 +308,16 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
                   return (
                     <div 
                       key={char.id} 
-                      className="bg-bg-card border border-white/10 hover:border-gold-accent/40 p-5 rounded-sm flex items-center justify-between transition-all duration-200 group gap-4"
+                      className="bg-bg-card border border-white/10 hover:border-gold-accent/40 p-5 rounded-sm flex items-center justify-between transition-all duration-200 group gap-4 relative"
                     >
+                      {/* Botão de Excluir Personagem (aparece no hover do card) */}
+                      <button
+                        onClick={() => openDeleteConfirmModal({ id: char.id, name: char.name })}
+                        className="absolute top-2 right-2 text-text-dim/30 hover:text-hunger-red transition-all duration-150 cursor-pointer text-xs p-1 opacity-0 group-hover:opacity-100"
+                        title="Excluir Personagem"
+                      >
+                        ✕
+                      </button>
                       <div className="flex items-center space-x-4">
                         {/* Avatar temático minimalista */}
                         <div className="w-12 h-12 rounded-full bg-bg-main border border-gold-accent/30 flex items-center justify-center overflow-hidden shrink-0 group-hover:border-gold-accent transition-colors">
@@ -466,6 +501,54 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* MODAL GÓTICO: CONFIRMAR EXCLUSÃO */}
+      {/* ========================================== */}
+      {isDeleteModalOpen && characterToDelete && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div 
+            className="w-full max-w-md bg-bg-card border border-hunger-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(230,36,36,0.15)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-2xl font-gothic tracking-widest text-hunger-red uppercase pb-2 border-b border-white/5 mb-4">
+              Destruir Criação
+            </h3>
+
+            <p className="text-sm text-text-muted leading-relaxed mb-6 font-reading">
+              Você está prestes a apagar o personagem <span className="text-white font-semibold">{characterToDelete.name.toUpperCase()}</span> nas cinzas do tempo. Esta ação é irreversível e apagará todos os dados da ficha de forma permanente. Deseja prosseguir?
+            </p>
+
+            {errorMsg && (
+              <div className="bg-hunger-red/10 border border-hunger-red text-hunger-red text-xs p-3 rounded-sm mb-4 font-data uppercase tracking-wider text-center">
+                {errorMsg}
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setCharacterToDelete(null);
+                }}
+                className="px-4 py-2 border border-white/10 hover:border-white text-text-muted hover:text-white text-xs uppercase tracking-widest font-data transition-colors rounded-sm cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleDeleteCharacter}
+                className="px-5 py-2 bg-hunger-red hover:bg-red-800 text-white text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(230,36,36,0.4)] disabled:opacity-50"
+              >
+                {loading ? "Apagando..." : "Confirmar Exclusão"}
+              </button>
+            </div>
           </div>
         </div>
       )}

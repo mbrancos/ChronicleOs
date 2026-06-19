@@ -27,6 +27,7 @@ export default async function CharacterPage({ params }: PageProps) {
       characterId={character_id}
       campaignId={campaign_id}
       initialData={initialData}
+      initialName={response.name ?? ""}
     />
   );
 }
