@@ -2,6 +2,21 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.12.0] - 2026-06-19
+
+### Adicionado
+- **Fundação do VTT - A Mesa da Crônica (/campanhas/[campaign_id]/mesa):**
+  - Criação do Server Component `/mesa/page.tsx` com validação de UUID de campanha e trava de segurança integrada ao Neon Auth. Caso o usuário não tenha um personagem associado a essa crônica específica, é redirecionado para o Hub.
+  - Criação do componente cliente `SheetDrawer.tsx` (Gaveta deslizante à direita com largura máxima de 4xl, backdrop clicável com desfoque `backdrop-blur-xs` e botão de fechar).
+  - Criação do componente cliente `PlayerDock.tsx` (Barra inferior de controle contendo avatar, nome, botão para abrir ficha, medidores compactos de Fome e medidores de danos Superficiais/Agravados representados visualmente por `╱` e `✕` no rodapé).
+  - Criação do componente cliente `VttRoomClient.tsx` (Orquestrador da Mesa que une o Palco escuro atmosférico com o PlayerDock e o SheetDrawer).
+
+### Modificado
+- **Callback de Sincronia Client-side:**
+  - Atualização do componente `CharacterSheetClient.tsx` para aceitar a prop opcional `onDataChange` e disparar um `useEffect` quando o estado do personagem for modificado. Isto permite atualizar instantaneamente os medidores vitais do Dock no VTT sem latência ou requisições de rede extras.
+
+---
+
 ## [0.11.0] - 2026-06-19
 
 ### Adicionado

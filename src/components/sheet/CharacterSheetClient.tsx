@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { 
   CharacterSheetData, 
   Tracker, 
@@ -86,13 +86,15 @@ interface CharacterSheetClientProps {
   campaignId: string;
   initialData: CharacterSheetData | null;
   initialName?: string;
+  onDataChange?: (data: CharacterSheetData) => void;
 }
 
 export default function CharacterSheetClient({
   characterId,
   campaignId,
   initialData,
-  initialName = ""
+  initialName = "",
+  onDataChange
 }: CharacterSheetClientProps) {
   
   // ESTADO LOCAL DA FICHA (Mescla com os dados padrão Brujah se for novo personagem no banco)
@@ -141,6 +143,13 @@ export default function CharacterSheetClient({
 
   // INVOCAR O HOOK DE AUTOSAVE DEBOUNCED (1000ms de delay)
   useAutosave(character, 1000, triggerSave);
+
+  // Notificar pai sobre alterações do estado do personagem
+  useEffect(() => {
+    if (onDataChange) {
+      onDataChange(character);
+    }
+  }, [character, onDataChange]);
 
   // ESTADO DO SIMULADOR DE DADOS
   const [rollResult, setRollResult] = useState<{
