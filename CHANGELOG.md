@@ -14,6 +14,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O 
   - Componente `<DiceVisualizer>` com renderização estilizada: dados normais (pretos/cinzas com destaque dourado para 10, branco para sucessos 6-9) e dados de fome (vermelhos com destaque dourado pulsante para 10, vermelho alarmante para 1, normal para falhas).
   - Suporte a Teste de Despertar (Rouse Check), exibindo 1 único dado com indicação reativa sobre alteração de Fome.
 
+### Corrigido
+- **Serialização de Server Actions:**
+  - Conversão do campo `createdAt` (instância de `Date`) para string ISO em `getRecentRolls` para evitar a falha de serialização do Next.js 16 que gerava o erro `"An unexpected response was received from the server"` no console.
+
 ## [0.14.0] - 2026-06-20
 
 ### Adicionado

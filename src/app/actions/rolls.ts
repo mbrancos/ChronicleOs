@@ -59,7 +59,12 @@ export async function getRecentRolls(campaignId: string) {
       .orderBy(desc(rolls.createdAt))
       .limit(50);
 
-    return { success: true, data: result };
+    const serialized = result.map((roll) => ({
+      ...roll,
+      createdAt: roll.createdAt instanceof Date ? roll.createdAt.toISOString() : String(roll.createdAt),
+    }));
+
+    return { success: true, data: serialized };
   } catch (error: any) {
     console.error("Erro em getRecentRolls:", error);
     return { success: false, error: error?.message || "Falha ao buscar rolagens do banco" };
