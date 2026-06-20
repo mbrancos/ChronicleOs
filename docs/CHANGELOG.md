@@ -2,6 +2,54 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.21.0] - 2026-06-20
+
+### Adicionado
+- **Real-Time Engine — Pusher e Action Feed Compacto (Fase 21):**
+  - Integração do Pusher WebSocket via `pusher` (server) e `pusher-js` (client) como substituto completo ao polling periódico de 2.5s.
+  - Endpoint de autenticação seguro em `src/app/api/pusher/auth/route.ts` integrado ao Neon Auth, garantindo que apenas usuários autenticados se conectem.
+  - **Arquitetura Dual-Channel (Anti-Metagaming):**
+    - Canal público `public-campaign-[id]`: trafega rolagens públicas e atualizações de status visíveis por todos os jogadores na mesa.
+    - Canal privado `private-gm-[id]`: trafega rolagens secretas, tokens ocultos e movimentações de bastidores, autenticado exclusivamente para `isStoryteller === true`.
+  - Emissão de eventos Pusher nas Server Actions `saveRoll`, `toggleTokenAction`, `resetRound`, `updateTokenQuickHealth` e `updateTokenPosition` para sincronização reativa em tempo real.
+  - Substituição do `setInterval` de polling nos clients `StorytellerDashboardClient` e `VttRoomClient` por assinaturas de canais Pusher com `channel.bind` e cleanup correto em `useEffect`.
+  - **Action Feed Compacto (`RollLogItem.tsx`):** histórico de rolagens estilo chat em linhas densas com auto-scroll para baixo via `useRef` + `useEffect`, substituindo os cards grandes anteriores.
+    - Ordenação decrescente dos itens (mais recentes no topo) com preservação do estado de seleção de dados para rerrolagem.
+    - Separação visual entre dados Normais e dados de Fome com ícones e cores distintas.
+    - Suporte a exibição de resultado de Rouse Check (Teste de Despertar) com ícone de gota de sangue.
+  - Fog of War nos Bastidores: dados de tokens ocultos (`isVisible === false`) trafegam exclusivamente pelo canal privado GM, invisíveis para jogadores.
+  - Sincronização resiliente: reconexão automática via eventos `pusher:subscription_error` e revalidação de estado inicial via Server Action na montagem dos clients.
+
+### Corrigido
+- **Tipagem TypeScript do `pusher-js`:**
+  - Adicionada a propriedade obrigatória `transport: "ajax"` no objeto `channelAuthorization` do client Pusher para satisfazer a tipagem estrita de `InternalAuthOptions`.
+- **Cascading Renders no Lint (React 19):**
+  - Uso de `Promise.resolve().then(...)` para postergar a inicialização de estado nos clients da mesa, evitando `setState` síncronos na raiz de `useEffect`.
+  - Uso de `setTimeout` de 50ms no auto-scroll do `ActionFeed` para aguardar a renderização completa do DOM antes de rolar para o final.
+- **Propriedade `dieResult` no BloodEngine:**
+  - Corrigida referência ao resultado do Rouse Check de `dieValue` para `dieResult` em `RollLogItem.tsx`.
+
+---
+
+## [0.19.0] - 2026-06-20
+
+### Adicionado
+- **Popover Universal e Gestão de Dano (Fase 19):**
+  - Componente `TokenPopover.tsx` sob `src/components/vtt/`: painel flutuante contextual aberto com clique simples em qualquer token no tabuleiro, preservando o duplo-clique para abertura de fichas completas na gaveta lateral.
+  - **Roteamento Inteligente de Entidade:** o Popover lê o `type` do token (`player`, `full_npc` ou `quick_npc`) para renderizar a interface correta e despachar alterações para a Server Action adequada.
+  - Componente `HealthTracker.tsx` sob `src/components/vtt/`: tracker cíclico de Vitalidade V5 com caixas vazias, Superficial (`/`) e Agravado (`✕`), seguindo a lógica nativa do sistema V5.
+  - Server Action `updateTokenQuickHealth` em `sceneActions.ts` para persistência imediata das alterações de Vitalidade e Força de Vontade no banco Neon via Drizzle.
+  - **Redimensionamento Dinâmico de Figurantes:** tokens `quick_npc` exibem no Popover um mini-campo numérico para ajuste da quantidade de caixas de Vitalidade (`quickStats.health`) diretamente na mesa, sem necessidade de abrir a ficha completa.
+  - **Sincronização Debounced:** alterações de status são enviadas ao banco com debounce de 400ms para evitar sobrecarga de requisições durante cliques rápidos no tracker.
+  - Integração com o canal Pusher: eventos `token-health-updated` emitidos após cada alteração persistida, garantindo sincronização imediata para todos na mesa.
+
+### Corrigido
+- **Otimização de Cliques no Tabuleiro:**
+  - Implementado `onPointerDown` com medição de tempo para distinguir clique simples (< 200ms → abre Popover) de duplo-clique (fecha Popover e abre gaveta de ficha).
+  - Fechamento automático do Popover ao clicar fora da área do componente via `useEffect` com listener `mousedown` no `document`.
+
+---
+
 ## [0.18.0] - 2026-06-20
 
 ### Adicionado
