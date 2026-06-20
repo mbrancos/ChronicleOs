@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import DiceVisualizer from "./DiceVisualizer";
 import { V5RollResult, RouseCheckResult } from "@/lib/vtt/BloodEngine";
 
@@ -11,14 +11,19 @@ export interface RollItem {
   characterName: string;
   poolName: string;
   resultData: V5RollResult | RouseCheckResult;
+  isRerolled: boolean;
   createdAt: Date | string;
 }
 
 interface ActionFeedProps {
   rolls: RollItem[];
+  localCharacterId?: string;
+  onReroll?: (rollId: string, indices: number[]) => Promise<void>;
+  isRerolling?: boolean;
 }
 
-export default function ActionFeed({ rolls }: ActionFeedProps) {
+export default function ActionFeed({ rolls, localCharacterId, onReroll, isRerolling }: ActionFeedProps) {
+  const [selectedDice, setSelectedDice] = useState<{ rollId: string; indices: number[] } | null>(null);
   // Formatar hora a partir da data de criação
   const formatTime = (dateInput: Date | string) => {
     try {
@@ -51,7 +56,11 @@ export default function ActionFeed({ rolls }: ActionFeedProps) {
             return (
               <div
                 key={roll.id}
-                className="bg-bg-card-dark/85 backdrop-blur-md border border-white/10 rounded-sm shadow-xl p-3 flex flex-col space-y-2 relative transition-all duration-300 animate-slide-in hover:border-white/20 select-text"
+                className={`backdrop-blur-md border rounded-sm shadow-xl p-3 flex flex-col space-y-2 relative transition-all duration-300 animate-slide-in select-text ${
+                  roll.isRerolled 
+                    ? "bg-bg-card-dark/50 border-white/5 opacity-70" 
+                    : "bg-bg-card-dark/85 border-white/10 hover:border-white/20"
+                }`}
               >
                 {/* Cabeçalho do Card */}
                 <div className="flex items-center justify-between text-[10px] uppercase font-data tracking-wider">
@@ -70,8 +79,43 @@ export default function ActionFeed({ rolls }: ActionFeedProps) {
 
                 {/* Visualizador dos Dados */}
                 <div className="py-1">
-                  <DiceVisualizer result={roll.resultData} />
+                  <DiceVisualizer 
+                    result={roll.resultData} 
+                    isClickable={roll.characterId === localCharacterId && isStandard && !roll.isRerolled}
+                    selectedIndices={selectedDice?.rollId === roll.id ? selectedDice.indices : []}
+                    onDieClick={(dieIdx) => {
+                      setSelectedDice((prev) => {
+                        if (!prev || prev.rollId !== roll.id) {
+                          return { rollId: roll.id, indices: [dieIdx] };
+                        }
+                        if (prev.indices.includes(dieIdx)) {
+                          const newIndices = prev.indices.filter(idx => idx !== dieIdx);
+                          return newIndices.length === 0 ? null : { rollId: roll.id, indices: newIndices };
+                        }
+                        if (prev.indices.length < 3) {
+                          return { rollId: roll.id, indices: [...prev.indices, dieIdx] };
+                        }
+                        return prev;
+                      });
+                    }}
+                  />
                 </div>
+
+                {/* Botão de Rerrolar com Força de Vontade */}
+                {selectedDice?.rollId === roll.id && selectedDice.indices.length > 0 && (
+                  <button
+                    disabled={isRerolling}
+                    onClick={async () => {
+                      if (onReroll) {
+                        await onReroll(roll.id, selectedDice.indices);
+                        setSelectedDice(null);
+                      }
+                    }}
+                    className="w-full mt-2 py-1.5 px-3 bg-linear-to-r from-gold-accent to-amber-500 hover:from-amber-400 hover:to-gold-accent disabled:from-gray-700 disabled:to-gray-800 disabled:text-text-dim text-black font-data font-bold text-xs uppercase tracking-wider rounded-sm transition-all duration-300 shadow-md hover:shadow-gold-accent/20 cursor-pointer text-center select-none"
+                  >
+                    {isRerolling ? "Rerrolando..." : `Rerrolar ${selectedDice.indices.length} ${selectedDice.indices.length === 1 ? "Dado" : "Dados"} (1 FV)`}
+                  </button>
+                )}
 
                 {/* Veredito e Resultado Consolidado */}
                 <div className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t border-white/5 text-xs">
@@ -92,7 +136,12 @@ export default function ActionFeed({ rolls }: ActionFeedProps) {
                       </div>
 
                       {/* Badges de Regras V5 */}
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
+                        {roll.isRerolled && (
+                          <span className="px-1.5 py-0.5 rounded-[2px] bg-willpower-blue/30 text-white border border-willpower-blue/50 font-data font-bold text-[9px] uppercase tracking-wider">
+                            Rerrolado 🌀
+                          </span>
+                        )}
                         {standardResult.isBestialFailure && (
                           <span className="px-1.5 py-0.5 rounded-[2px] bg-hunger-red/20 text-hunger-red border border-hunger-red/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_8px_rgba(255,92,92,0.3)]">
                             Falha Bestial! 💀

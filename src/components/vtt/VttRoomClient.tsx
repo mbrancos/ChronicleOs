@@ -6,7 +6,8 @@ import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import ActionFeed, { RollItem } from "./ActionFeed";
 import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
-import { saveRoll, getRecentRolls } from "@/app/actions/rolls";
+import { saveRoll, getRecentRolls, executeWillpowerReroll } from "@/app/actions/rolls";
+import { updateCharacterSheet } from "@/app/actions/characterActions";
 
 interface VttRoomClientProps {
   character: {
@@ -24,6 +25,7 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
   const [localCharacter, setLocalCharacter] = useState(character);
   const [dicePool, setDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
   const [rollsList, setRollsList] = useState<RollItem[]>([]);
+  const [isRerolling, setIsRerolling] = useState(false);
   const isFetching = useRef(false);
 
   // Carregar rolagens recentes e atualizar estado
@@ -125,6 +127,69 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
     }
   };
 
+  // Disparar rerrolagem de Força de Vontade (Willpower Reroll)
+  const handleWillpowerReroll = async (rollId: string, indices: number[]) => {
+    const willpower = localCharacter.sheetData.status?.willpower;
+    if (!willpower) {
+      alert("Erro: Informações de Força de Vontade não encontradas na ficha.");
+      return;
+    }
+
+    const superficial = willpower.superficial ?? 0;
+    const aggravated = willpower.aggravated ?? 0;
+    const max = willpower.max ?? 5;
+
+    if (superficial + aggravated >= max) {
+      alert("Força de Vontade insuficiente! Você não pode gastar Força de Vontade se todos os espaços de dano estiverem cheios.");
+      return;
+    }
+
+    try {
+      setIsRerolling(true);
+
+      // 1. Executar a ação de rerrolagem no servidor
+      const res = await executeWillpowerReroll(rollId, indices, character.id);
+      if (!res.success) {
+        alert(`Falha ao rerrolar: ${res.error}`);
+        return;
+      }
+
+      // 2. Atualizar a Ficha local com 1 ponto de dano Superficial na Força de Vontade
+      const updatedWillpower = {
+        ...willpower,
+        superficial: superficial + 1
+      };
+
+      const updatedSheetData = {
+        ...localCharacter.sheetData,
+        status: {
+          ...localCharacter.sheetData.status,
+          willpower: updatedWillpower
+        }
+      };
+
+      // Atualiza o estado da sala (Optimistic UI)
+      setLocalCharacter(prev => ({
+        ...prev,
+        sheetData: updatedSheetData
+      }));
+
+      // 3. Salvar no banco imediatamente (necessário pois a gaveta da ficha pode estar fechada)
+      const saveRes = await updateCharacterSheet(character.id, updatedSheetData);
+      if (!saveRes.success) {
+        console.error("Falha ao persistir atualização de Força de Vontade no banco:", saveRes.error);
+      }
+
+      // 4. Atualizar rolagens na tela
+      await fetchRecentRolls();
+    } catch (err) {
+      console.error("Erro na rerrolagem de Força de Vontade:", err);
+      alert("Erro inesperado ao processar rerrolagem de Força de Vontade.");
+    } finally {
+      setIsRerolling(false);
+    }
+  };
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary">
       
@@ -148,7 +213,12 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
       </div>
 
       {/* FEED DE ROlagens MULTIPLAYER (z-30) */}
-      <ActionFeed rolls={rollsList} />
+      <ActionFeed 
+        rolls={rollsList} 
+        localCharacterId={character.id}
+        onReroll={handleWillpowerReroll}
+        isRerolling={isRerolling}
+      />
 
       {/* DOCK DE CONTROLE (z-40) */}
       <PlayerDock 

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(), // UUID associado ao Neon Auth
@@ -37,5 +37,6 @@ export const rolls = pgTable("rolls", {
   characterName: text("character_name").notNull(),
   poolName: text("pool_name").notNull(),
   resultData: jsonb("result_data").$type<any>().notNull(), // Estrutura V5RollResult ou RouseCheckResult
+  isRerolled: boolean("is_rerolled").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

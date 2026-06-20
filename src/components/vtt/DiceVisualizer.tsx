@@ -5,9 +5,12 @@ import { V5RollResult, RouseCheckResult } from "@/lib/vtt/BloodEngine";
 
 interface DiceVisualizerProps {
   result: V5RollResult | RouseCheckResult;
+  isClickable?: boolean;
+  selectedIndices?: number[];
+  onDieClick?: (index: number) => void;
 }
 
-export default function DiceVisualizer({ result }: DiceVisualizerProps) {
+export default function DiceVisualizer({ result, isClickable, selectedIndices, onDieClick }: DiceVisualizerProps) {
   if (result.type === "rouse") {
     const val = result.dieResult;
     const isSuccess = result.isSuccess;
@@ -56,11 +59,19 @@ export default function DiceVisualizer({ result }: DiceVisualizerProps) {
           diceStyle = "bg-black/30 border-white/5 text-text-dim/40 font-normal";
         }
 
+        const isSelected = selectedIndices?.includes(idx);
+        const borderStyle = isSelected
+          ? "ring-2 ring-gold-accent border-gold-accent shadow-[0_0_8px_rgba(255,216,77,0.5)] scale-105"
+          : isClickable
+          ? "cursor-pointer hover:border-gold-accent/70 hover:scale-105"
+          : "";
+
         return (
           <div
             key={`normal-${idx}`}
-            className={`w-8 h-8 rounded-md flex items-center justify-center text-sm border shadow select-none transition-all duration-200 ${diceStyle}`}
-            title="Dado Normal"
+            className={`w-8 h-8 rounded-md flex items-center justify-center text-sm border shadow select-none transition-all duration-200 ${diceStyle} ${borderStyle}`}
+            title={isClickable ? "Clique para selecionar para rerrolagem de Força de Vontade" : "Dado Normal"}
+            onClick={() => isClickable && onDieClick && onDieClick(idx)}
           >
             {val}
           </div>

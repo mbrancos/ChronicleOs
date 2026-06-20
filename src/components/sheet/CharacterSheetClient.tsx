@@ -113,6 +113,31 @@ export default function CharacterSheetClient({
     return baseData;
   });
 
+  // Sincronizar dados externos (como Força de Vontade gasta via rerrolagem no VTT)
+  useEffect(() => {
+    if (initialData?.status?.willpower) {
+      setCharacter(prev => {
+        const prevWill = prev.status?.willpower;
+        const newWill = initialData.status?.willpower;
+        if (
+          prevWill &&
+          (prevWill.superficial !== newWill.superficial ||
+            prevWill.aggravated !== newWill.aggravated ||
+            prevWill.max !== newWill.max)
+        ) {
+          return {
+            ...prev,
+            status: {
+              ...prev.status,
+              willpower: newWill
+            }
+          };
+        }
+        return prev;
+      });
+    }
+  }, [initialData]);
+
   const [activeTab, setActiveTab] = useState<"nucleo" | "sangue" | "vantagens" | "sistema">("nucleo");
   
   // ESTADOS DO MINI-FORMULÁRIO DE ESPECIALIZAÇÕES (ABA NÚCLEO)
