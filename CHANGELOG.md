@@ -17,6 +17,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O 
 ### Corrigido
 - **Serialização de Server Actions:**
   - Conversão do campo `createdAt` (instância de `Date`) para string ISO em `getRecentRolls` para evitar a falha de serialização do Next.js 16 que gerava o erro `"An unexpected response was received from the server"` no console.
+- **Proteção do Polling contra Esgotamento de Conexões (Neon DB):**
+  - Implementado lock de requisições concorrentes (`isFetching` ref) e check de visibilidade da aba (`document.visibilityState !== "visible"`) no polling do `<VttRoomClient>` para blindar o pool de conexões contra sobrecarga no Neon PostgreSQL em desenvolvimento e produção.
 
 ## [0.14.0] - 2026-06-20
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PlayerDock from "./PlayerDock";
 import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
@@ -24,16 +24,27 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
   const [localCharacter, setLocalCharacter] = useState(character);
   const [dicePool, setDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
   const [rollsList, setRollsList] = useState<RollItem[]>([]);
+  const isFetching = useRef(false);
 
   // Carregar rolagens recentes e atualizar estado
   const fetchRecentRolls = async () => {
+    // Evitar requisições de polling redundantes se a aba estiver oculta
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      return;
+    }
+    // Evitar requisições paralelas empilhadas se a anterior ainda estiver pendente no banco
+    if (isFetching.current) return;
+
     try {
+      isFetching.current = true;
       const res = await getRecentRolls(character.campaignId);
       if (res.success && res.data) {
         setRollsList(res.data as RollItem[]);
       }
     } catch (err) {
       console.error("Erro ao buscar rolagens do banco:", err);
+    } finally {
+      isFetching.current = false;
     }
   };
 
