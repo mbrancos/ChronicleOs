@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { 
   CharacterSheetData, 
-  Tracker, 
   Specialty, 
   Discipline, 
   Advantage, 
@@ -81,6 +80,88 @@ function deepMerge<T extends object>(target: T, source: any): T {
   return output;
 }
 
+// Helper para gerar IDs aleatórios únicos e evitar Math.random no escopo do componente
+function generateRandomId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+// Simulador fora do escopo do componente para evitar funções impuras (Math.random) no render
+function executeSimulationRoll(
+  macro: RollMacro,
+  character: CharacterSheetData
+) {
+  let poolSize = 0;
+  
+  const physical = character.attributes.physical as unknown as Record<string, number>;
+  const social = character.attributes.social as unknown as Record<string, number>;
+  const mental = character.attributes.mental as unknown as Record<string, number>;
+  const skills = character.skills as unknown as Record<string, number>;
+
+  macro.pool.forEach(key => {
+    if (physical[key] !== undefined) {
+      poolSize += physical[key];
+    } else if (social[key] !== undefined) {
+      poolSize += social[key];
+    } else if (mental[key] !== undefined) {
+      poolSize += mental[key];
+    } else if (skills[key] !== undefined) {
+      poolSize += skills[key];
+    }
+  });
+
+  if (poolSize === 0) poolSize = 1;
+
+  const hunger = character.status.hunger;
+  const hungerDiceCount = Math.min(poolSize, hunger);
+  const normalDiceCount = poolSize - hungerDiceCount;
+
+  const diceList: { type: "normal" | "hunger"; value: number }[] = [];
+  
+  for (let i = 0; i < normalDiceCount; i++) {
+    diceList.push({ type: "normal", value: Math.floor(Math.random() * 10) + 1 });
+  }
+  for (let i = 0; i < hungerDiceCount; i++) {
+    diceList.push({ type: "hunger", value: Math.floor(Math.random() * 10) + 1 });
+  }
+
+  const normalSuccesses = diceList.filter(d => d.value >= 6).length;
+  const normalTens = diceList.filter(d => d.type === "normal" && d.value === 10).length;
+  const hungerTens = diceList.filter(d => d.type === "hunger" && d.value === 10).length;
+  const totalTens = normalTens + hungerTens;
+
+  const criticalPairs = Math.floor(totalTens / 2);
+  const extraSuccesses = criticalPairs * 2;
+  const successes = normalSuccesses + extraSuccesses;
+
+  const isCritical = criticalPairs > 0;
+  const isMessianic = isCritical && hungerTens > 0;
+  const isBestialFailure = diceList.some(d => d.type === "hunger" && d.value === 1) && successes === 0;
+
+  let rouseText = "";
+  let shouldIncreaseHunger = false;
+  if (macro.rouse_check) {
+    const rouseResult = Math.floor(Math.random() * 10) + 1;
+    
+    if (rouseResult < 6) {
+      rouseText = " [Despertar: Falhou (Fome +1)]";
+      shouldIncreaseHunger = true;
+    } else {
+      rouseText = " [Despertar: Sucesso]";
+    }
+  }
+
+  return {
+    macroName: macro.name + rouseText,
+    totalPool: poolSize,
+    successes,
+    isCritical,
+    isMessianic,
+    isBestial: isBestialFailure,
+    diceList,
+    shouldIncreaseHunger
+  };
+}
+
 interface CharacterSheetClientProps {
   characterId: string;
   campaignId: string;
@@ -113,30 +194,27 @@ export default function CharacterSheetClient({
     return baseData;
   });
 
-  // Sincronizar dados externos (como Força de Vontade gasta via rerrolagem no VTT)
-  useEffect(() => {
-    if (initialData?.status?.willpower) {
-      setCharacter(prev => {
-        const prevWill = prev.status?.willpower;
-        const newWill = initialData.status?.willpower;
-        if (
-          prevWill &&
-          (prevWill.superficial !== newWill.superficial ||
-            prevWill.aggravated !== newWill.aggravated ||
-            prevWill.max !== newWill.max)
-        ) {
-          return {
-            ...prev,
-            status: {
-              ...prev.status,
-              willpower: newWill
-            }
-          };
+  const [prevWillpower, setPrevWillpower] = useState(initialData?.status?.willpower);
+
+  // Sincronizar com mudanças de valor externas no render para evitar render em cascata
+  if (initialData?.status?.willpower) {
+    const newWill = initialData.status.willpower;
+    if (
+      !prevWillpower ||
+      prevWillpower.superficial !== newWill.superficial ||
+      prevWillpower.aggravated !== newWill.aggravated ||
+      prevWillpower.max !== newWill.max
+    ) {
+      setPrevWillpower(newWill);
+      setCharacter(prev => ({
+        ...prev,
+        status: {
+          ...prev.status,
+          willpower: newWill
         }
-        return prev;
-      });
+      }));
     }
-  }, [initialData]);
+  }
 
   const [activeTab, setActiveTab] = useState<"nucleo" | "sangue" | "vantagens" | "sistema">("nucleo");
   
@@ -222,7 +300,7 @@ export default function CharacterSheetClient({
   };
 
   // Alterações de Perfil (InlineEdit)
-  const handleProfileChange = (field: keyof typeof character.profile, value: any) => {
+  const handleProfileChange = (field: keyof typeof character.profile, value: string | number) => {
     setCharacter(prev => ({
       ...prev,
       profile: {
@@ -237,7 +315,7 @@ export default function CharacterSheetClient({
   // ========================================================
   const handleAddDiscipline = () => {
     const newDisc: Discipline = {
-      id: `disc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      id: generateRandomId("disc"),
       name: "Nova Disciplina",
       level: 1,
       powers: ["Novo Poder"]
@@ -319,7 +397,7 @@ export default function CharacterSheetClient({
   const handleAddAdvantage = (type: "background" | "merit" | "flaw" | "loresheet") => {
     const isPositive = type === "background" || type === "merit";
     const newAdv: Advantage = {
-      id: `adv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      id: generateRandomId("adv"),
       name: isPositive ? "Nova Qualidade / Antecedente" : "Novo Defeito / Ficha de Saber",
       type,
       level: 1,
@@ -373,7 +451,7 @@ export default function CharacterSheetClient({
     if (!selectedSkill || !newSpecialtyName.trim()) return;
     
     const newSpec: Specialty = {
-      id: `spec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      id: generateRandomId("spec"),
       skill: selectedSkill,
       name: newSpecialtyName.trim()
     };
@@ -396,76 +474,26 @@ export default function CharacterSheetClient({
 
   // SIMULADOR DE ROLAGEM DE DADOS D10 GÓTICO (REGRAS V5)
   const triggerRoll = (macro: RollMacro) => {
-    let poolSize = 0;
+    const result = executeSimulationRoll(macro, character);
     
-    macro.pool.forEach(key => {
-      if (key in character.attributes.physical) {
-        poolSize += (character.attributes.physical as any)[key];
-      } else if (key in character.attributes.social) {
-        poolSize += (character.attributes.social as any)[key];
-      } else if (key in character.attributes.mental) {
-        poolSize += (character.attributes.mental as any)[key];
-      } else if (key in character.skills) {
-        poolSize += (character.skills as any)[key];
-      }
-    });
-
-    if (poolSize === 0) poolSize = 1;
-
-    const hunger = character.status.hunger;
-    const hungerDiceCount = Math.min(poolSize, hunger);
-    const normalDiceCount = poolSize - hungerDiceCount;
-
-    const diceList: { type: "normal" | "hunger"; value: number }[] = [];
-    
-    for (let i = 0; i < normalDiceCount; i++) {
-      diceList.push({ type: "normal", value: Math.floor(Math.random() * 10) + 1 });
-    }
-    for (let i = 0; i < hungerDiceCount; i++) {
-      diceList.push({ type: "hunger", value: Math.floor(Math.random() * 10) + 1 });
-    }
-
-    let normalSuccesses = diceList.filter(d => d.value >= 6).length;
-    const normalTens = diceList.filter(d => d.type === "normal" && d.value === 10).length;
-    const hungerTens = diceList.filter(d => d.type === "hunger" && d.value === 10).length;
-    const totalTens = normalTens + hungerTens;
-
-    const criticalPairs = Math.floor(totalTens / 2);
-    const extraSuccesses = criticalPairs * 2;
-    const successes = normalSuccesses + extraSuccesses;
-
-    const isCritical = criticalPairs > 0;
-    const isMessianic = isCritical && hungerTens > 0;
-    const isBestialFailure = diceList.some(d => d.type === "hunger" && d.value === 1) && successes === 0;
-
-    let rouseText = "";
-    if (macro.rouse_check) {
-      const rouseResult = Math.floor(Math.random() * 10) + 1;
-      
-      // Simulação visual do Rouse Check
-      if (rouseResult < 6) {
-        rouseText = " [Despertar: Falhou (Fome +1)]";
-        // Atualiza a Fome no estado local (Optimistic UI)
-        setCharacter(prev => ({
-          ...prev,
-          status: {
-            ...prev.status,
-            hunger: Math.min(5, prev.status.hunger + 1)
-          }
-        }));
-      } else {
-        rouseText = " [Despertar: Sucesso]";
-      }
+    if (result.shouldIncreaseHunger) {
+      setCharacter(prev => ({
+        ...prev,
+        status: {
+          ...prev.status,
+          hunger: Math.min(5, prev.status.hunger + 1)
+        }
+      }));
     }
 
     setRollResult({
-      macroName: macro.name + rouseText,
-      totalPool: poolSize,
-      successes,
-      isCritical,
-      isMessianic,
-      isBestial: isBestialFailure,
-      diceList
+      macroName: result.macroName,
+      totalPool: result.totalPool,
+      successes: result.successes,
+      isCritical: result.isCritical,
+      isMessianic: result.isMessianic,
+      isBestial: result.isBestial,
+      diceList: result.diceList
     });
   };
 
@@ -1034,7 +1062,7 @@ export default function CharacterSheetClient({
                               (
                               <InlineEdit
                                 value={adv.type}
-                                onChange={(val) => handleAdvantageTypeChange(adv.id, val as any)}
+                                onChange={(val) => handleAdvantageTypeChange(adv.id, val as "background" | "merit" | "flaw" | "loresheet")}
                                 type="select"
                                 options={["background", "merit"]}
                                 className="hover:bg-white/5 text-[10px] text-gold-accent italic border-none py-0 px-0.5"
@@ -1109,7 +1137,7 @@ export default function CharacterSheetClient({
                                 (
                                 <InlineEdit
                                   value={adv.type}
-                                  onChange={(val) => handleAdvantageTypeChange(adv.id, val as any)}
+                                  onChange={(val) => handleAdvantageTypeChange(adv.id, val as "background" | "merit" | "flaw" | "loresheet")}
                                   type="select"
                                   options={["flaw", "loresheet"]}
                                   className={`hover:bg-white/5 text-[10px] italic border-none py-0 px-0.5 ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}

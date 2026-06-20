@@ -10,7 +10,7 @@ interface PlayerDockProps {
     userId: string | null;
     name: string;
     type: "jogador" | "npc" | "coterie";
-    sheetData: any; // jsonb
+    sheetData: CharacterSheetData; // jsonb
   };
   onOpenSheet: () => void;
   dicePool?: Array<{ id: string, label: string, value: number }>;
@@ -37,14 +37,16 @@ export default function PlayerDock({
 
   const [modifier, setModifier] = React.useState(0);
   const [difficulty, setDifficulty] = React.useState(0);
+  const [prevPoolLength, setPrevPoolLength] = React.useState(dicePool.length);
 
-  // Limpar os steppers quando o carrinho for esvaziado
-  React.useEffect(() => {
+  // Sincronizar estado durante a renderização quando o carrinho for esvaziado
+  if (dicePool.length !== prevPoolLength) {
+    setPrevPoolLength(dicePool.length);
     if (dicePool.length === 0) {
       setModifier(0);
       setDifficulty(0);
     }
-  }, [dicePool.length]);
+  }
 
   const getInitials = (name: string) => {
     return name.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();

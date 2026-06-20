@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import PlayerDock from "./PlayerDock";
 import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
@@ -8,6 +8,7 @@ import ActionFeed, { RollItem } from "./ActionFeed";
 import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
 import { saveRoll, getRecentRolls, executeWillpowerReroll } from "@/app/actions/rolls";
 import { updateCharacterSheet } from "@/app/actions/characterActions";
+import { CharacterSheetData } from "@/types/character";
 
 interface VttRoomClientProps {
   character: {
@@ -16,7 +17,7 @@ interface VttRoomClientProps {
     userId: string | null;
     name: string;
     type: "jogador" | "npc" | "coterie";
-    sheetData: any;
+    sheetData: CharacterSheetData;
   };
 }
 
@@ -29,7 +30,7 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
   const isFetching = useRef(false);
 
   // Carregar rolagens recentes e atualizar estado
-  const fetchRecentRolls = async () => {
+  const fetchRecentRolls = useCallback(async () => {
     // Evitar requisições de polling redundantes se a aba estiver oculta
     if (typeof document !== "undefined" && document.visibilityState !== "visible") {
       return;
@@ -48,18 +49,21 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
     } finally {
       isFetching.current = false;
     }
-  };
+  }, [character.campaignId]);
 
   // Configurar polling a cada 2.5 segundos
   useEffect(() => {
-    fetchRecentRolls();
+    // Executar polling de forma assíncrona não-bloqueante no microtask queue
+    Promise.resolve().then(() => {
+      fetchRecentRolls();
+    });
 
     const interval = setInterval(() => {
       fetchRecentRolls();
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [character.campaignId]);
+  }, [character.campaignId, fetchRecentRolls]);
 
   const handleTraitClick = (trait: { id: string, label: string, value: number }) => {
     setDicePool(prev => {
@@ -207,7 +211,7 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
             Crônica ID: {character.campaignId}
           </p>
           <p className="text-xs sm:text-sm text-text-dim/80 font-reading italic leading-relaxed pt-2">
-            "As sombras de Manaus se movem à espreita. O sangue sussurra segredos que a noite tenta apagar."
+            {"\"As sombras de Manaus se movem à espreita. O sangue sussurra segredos que a noite tenta apagar.\""}
           </p>
         </div>
       </div>
@@ -269,7 +273,7 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
                 }
                 // Verificar se é disciplina
                 else {
-                  const disc = newData.disciplines?.find((d: any) => d.id === item.id);
+                  const disc = newData.disciplines?.find((d) => d.id === item.id);
                   if (disc) {
                     newValue = disc.level;
                   }

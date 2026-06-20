@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 
 interface InlineEditProps {
   value: string;
@@ -23,10 +23,13 @@ export default function InlineEdit({
   const [currentValue, setCurrentValue] = useState(value);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
 
-  // Sincronizar com mudanças de valor externas
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+
+  // Sincronizar com mudanças de valor externas no render
+  if (value !== prevValue) {
+    setPrevValue(value);
     setCurrentValue(value);
-  }, [value]);
+  }
 
   const handleBlur = () => {
     setIsEditing(false);

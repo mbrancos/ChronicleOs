@@ -36,7 +36,7 @@ export const rolls = pgTable("rolls", {
     .references(() => characters.id, { onDelete: "cascade" }),
   characterName: text("character_name").notNull(),
   poolName: text("pool_name").notNull(),
-  resultData: jsonb("result_data").$type<any>().notNull(), // Estrutura V5RollResult ou RouseCheckResult
+  resultData: jsonb("result_data").$type<unknown>().notNull(), // Estrutura V5RollResult ou RouseCheckResult
   isRerolled: boolean("is_rerolled").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
