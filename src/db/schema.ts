@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, jsonb, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(), // UUID associado ao Neon Auth
@@ -38,5 +38,21 @@ export const rolls = pgTable("rolls", {
   poolName: text("pool_name").notNull(),
   resultData: jsonb("result_data").$type<unknown>().notNull(), // Estrutura V5RollResult ou RouseCheckResult
   isRerolled: boolean("is_rerolled").default(false).notNull(),
+  isSecret: boolean("is_secret").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const sceneTokens = pgTable("scene_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  campaignId: uuid("campaign_id")
+    .references(() => campaigns.id, { onDelete: "cascade" })
+    .notNull(),
+  characterId: uuid("character_id")
+    .references(() => characters.id, { onDelete: "cascade" }), // Nulo para figurantes rápidos (quick_npc)
+  name: text("name").notNull(),
+  type: text("type").$type<"player" | "full_npc" | "quick_npc">().notNull(),
+  x: integer("x").default(100).notNull(),
+  y: integer("y").default(100).notNull(),
+  isVisible: boolean("is_visible").default(false).notNull(), // true se estiver dentro do "Palco"
+  quickStats: jsonb("quick_stats").$type<{ physical: number; social: number; health: number }>() // Nulo se type !== "quick_npc"
 });

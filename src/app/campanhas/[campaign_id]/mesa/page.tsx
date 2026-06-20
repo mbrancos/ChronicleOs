@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth/server";
 import { db } from "@/db";
-import { characters } from "@/db/schema";
+import { characters, campaigns } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { redirect, notFound } from "next/navigation";
 import VttRoomClient from "@/components/vtt/VttRoomClient";
+import StorytellerDashboardClient from "@/components/vtt/StorytellerDashboardClient";
 import { CharacterSheetData } from "@/types/character";
 
 interface PageProps {
@@ -27,7 +28,34 @@ export default async function MesaPage({ params }: PageProps) {
     redirect("/");
   }
 
-  // 3. Buscar o personagem do jogador nesta campanha específica no Neon Database
+  // 3. Buscar a crônica/campanha para checar se o usuário logado é o Narrador
+  const campaignResult = await db
+    .select()
+    .from(campaigns)
+    .where(eq(campaigns.id, campaign_id))
+    .limit(1);
+
+  if (campaignResult.length === 0) {
+    return notFound();
+  }
+
+  const campaign = campaignResult[0];
+  const isNarrator = campaign.narratorId === session.user.id;
+
+  if (isNarrator) {
+    return (
+      <StorytellerDashboardClient 
+        campaign={{
+          id: campaign.id,
+          name: campaign.name,
+          narratorId: campaign.narratorId,
+          description: campaign.description
+        }}
+      />
+    );
+  }
+
+  // 4. Buscar o personagem do jogador nesta campanha específica no Neon Database
   const userCharacters = await db
     .select()
     .from(characters)

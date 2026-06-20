@@ -2,6 +2,26 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.17.0] - 2026-06-20
+
+### Adicionado
+- **Dashboard do Narrador (Storyteller Mode - Fase 17):**
+  - Criação da tabela `scene_tokens` no banco de dados para gerenciar os tokens ativos na mesa.
+  - Implementação das Server Actions de cena em `sceneActions.ts`: `getSceneTokens`, `createSceneToken`, `updateTokenPosition` e `deleteSceneToken`.
+  - Controle de Rota Assimétrica em `/mesa/page.tsx` para carregar `StorytellerDashboardClient` para o Narrador (independente de possuir ficha) e `VttRoomClient` para jogadores.
+  - Implementação do Quadro Interativo 2D (`DirectorBoard.tsx`) com demarcação do "Palco" (800x400px) e área externa de "Bastidores", com arrasto suave de tokens via Pointer Events.
+  - Mecanismo de Fog of War: Jogadores só visualizam tokens do Palco (`isVisible === true`), enquanto o Narrador visualiza todos (tokens em Bastidores aparecem com 50% de opacidade).
+  - Componente de Token circular (`Token.tsx`) com bordas coloridas indicando tipo (Jogador: Dourado, NPC: Vermelho, Figurante Rápido: Azul).
+  - Popover de rolagens rápidas para Figurantes Rápidos (`quick_npc`), permitindo rolar status Físico, Social e Combate de forma Pública ou Secreta (Fome 0).
+  - Dock Exclusivo de Narrador para rolagens customizadas livres (públicas/secretas) de dados normais ou testes de despertar (Rouse Checks).
+  - Gaveta lateral direita na tela do Narrador exibindo fichas cadastradas da crônica para rápida inserção em cena e mini-formulário de criação de Figurantes Rápidos.
+  - Integração do histórico de rolagens com suporte a Rolagens Secretas (`isSecret`), ofuscando dados e pools para jogadores (exibindo placeholders "?") e mantendo visualização transparente para o Narrador.
+
+### Corrigido
+- **Otimização de Estado no Tabuleiro 2D:**
+  - Sincronização da posição dos tokens durante a renderização (React State Sync) em vez de efeitos assíncronos no `DirectorBoard` para eliminar cascading renders e avisos do linter.
+  - Remoção de variáveis não-utilizadas no componente de Token e tipagem estrita via Drizzle (`typeof characters.$inferSelect`) de jogadores no client do Narrador para remover o tipo `any` e passar no linter de desenvolvimento.
+
 ## [0.16.0] - 2026-06-20
 
 ### Adicionado

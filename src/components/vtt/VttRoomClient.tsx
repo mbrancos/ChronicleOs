@@ -5,9 +5,12 @@ import PlayerDock from "./PlayerDock";
 import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import ActionFeed, { RollItem } from "./ActionFeed";
+import DirectorBoard from "./DirectorBoard";
+import { TokenData } from "./Token";
 import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
 import { saveRoll, getRecentRolls, executeWillpowerReroll } from "@/app/actions/rolls";
 import { updateCharacterSheet } from "@/app/actions/characterActions";
+import { getSceneTokens } from "@/app/actions/sceneActions";
 import { CharacterSheetData } from "@/types/character";
 
 interface VttRoomClientProps {
@@ -26,8 +29,10 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
   const [localCharacter, setLocalCharacter] = useState(character);
   const [dicePool, setDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
   const [rollsList, setRollsList] = useState<RollItem[]>([]);
+  const [tokensList, setTokensList] = useState<TokenData[]>([]);
   const [isRerolling, setIsRerolling] = useState(false);
   const isFetching = useRef(false);
+  const isFetchingTokens = useRef(false);
 
   // Carregar rolagens recentes e atualizar estado
   const fetchRecentRolls = useCallback(async () => {
@@ -51,19 +56,41 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
     }
   }, [character.campaignId]);
 
+  // Carregar tokens de cena visíveis (isVisible === true)
+  const fetchSceneTokens = useCallback(async () => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      return;
+    }
+    if (isFetchingTokens.current) return;
+
+    try {
+      isFetchingTokens.current = true;
+      const res = await getSceneTokens(character.campaignId, false);
+      if (res.success && res.data) {
+        setTokensList(res.data as TokenData[]);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar tokens de cena para o jogador:", err);
+    } finally {
+      isFetchingTokens.current = false;
+    }
+  }, [character.campaignId]);
+
   // Configurar polling a cada 2.5 segundos
   useEffect(() => {
     // Executar polling de forma assíncrona não-bloqueante no microtask queue
     Promise.resolve().then(() => {
       fetchRecentRolls();
+      fetchSceneTokens();
     });
 
     const interval = setInterval(() => {
       fetchRecentRolls();
+      fetchSceneTokens();
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [character.campaignId, fetchRecentRolls]);
+  }, [character.campaignId, fetchRecentRolls, fetchSceneTokens]);
 
   const handleTraitClick = (trait: { id: string, label: string, value: number }) => {
     setDicePool(prev => {
@@ -197,23 +224,20 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
   return (
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary">
       
-      {/* O PALCO (z-0) - BACKGROUND ATMOSFÉRICO */}
+      {/* O TABULEIRO 2D (DirectorBoard em modo Jogador) */}
       <div 
-        className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-burgundy/15 via-bg-main to-bg-main flex flex-col items-center justify-center select-none p-4"
+        className="absolute inset-0 z-0 flex items-center justify-center select-none p-4"
         style={{ height: "calc(100vh - 5rem)" }} // Descontar a altura do dock (20 / h-20 = 5rem)
       >
-        <div className="text-center space-y-4 max-w-lg">
-          <h1 className="text-5xl sm:text-6xl font-gothic text-blood-red tracking-wider animate-pulse leading-none uppercase">
-            A Mesa da Crônica
-          </h1>
-          <div className="h-0.5 w-32 bg-gold-accent/40 mx-auto" />
-          <p className="text-[10px] sm:text-xs uppercase tracking-widest text-gold-accent font-data font-semibold">
-            Crônica ID: {character.campaignId}
-          </p>
-          <p className="text-xs sm:text-sm text-text-dim/80 font-reading italic leading-relaxed pt-2">
-            {"\"As sombras de Manaus se movem à espreita. O sangue sussurra segredos que a noite tenta apagar.\""}
-          </p>
-        </div>
+        <DirectorBoard
+          tokens={tokensList}
+          isStoryteller={false}
+          onDoubleClickToken={(charId) => {
+            if (charId === character.id) {
+              setIsSheetOpen(true);
+            }
+          }}
+        />
       </div>
 
       {/* FEED DE ROlagens MULTIPLAYER (z-30) */}

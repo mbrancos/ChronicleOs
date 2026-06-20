@@ -12,6 +12,7 @@ export interface RollItem {
   poolName: string;
   resultData: V5RollResult | RouseCheckResult;
   isRerolled: boolean;
+  isSecret: boolean;
   createdAt: Date | string;
 }
 
@@ -20,9 +21,10 @@ interface ActionFeedProps {
   localCharacterId?: string;
   onReroll?: (rollId: string, indices: number[]) => Promise<void>;
   isRerolling?: boolean;
+  isStoryteller?: boolean;
 }
 
-export default function ActionFeed({ rolls, localCharacterId, onReroll, isRerolling }: ActionFeedProps) {
+export default function ActionFeed({ rolls, localCharacterId, onReroll, isRerolling, isStoryteller = false }: ActionFeedProps) {
   const [selectedDice, setSelectedDice] = useState<{ rollId: string; indices: number[] } | null>(null);
   // Formatar hora a partir da data de criação
   const formatTime = (dateInput: Date | string) => {
@@ -52,6 +54,7 @@ export default function ActionFeed({ rolls, localCharacterId, onReroll, isReroll
             const standardResult = roll.resultData as V5RollResult;
             const rouseResult = roll.resultData as RouseCheckResult;
             const timeStr = formatTime(roll.createdAt);
+            const showSecret = roll.isSecret && !isStoryteller;
 
             return (
               <div
@@ -65,7 +68,7 @@ export default function ActionFeed({ rolls, localCharacterId, onReroll, isReroll
                 {/* Cabeçalho do Card */}
                 <div className="flex items-center justify-between text-[10px] uppercase font-data tracking-wider">
                   <span className="font-bold text-text-primary text-xs truncate max-w-[70%]">
-                    {roll.characterName}
+                    {showSecret ? "Narrador" : roll.characterName}
                   </span>
                   <span className="text-text-dim text-[9px] font-mono shrink-0">
                     {timeStr}
@@ -74,35 +77,56 @@ export default function ActionFeed({ rolls, localCharacterId, onReroll, isReroll
 
                 {/* Nome da Ação/Pool */}
                 <div className="text-xs text-text-muted font-reading italic">
-                  {roll.poolName}
+                  {showSecret ? "O Narrador realizou uma rolagem em segredo..." : roll.poolName}
                 </div>
 
                 {/* Visualizador dos Dados */}
                 <div className="py-1">
-                  <DiceVisualizer 
-                    result={roll.resultData} 
-                    isClickable={roll.characterId === localCharacterId && isStandard && !roll.isRerolled}
-                    selectedIndices={selectedDice?.rollId === roll.id ? selectedDice.indices : []}
-                    onDieClick={(dieIdx) => {
-                      setSelectedDice((prev) => {
-                        if (!prev || prev.rollId !== roll.id) {
-                          return { rollId: roll.id, indices: [dieIdx] };
-                        }
-                        if (prev.indices.includes(dieIdx)) {
-                          const newIndices = prev.indices.filter(idx => idx !== dieIdx);
-                          return newIndices.length === 0 ? null : { rollId: roll.id, indices: newIndices };
-                        }
-                        if (prev.indices.length < 3) {
-                          return { rollId: roll.id, indices: [...prev.indices, dieIdx] };
-                        }
-                        return prev;
-                      });
-                    }}
-                  />
+                  {showSecret ? (
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {isStandard ? (
+                        Array.from({ length: (standardResult.normalDice?.length || 0) + (standardResult.hungerDice?.length || 0) }).map((_, idx) => (
+                          <div
+                            key={`secret-die-${idx}`}
+                            className="w-8 h-8 rounded-md flex items-center justify-center text-sm border shadow select-none bg-black/30 border-white/5 text-text-dim/40 font-normal"
+                          >
+                            ?
+                          </div>
+                        ))
+                      ) : (
+                        <div
+                          className="w-9 h-9 rounded-md flex items-center justify-center text-base border shadow select-none bg-black/30 border-white/5 text-text-dim/40 font-normal"
+                        >
+                          ?
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <DiceVisualizer 
+                      result={roll.resultData} 
+                      isClickable={roll.characterId === localCharacterId && isStandard && !roll.isRerolled}
+                      selectedIndices={selectedDice?.rollId === roll.id ? selectedDice.indices : []}
+                      onDieClick={(dieIdx) => {
+                        setSelectedDice((prev) => {
+                          if (!prev || prev.rollId !== roll.id) {
+                            return { rollId: roll.id, indices: [dieIdx] };
+                          }
+                          if (prev.indices.includes(dieIdx)) {
+                            const newIndices = prev.indices.filter(idx => idx !== dieIdx);
+                            return newIndices.length === 0 ? null : { rollId: roll.id, indices: newIndices };
+                          }
+                          if (prev.indices.length < 3) {
+                            return { rollId: roll.id, indices: [...prev.indices, dieIdx] };
+                          }
+                          return prev;
+                        });
+                      }}
+                    />
+                  )}
                 </div>
 
                 {/* Botão de Rerrolar com Força de Vontade */}
-                {selectedDice?.rollId === roll.id && selectedDice.indices.length > 0 && (
+                {!showSecret && selectedDice?.rollId === roll.id && selectedDice.indices.length > 0 && (
                   <button
                     disabled={isRerolling}
                     onClick={async () => {
@@ -118,72 +142,74 @@ export default function ActionFeed({ rolls, localCharacterId, onReroll, isReroll
                 )}
 
                 {/* Veredito e Resultado Consolidado */}
-                <div className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t border-white/5 text-xs">
-                  {isStandard ? (
-                    <>
-                      <div className="flex items-center space-x-1 font-data font-bold">
-                        <span className="text-text-primary text-sm">
-                          {standardResult.totalSuccesses}
-                        </span>
-                        <span className="text-text-muted text-[10px] uppercase">
-                          {standardResult.totalSuccesses === 1 ? "Sucesso" : "Sucessos"}
-                        </span>
-                        {standardResult.difficulty > 0 && (
-                          <span className="text-text-dim text-[10px] font-normal">
-                            / Alvo {standardResult.difficulty}
+                {!showSecret && (
+                  <div className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t border-white/5 text-xs">
+                    {isStandard ? (
+                      <>
+                        <div className="flex items-center space-x-1 font-data font-bold">
+                          <span className="text-text-primary text-sm">
+                            {standardResult.totalSuccesses}
                           </span>
-                        )}
-                      </div>
+                          <span className="text-text-muted text-[10px] uppercase">
+                            {standardResult.totalSuccesses === 1 ? "Sucesso" : "Sucessos"}
+                          </span>
+                          {standardResult.difficulty > 0 && (
+                            <span className="text-text-dim text-[10px] font-normal">
+                              / Alvo {standardResult.difficulty}
+                            </span>
+                          )}
+                        </div>
 
-                      {/* Badges de Regras V5 */}
-                      <div className="flex flex-wrap gap-1">
-                        {roll.isRerolled && (
-                          <span className="px-1.5 py-0.5 rounded-[2px] bg-willpower-blue/30 text-white border border-willpower-blue/50 font-data font-bold text-[9px] uppercase tracking-wider">
-                            Rerrolado 🌀
-                          </span>
-                        )}
-                        {standardResult.isBestialFailure && (
-                          <span className="px-1.5 py-0.5 rounded-[2px] bg-hunger-red/20 text-hunger-red border border-hunger-red/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_8px_rgba(255,92,92,0.3)]">
-                            Falha Bestial! 💀
-                          </span>
-                        )}
-                        {standardResult.isMessianic && (
-                          <span className="px-1.5 py-0.5 rounded-[2px] bg-gold-accent/20 text-gold-accent border border-gold-accent/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_8px_rgba(255,216,77,0.3)]">
-                            Crítico Messiânico! ✨
-                          </span>
-                        )}
-                        {!standardResult.isBestialFailure && !standardResult.isMessianic && standardResult.difficulty > 0 && (
-                          <span
-                            className={`px-1.5 py-0.5 rounded-[2px] border font-data font-semibold text-[9px] uppercase tracking-wider ${
-                              standardResult.isSuccess
-                                ? "bg-green-500/10 text-green-400 border-green-500/25"
-                                : "bg-white/5 text-text-dim border-white/10"
-                            }`}
-                          >
-                            {standardResult.isSuccess ? "Sucesso" : "Falha"}
-                          </span>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="font-data font-semibold text-[10px] text-text-muted uppercase tracking-wider">
-                        Resultado:
-                      </div>
-                      <div>
-                        {rouseResult.isSuccess ? (
-                          <span className="px-1.5 py-0.5 rounded-[2px] bg-green-500/10 text-green-400 border border-green-500/25 font-data font-bold text-[9px] uppercase tracking-wider">
-                            Sucesso (Fome Mantida)
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded-[2px] bg-hunger-red/20 text-hunger-red border border-hunger-red/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_6px_rgba(255,92,92,0.2)]">
-                            Falha (Aumente Fome +1) 🩸
-                          </span>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
+                        {/* Badges de Regras V5 */}
+                        <div className="flex flex-wrap gap-1">
+                          {roll.isRerolled && (
+                            <span className="px-1.5 py-0.5 rounded-[2px] bg-willpower-blue/30 text-white border border-willpower-blue/50 font-data font-bold text-[9px] uppercase tracking-wider">
+                              Rerrolado 🌀
+                            </span>
+                          )}
+                          {standardResult.isBestialFailure && (
+                            <span className="px-1.5 py-0.5 rounded-[2px] bg-hunger-red/20 text-hunger-red border border-hunger-red/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_8px_rgba(255,92,92,0.3)]">
+                              Falha Bestial! 💀
+                            </span>
+                          )}
+                          {standardResult.isMessianic && (
+                            <span className="px-1.5 py-0.5 rounded-[2px] bg-gold-accent/20 text-gold-accent border border-gold-accent/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_8px_rgba(255,216,77,0.3)]">
+                              Crítico Messiânico! ✨
+                            </span>
+                          )}
+                          {!standardResult.isBestialFailure && !standardResult.isMessianic && standardResult.difficulty > 0 && (
+                            <span
+                              className={`px-1.5 py-0.5 rounded-[2px] border font-data font-semibold text-[9px] uppercase tracking-wider ${
+                                standardResult.isSuccess
+                                  ? "bg-green-500/10 text-green-400 border-green-500/25"
+                                  : "bg-white/5 text-text-dim border-white/10"
+                              }`}
+                            >
+                              {standardResult.isSuccess ? "Sucesso" : "Falha"}
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-data font-semibold text-[10px] text-text-muted uppercase tracking-wider">
+                          Resultado:
+                        </div>
+                        <div>
+                          {rouseResult.isSuccess ? (
+                            <span className="px-1.5 py-0.5 rounded-[2px] bg-green-500/10 text-green-400 border border-green-500/25 font-data font-bold text-[9px] uppercase tracking-wider">
+                              Sucesso (Fome Mantida)
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded-[2px] bg-hunger-red/20 text-hunger-red border border-hunger-red/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_6px_rgba(255,92,92,0.2)]">
+                              Falha (Aumente Fome +1) 🩸
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })

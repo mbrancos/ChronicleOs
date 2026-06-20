@@ -13,7 +13,8 @@ export async function saveRoll(
   characterId: string | null,
   characterName: string,
   poolName: string,
-  resultData: any
+  resultData: any,
+  isSecret: boolean = false
 ) {
   try {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -33,6 +34,7 @@ export async function saveRoll(
         characterName: characterName.trim(),
         poolName: poolName.trim(),
         resultData,
+        isSecret,
       })
       .returning({ id: rolls.id });
 
@@ -127,7 +129,7 @@ export async function executeWillpowerReroll(
         .set({ isRerolled: true })
         .where(eq(rolls.id, originalRollId));
 
-      // 5. Inserir a nova rolagem
+      // 5. Inserir a nova rolagem inheriting isSecret
       const inserted = await tx
         .insert(rolls)
         .values({
@@ -137,6 +139,7 @@ export async function executeWillpowerReroll(
           poolName: `Rerrolagem: ${originalRoll.poolName}`,
           resultData: newResultData,
           isRerolled: true,
+          isSecret: originalRoll.isSecret,
         })
         .returning({ id: rolls.id });
 
