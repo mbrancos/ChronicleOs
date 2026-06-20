@@ -2,6 +2,27 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.16.0] - 2026-06-20
+
+### Adicionado
+- **Rerrolagem de Força de Vontade (Willpower Reroll - Fase 16):**
+  - Coluna `isRerolled` na tabela `rolls` do banco de dados (Neon DB via Drizzle) para gerenciar o estado do teste original.
+  - Função lógica `rerollV5` em `BloodEngine.ts` que permite a substituição de 1 a 3 dados normais mantendo os dados de fome intactos e recalculando a rolagem total.
+  - Server Action `executeWillpowerReroll` em `rolls.ts` executando transações atômicas para atualizar o teste original e salvar a nova rolagem de rerrolagem.
+  - Interface interativa no `<DiceVisualizer>` com suporte a cliques, efeito de hover e bordas douradas ativas nos dados normais selecionados.
+  - Botão de ação premium `"Rerrolar X Dados (1 FV)"` no rodapé dos cards elegíveis do `<ActionFeed>`.
+  - Tratamento de opacidade e visual translúcido reativo nos cards de rolagem já rerrolados com inclusão de badge azul `"Rerrolado 🌀"`.
+  - Validação mecânica impeditiva no VTT bloqueando a rerrolagem caso a Força de Vontade do personagem esteja completamente danificada.
+  - Persistência imediata do dano de Força de Vontade na ficha através do disparo direto de `updateCharacterSheet` ao realizar a ação de rerrolagem.
+
+### Corrigido
+- **Sincronização e Ciclos de Renderização (React 19 / Next.js 16):**
+  - Implementação de `useCallback` e execução de polling em microtask queue (`Promise.resolve().then(...)`) no `<VttRoomClient>` para evitar cascading renders.
+  - Substituição dos ganchos de sincronia de `useEffect` em `<InlineEdit>` e `<CharacterSheetClient>` por sincronizações síncronas de propriedades diretamente na fase de renderização (React State Sync).
+  - Remoção de casts genéricos `as any` e tipagem estrita de props e parâmetros para sanar avisos e erros do compilador TypeScript e do linter ESLint.
+
+---
+
 ## [0.15.0] - 2026-06-20
 
 ### Adicionado

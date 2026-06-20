@@ -2,6 +2,81 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.16.0] - 2026-06-20
+
+### Adicionado
+- **Rerrolagem de Força de Vontade (Willpower Reroll - Fase 16):**
+  - Coluna `isRerolled` na tabela `rolls` do banco de dados (Neon DB via Drizzle) para gerenciar o estado do teste original.
+  - Função lógica `rerollV5` em `BloodEngine.ts` que permite a substituição de 1 a 3 dados normais mantendo os dados de fome intactos e recalculando a rolagem total.
+  - Server Action `executeWillpowerReroll` em `rolls.ts` executando transações atômicas para atualizar o teste original e salvar a nova rolagem de rerrolagem.
+  - Interface interativa no `<DiceVisualizer>` com suporte a cliques, efeito de hover e bordas douradas ativas nos dados normais selecionados.
+  - Botão de ação premium `"Rerrolar X Dados (1 FV)"` no rodapé dos cards elegíveis do `<ActionFeed>`.
+  - Tratamento de opacidade e visual translúcido reativo nos cards de rolagem já rerrolados com inclusão de badge azul `"Rerrolado 🌀"`.
+  - Validação mecânica impeditiva no VTT bloqueando a rerrolagem caso a Força de Vontade do personagem esteja completamente danificada.
+  - Persistência imediata do dano de Força de Vontade na ficha através do disparo direto de `updateCharacterSheet` ao realizar a ação de rerrolagem.
+
+### Corrigido
+- **Sincronização e Ciclos de Renderização (React 19 / Next.js 16):**
+  - Implementação de `useCallback` e execução de polling em microtask queue (`Promise.resolve().then(...)`) no `<VttRoomClient>` para evitar cascading renders.
+  - Substituição dos ganchos de sincronia de `useEffect` em `<InlineEdit>` e `<CharacterSheetClient>` por sincronizações síncronas de propriedades diretamente na fase de renderização (React State Sync).
+  - Remoção de casts genéricos `as any` e tipagem estrita de props e parâmetros para sanar avisos e erros do compilador TypeScript e do linter ESLint.
+
+---
+
+## [0.15.0] - 2026-06-20
+
+### Adicionado
+- **Histórico Multiplayer em Tempo Real (Feed de Ações):**
+  - Tabela `rolls` no Neon Database via Drizzle para persistência.
+  - Server Actions `saveRoll` e `getRecentRolls` para salvar e obter as rolagens.
+  - Componente `<ActionFeed>` na lateral esquerda com cards translúcidos dark-morphism e animação de entrada `slide-in` a partir da esquerda.
+  - Polling periódico de 2.5s no `<VttRoomClient>` para sincronização em tempo real entre jogadores na mesa.
+- **Visualizador Imersivo de Dados V5:**
+  - Componente `<DiceVisualizer>` com renderização estilizada: dados normais (pretos/cinzas com destaque dourado para 10, branco para sucessos 6-9) e dados de fome (vermelhos com destaque dourado pulsante para 10, vermelho alarmante para 1, normal para falhas).
+  - Suporte a Teste de Despertar (Rouse Check), exibindo 1 único dado com indicação reativa sobre alteração de Fome.
+
+### Corrigido
+- **Serialização de Server Actions:**
+  - Conversão do campo `createdAt` (instância de `Date`) para string ISO em `getRecentRolls` para evitar a falha de serialização do Next.js 16 que gerava o erro `"An unexpected response was received from the server"` no console.
+- **Proteção do Polling contra Esgotamento de Conexões (Neon DB):**
+  - Implementado lock de requisições concorrentes (`isFetching` ref) e check de visibilidade da aba (`document.visibilityState !== "visible"`) no polling do `<VttRoomClient>` para blindar o pool de conexões contra sobrecarga no Neon PostgreSQL em desenvolvimento e produção.
+
+---
+
+## [0.14.0] - 2026-06-20
+
+### Adicionado
+- **O Motor de Regras V5 (BloodEngine):**
+  - Módulo utilitário `src/lib/vtt/BloodEngine.ts` com funções `rollV5` e `rollRouseCheck`.
+  - Tratamento de parada total com floor de 1, divisão de dados normais e dados de fome, cálculo de sucessos básicos e bônus por par de 10 (+2 sucessos adicionais por par).
+  - Regra de Crítico Messiânico (par de 10 contendo dado de fome) e Falha Bestial corrigida (sucessos < dificuldade alvo e dado de fome resultando em 1).
+- **Steppers de Modificadores e Dificuldade no Dock:**
+  - Steppers `MOD [-] +0 [+]` e `DIF [-] 0 [+]` dourado no `PlayerDock.tsx` para permitir que o jogador configure a dificuldade do teste e bônus situacionais antes de disparar.
+  - Botão de Despertar `[ 🩸 Despertar ]` integrado ao dock para rolar Testes de Despertar instantaneamente.
+
+---
+
+## [0.13.0] - 2026-06-19
+
+### Adicionado
+- **Carrinho de Dados (Interface de Seleção de Pool no VTT):**
+  - Estado global `dicePool` no `VttRoomClient.tsx` com lógica de toggle e limite estrito de 2 slots (Atributo + Habilidade/Disciplina), seguindo o sistema V5.
+  - Extensão do componente `DotSlider.tsx` com as props opcionais `onLabelClick` e `isSelected` para permitir interatividade de seleção nos rótulos de atributos e habilidades.
+  - Destaque visual animado (vermelho fome + `animate-pulse-subtle`) nos labels selecionados na ficha reativa.
+  - Ícone de dado `🎲` ao lado dos títulos de disciplinas na aba Sangue, resolvendo o conflito de clique com a edição inline.
+  - Painel central dinâmico no `PlayerDock.tsx` com mini-badges das seleções (`Nome (Valor)`), botão de limpeza `✕` e botão primário **"ROLAR X DADOS"** com cálculo reativo da soma.
+  - Animação CSS customizada `pulse-subtle` no `globals.css` para micro-animações premium no carrinho.
+
+### Modificado
+- **Sincronização Reativa dos Valores da Pool:**
+  - O `VttRoomClient.tsx` agora sincroniza automaticamente os valores numéricos dos traços selecionados no carrinho quando o jogador altera níveis de atributos, habilidades ou disciplinas na ficha.
+  - Correção de loop infinito de renderização no `CharacterSheetClient.tsx` ao usar `useRef` para estabilizar o callback `onDataChange`.
+- **Melhorias de Lint e Qualidade:**
+  - Correção de `min-h-[1.25rem]` para `min-h-5` no `InlineEdit.tsx`.
+  - Correção de underscore desnecessário na classe CSS radial-gradient do `VttRoomClient.tsx`.
+
+---
+
 ## [0.12.0] - 2026-06-19
 
 ### Adicionado
