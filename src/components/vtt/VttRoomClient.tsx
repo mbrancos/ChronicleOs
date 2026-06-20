@@ -12,6 +12,7 @@ import { saveRoll, getRecentRolls, executeWillpowerReroll } from "@/app/actions/
 import { updateCharacterSheet } from "@/app/actions/characterActions";
 import { getSceneTokens } from "@/app/actions/sceneActions";
 import { CharacterSheetData } from "@/types/character";
+import Pusher from "pusher-js";
 
 interface VttRoomClientProps {
   character: {
@@ -76,20 +77,91 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
     }
   }, [character.campaignId]);
 
-  // Configurar polling a cada 2.5 segundos
+  // Configuração Geral das Escutas do Pusher (WebSocket) e Sincronizações Resilientes para Jogadores
   useEffect(() => {
-    // Executar polling de forma assíncrona não-bloqueante no microtask queue
+    // 1. Carga Inicial de Dados (envolvido em microtask para evitar cascading renders no linter)
     Promise.resolve().then(() => {
       fetchRecentRolls();
       fetchSceneTokens();
     });
 
-    const interval = setInterval(() => {
+    // 2. Conectar Cliente Pusher
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      channelAuthorization: {
+        endpoint: "/api/pusher/auth",
+        transport: "ajax",
+      },
+    });
+
+    const publicChannelName = `public-campaign-${character.campaignId}`;
+    const publicChannel = pusher.subscribe(publicChannelName);
+
+    // Handlers de atualização dos Tokens
+    const handleTokenCreated = (token: TokenData) => {
+      // Jogador comum só renderiza se estiver no Palco (isVisible === true)
+      if (!token.isVisible) return;
+      setTokensList((prev) => {
+        if (prev.some((t) => t.id === token.id)) return prev;
+        return [...prev, token];
+      });
+    };
+
+    const handleTokenUpdated = (updatedToken: TokenData | (Partial<TokenData> & { id: string })) => {
+      setTokensList((prev) => {
+        // Se o token foi ocultado pelo Narrador (levado para os Bastidores)
+        if (updatedToken.isVisible === false) {
+          return prev.filter((t) => t.id !== updatedToken.id);
+        }
+        
+        // Se o token já existia na lista do jogador, atualiza. Se não existia (estava invisível e agora ficou visível)
+        const exists = prev.some((t) => t.id === updatedToken.id);
+        if (exists) {
+          return prev.map((t) => (t.id === updatedToken.id ? { ...t, ...updatedToken } : t));
+        } else if (updatedToken.name) {
+          // Só adiciona se o payload contiver dados completos (para evitar tokens quebrados)
+          return [...prev, updatedToken as TokenData];
+        }
+        return prev;
+      });
+    };
+
+    const handleTokenDeleted = (data: { id: string }) => {
+      setTokensList((prev) => prev.filter((t) => t.id !== data.id));
+    };
+
+    const handleRoundReset = () => {
+      setTokensList((prev) => prev.map((t) => ({ ...t, hasActed: false })));
+    };
+
+    // Registrar binds no canal público do jogador
+    publicChannel.bind("token-created", handleTokenCreated);
+    publicChannel.bind("token-updated", handleTokenUpdated);
+    publicChannel.bind("token-deleted", handleTokenDeleted);
+    publicChannel.bind("round-reset", handleRoundReset);
+
+    // 3. Lógica de Resiliência: fetch pontual em reconexão ou foco ativo da aba do navegador
+    const handleSync = () => {
       fetchRecentRolls();
       fetchSceneTokens();
-    }, 2500);
+    };
 
-    return () => clearInterval(interval);
+    pusher.connection.bind("connected", handleSync);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleSync();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      publicChannel.unbind_all();
+      pusher.unsubscribe(publicChannelName);
+      pusher.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [character.campaignId, fetchRecentRolls, fetchSceneTokens]);
 
   const handleTraitClick = (trait: { id: string, label: string, value: number }) => {
@@ -243,6 +315,7 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
       {/* FEED DE ROlagens MULTIPLAYER (z-30) */}
       <ActionFeed 
         rolls={rollsList} 
+        campaignId={character.campaignId}
         localCharacterId={character.id}
         onReroll={handleWillpowerReroll}
         isRerolling={isRerolling}

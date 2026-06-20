@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import DiceVisualizer from "./DiceVisualizer";
+import React, { useState, useEffect, useRef } from "react";
+import Pusher, { Channel } from "pusher-js";
+import RollLogItem from "./RollLogItem";
 import { V5RollResult, RouseCheckResult } from "@/lib/vtt/BloodEngine";
 
 export interface RollItem {
@@ -11,6 +12,7 @@ export interface RollItem {
   characterName: string;
   poolName: string;
   resultData: V5RollResult | RouseCheckResult;
+  hungerDice: number;
   isRerolled: boolean;
   isSecret: boolean;
   createdAt: Date | string;
@@ -18,201 +20,151 @@ export interface RollItem {
 
 interface ActionFeedProps {
   rolls: RollItem[];
+  campaignId: string;
   localCharacterId?: string;
   onReroll?: (rollId: string, indices: number[]) => Promise<void>;
   isRerolling?: boolean;
   isStoryteller?: boolean;
 }
 
-export default function ActionFeed({ rolls, localCharacterId, onReroll, isRerolling, isStoryteller = false }: ActionFeedProps) {
+export default function ActionFeed({
+  rolls,
+  campaignId,
+  localCharacterId,
+  onReroll,
+  isRerolling = false,
+  isStoryteller = false,
+}: ActionFeedProps) {
+  const [localRolls, setLocalRolls] = useState<RollItem[]>(rolls);
   const [selectedDice, setSelectedDice] = useState<{ rollId: string; indices: number[] } | null>(null);
-  // Formatar hora a partir da data de criação
-  const formatTime = (dateInput: Date | string) => {
-    try {
-      const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-      return date.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-    } catch {
-      return "";
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Sincronizar rolagens iniciais do servidor
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setLocalRolls(rolls);
+    });
+  }, [rolls]);
+
+  // Auto-scroll para baixo a cada nova rolagem (com timeout curto para esperar atualização do DOM)
+  useEffect(() => {
+    if (scrollRef.current) {
+      const container = scrollRef.current;
+      const timer = setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 50);
+      return () => clearTimeout(timer);
     }
+  }, [localRolls]);
+
+  // Conexão WebSocket do Pusher
+  useEffect(() => {
+    if (!campaignId) return;
+
+    // Instanciar o Pusher Client
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      channelAuthorization: {
+        endpoint: "/api/pusher/auth",
+        transport: "ajax",
+      },
+    });
+
+    const handleNewRoll = (newRoll: RollItem) => {
+      setLocalRolls((prev) => {
+        if (prev.some((r) => r.id === newRoll.id)) return prev;
+        return [...prev, newRoll];
+      });
+    };
+
+    const handleUpdateRoll = (data: { id: string; isRerolled: boolean }) => {
+      setLocalRolls((prev) =>
+        prev.map((r) => (r.id === data.id ? { ...r, isRerolled: data.isRerolled } : r))
+      );
+    };
+
+    // 1. Assinar canal público
+    const publicChannelName = `public-campaign-${campaignId}`;
+    const publicChannel = pusher.subscribe(publicChannelName);
+    publicChannel.bind("new-roll", handleNewRoll);
+    publicChannel.bind("update-roll", handleUpdateRoll);
+
+    // 2. Se for Narrador, assinar canal privado
+    let privateChannel: Channel | null = null;
+    if (isStoryteller) {
+      const privateChannelName = `private-gm-${campaignId}`;
+      privateChannel = pusher.subscribe(privateChannelName);
+      privateChannel.bind("new-roll", handleNewRoll);
+      privateChannel.bind("update-roll", handleUpdateRoll);
+    }
+
+    return () => {
+      publicChannel.unbind_all();
+      pusher.unsubscribe(publicChannelName);
+      if (privateChannel) {
+        privateChannel.unbind_all();
+        pusher.unsubscribe(privateChannel.name);
+      }
+      pusher.disconnect();
+    };
+  }, [campaignId, isStoryteller]);
+
+  // Selecionar dados normais para Rerrolagem
+  const handleSelectDie = (rollId: string, originalIdx: number) => {
+    setSelectedDice((prev) => {
+      if (!prev || prev.rollId !== rollId) {
+        return { rollId, indices: [originalIdx] };
+      }
+      if (prev.indices.includes(originalIdx)) {
+        const newIndices = prev.indices.filter((idx) => idx !== originalIdx);
+        return newIndices.length === 0 ? null : { rollId, indices: newIndices };
+      }
+      if (prev.indices.length < 3) {
+        return { rollId, indices: [...prev.indices, originalIdx] };
+      }
+      return prev;
+    });
   };
 
   return (
-    <div className="absolute left-4 top-4 bottom-24 w-80 z-30 pointer-events-none flex flex-col justify-end overflow-hidden">
-      {/* Container de rolagem interna. pointer-events-auto permite scroll e interações */}
-      <div className="pointer-events-auto overflow-y-auto flex flex-col-reverse justify-end scrollbar-none pr-2 pb-2 h-full max-h-full space-y-3 space-y-reverse">
-        {rolls.length === 0 ? (
-          <div className="text-center py-4 bg-bg-card-dark/40 backdrop-blur-xs border border-white/5 rounded-sm p-4 text-[10px] uppercase tracking-widest text-text-dim/80 font-data select-none animate-slide-in">
-            Nenhuma rolagem nesta mesa
+    <div className="absolute left-4 top-16 bottom-24 w-80 z-30 pointer-events-none flex flex-col justify-end overflow-hidden">
+      {/* Container de scroll do histórico estilo chat */}
+      <div
+        ref={scrollRef}
+        className="pointer-events-auto overflow-y-auto flex flex-col scrollbar-none pr-1.5 pb-2 h-full max-h-full space-y-2.5"
+      >
+        {localRolls.length === 0 ? (
+          <div className="text-center py-4 bg-bg-card-dark/40 backdrop-blur-xs border border-white/5 rounded-sm p-4 text-[9px] uppercase tracking-widest text-text-dim/80 font-data select-none">
+            Nenhum histórico nesta mesa
           </div>
         ) : (
-          rolls.map((roll) => {
-            const isStandard = roll.resultData.type === "standard";
-            const standardResult = roll.resultData as V5RollResult;
-            const rouseResult = roll.resultData as RouseCheckResult;
-            const timeStr = formatTime(roll.createdAt);
-            const showSecret = roll.isSecret && !isStoryteller;
-
-            return (
-              <div
-                key={roll.id}
-                className={`backdrop-blur-md border rounded-sm shadow-xl p-3 flex flex-col space-y-2 relative transition-all duration-300 animate-slide-in select-text ${
-                  roll.isRerolled 
-                    ? "bg-bg-card-dark/50 border-white/5 opacity-70" 
-                    : "bg-bg-card-dark/85 border-white/10 hover:border-white/20"
-                }`}
-              >
-                {/* Cabeçalho do Card */}
-                <div className="flex items-center justify-between text-[10px] uppercase font-data tracking-wider">
-                  <span className="font-bold text-text-primary text-xs truncate max-w-[70%]">
-                    {showSecret ? "Narrador" : roll.characterName}
-                  </span>
-                  <span className="text-text-dim text-[9px] font-mono shrink-0">
-                    {timeStr}
-                  </span>
-                </div>
-
-                {/* Nome da Ação/Pool */}
-                <div className="text-xs text-text-muted font-reading italic">
-                  {showSecret ? "O Narrador realizou uma rolagem em segredo..." : roll.poolName}
-                </div>
-
-                {/* Visualizador dos Dados */}
-                <div className="py-1">
-                  {showSecret ? (
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {isStandard ? (
-                        Array.from({ length: (standardResult.normalDice?.length || 0) + (standardResult.hungerDice?.length || 0) }).map((_, idx) => (
-                          <div
-                            key={`secret-die-${idx}`}
-                            className="w-8 h-8 rounded-md flex items-center justify-center text-sm border shadow select-none bg-black/30 border-white/5 text-text-dim/40 font-normal"
-                          >
-                            ?
-                          </div>
-                        ))
-                      ) : (
-                        <div
-                          className="w-9 h-9 rounded-md flex items-center justify-center text-base border shadow select-none bg-black/30 border-white/5 text-text-dim/40 font-normal"
-                        >
-                          ?
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <DiceVisualizer 
-                      result={roll.resultData} 
-                      isClickable={roll.characterId === localCharacterId && isStandard && !roll.isRerolled}
-                      selectedIndices={selectedDice?.rollId === roll.id ? selectedDice.indices : []}
-                      onDieClick={(dieIdx) => {
-                        setSelectedDice((prev) => {
-                          if (!prev || prev.rollId !== roll.id) {
-                            return { rollId: roll.id, indices: [dieIdx] };
-                          }
-                          if (prev.indices.includes(dieIdx)) {
-                            const newIndices = prev.indices.filter(idx => idx !== dieIdx);
-                            return newIndices.length === 0 ? null : { rollId: roll.id, indices: newIndices };
-                          }
-                          if (prev.indices.length < 3) {
-                            return { rollId: roll.id, indices: [...prev.indices, dieIdx] };
-                          }
-                          return prev;
-                        });
-                      }}
-                    />
-                  )}
-                </div>
-
-                {/* Botão de Rerrolar com Força de Vontade */}
-                {!showSecret && selectedDice?.rollId === roll.id && selectedDice.indices.length > 0 && (
-                  <button
-                    disabled={isRerolling}
-                    onClick={async () => {
-                      if (onReroll) {
-                        await onReroll(roll.id, selectedDice.indices);
-                        setSelectedDice(null);
-                      }
-                    }}
-                    className="w-full mt-2 py-1.5 px-3 bg-linear-to-r from-gold-accent to-amber-500 hover:from-amber-400 hover:to-gold-accent disabled:from-gray-700 disabled:to-gray-800 disabled:text-text-dim text-black font-data font-bold text-xs uppercase tracking-wider rounded-sm transition-all duration-300 shadow-md hover:shadow-gold-accent/20 cursor-pointer text-center select-none"
-                  >
-                    {isRerolling ? "Rerrolando..." : `Rerrolar ${selectedDice.indices.length} ${selectedDice.indices.length === 1 ? "Dado" : "Dados"} (1 FV)`}
-                  </button>
-                )}
-
-                {/* Veredito e Resultado Consolidado */}
-                {!showSecret && (
-                  <div className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t border-white/5 text-xs">
-                    {isStandard ? (
-                      <>
-                        <div className="flex items-center space-x-1 font-data font-bold">
-                          <span className="text-text-primary text-sm">
-                            {standardResult.totalSuccesses}
-                          </span>
-                          <span className="text-text-muted text-[10px] uppercase">
-                            {standardResult.totalSuccesses === 1 ? "Sucesso" : "Sucessos"}
-                          </span>
-                          {standardResult.difficulty > 0 && (
-                            <span className="text-text-dim text-[10px] font-normal">
-                              / Alvo {standardResult.difficulty}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Badges de Regras V5 */}
-                        <div className="flex flex-wrap gap-1">
-                          {roll.isRerolled && (
-                            <span className="px-1.5 py-0.5 rounded-[2px] bg-willpower-blue/30 text-white border border-willpower-blue/50 font-data font-bold text-[9px] uppercase tracking-wider">
-                              Rerrolado 🌀
-                            </span>
-                          )}
-                          {standardResult.isBestialFailure && (
-                            <span className="px-1.5 py-0.5 rounded-[2px] bg-hunger-red/20 text-hunger-red border border-hunger-red/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_8px_rgba(255,92,92,0.3)]">
-                              Falha Bestial! 💀
-                            </span>
-                          )}
-                          {standardResult.isMessianic && (
-                            <span className="px-1.5 py-0.5 rounded-[2px] bg-gold-accent/20 text-gold-accent border border-gold-accent/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_8px_rgba(255,216,77,0.3)]">
-                              Crítico Messiânico! ✨
-                            </span>
-                          )}
-                          {!standardResult.isBestialFailure && !standardResult.isMessianic && standardResult.difficulty > 0 && (
-                            <span
-                              className={`px-1.5 py-0.5 rounded-[2px] border font-data font-semibold text-[9px] uppercase tracking-wider ${
-                                standardResult.isSuccess
-                                  ? "bg-green-500/10 text-green-400 border-green-500/25"
-                                  : "bg-white/5 text-text-dim border-white/10"
-                              }`}
-                            >
-                              {standardResult.isSuccess ? "Sucesso" : "Falha"}
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="font-data font-semibold text-[10px] text-text-muted uppercase tracking-wider">
-                          Resultado:
-                        </div>
-                        <div>
-                          {rouseResult.isSuccess ? (
-                            <span className="px-1.5 py-0.5 rounded-[2px] bg-green-500/10 text-green-400 border border-green-500/25 font-data font-bold text-[9px] uppercase tracking-wider">
-                              Sucesso (Fome Mantida)
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 rounded-[2px] bg-hunger-red/20 text-hunger-red border border-hunger-red/30 font-data font-bold text-[9px] uppercase tracking-wider animate-pulse shadow-[0_0_6px_rgba(255,92,92,0.2)]">
-                              Falha (Aumente Fome +1) 🩸
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })
+          localRolls.map((roll) => (
+            <div key={roll.id} className="flex flex-col space-y-1">
+              <RollLogItem
+                roll={roll}
+                localCharacterId={localCharacterId}
+                isStoryteller={isStoryteller}
+                selectedDiceIndices={selectedDice?.rollId === roll.id ? selectedDice.indices : []}
+                onSelectDie={handleSelectDie}
+              />
+              
+              {/* Botão de Rerrolagem de Força de Vontade se houver dados selecionados */}
+              {selectedDice?.rollId === roll.id && selectedDice.indices.length > 0 && (
+                <button
+                  disabled={isRerolling}
+                  onClick={async () => {
+                    if (onReroll) {
+                      await onReroll(roll.id, selectedDice.indices);
+                      setSelectedDice(null);
+                    }
+                  }}
+                  className="w-full py-1 bg-linear-to-r from-gold-accent to-amber-500 hover:from-amber-400 hover:to-gold-accent disabled:from-gray-700 disabled:to-gray-800 disabled:text-text-dim text-black font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all duration-300 shadow-md cursor-pointer select-none"
+                >
+                  {isRerolling ? "Rerrolando..." : `Rerrolar ${selectedDice.indices.length} ${selectedDice.indices.length === 1 ? "Dado" : "Dados"} (1 FV)`}
+                </button>
+              )}
+            </div>
+          ))
         )}
       </div>
     </div>

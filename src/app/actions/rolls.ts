@@ -4,9 +4,10 @@ import { db } from "@/db";
 import { rolls } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { rerollV5 } from "@/lib/vtt/BloodEngine";
+import { pusherServer } from "@/lib/pusher";
 
 /**
- * Persiste uma nova rolagem (padrão ou teste de despertar) no banco de dados.
+ * Persiste uma nova rolagem (padrão ou teste de despertar) no banco de dados e notifica via WebSocket.
  */
 export async function saveRoll(
   campaignId: string,
@@ -26,6 +27,12 @@ export async function saveRoll(
       return { success: false, error: "ID de personagem inválido (não é um UUID válido)" };
     }
 
+    // Calcular dados de fome a partir do resultado
+    let hungerCount = 0;
+    if (resultData && resultData.type === "standard" && Array.isArray(resultData.hungerDice)) {
+      hungerCount = resultData.hungerDice.length;
+    }
+
     const inserted = await db
       .insert(rolls)
       .values({
@@ -34,11 +41,63 @@ export async function saveRoll(
         characterName: characterName.trim(),
         poolName: poolName.trim(),
         resultData,
+        hungerDice: hungerCount,
         isSecret,
       })
       .returning({ id: rolls.id });
 
-    return { success: true, id: inserted[0].id };
+    const insertedId = inserted[0].id;
+    const createdAtStr = new Date().toISOString();
+
+    const serializedRoll = {
+      id: insertedId,
+      campaignId,
+      characterId,
+      characterName: characterName.trim(),
+      poolName: poolName.trim(),
+      resultData,
+      hungerDice: hungerCount,
+      isRerolled: false,
+      isSecret,
+      createdAt: createdAtStr
+    };
+
+    // Disparar WebSocket no Pusher
+    try {
+      if (isSecret) {
+        // Enviar completo apenas para o Narrador (canal privado)
+        await pusherServer.trigger(`private-gm-${campaignId}`, "new-roll", serializedRoll);
+        
+        // Enviar fantasma mascarado para os jogadores no canal público
+        const maskedResult = resultData.type === "standard" 
+          ? {
+              type: "standard",
+              normalDice: Array(resultData.normalDice?.length || 0).fill(null),
+              hungerDice: Array(resultData.hungerDice?.length || 0).fill(null),
+              totalSuccesses: 0,
+              isSuccess: false
+            }
+          : {
+              type: "rouse",
+              isSuccess: false
+            };
+
+        await pusherServer.trigger(`public-campaign-${campaignId}`, "new-roll", {
+          ...serializedRoll,
+          characterId: null,
+          characterName: "Narrador",
+          poolName: "O Narrador realizou uma rolagem em segredo...",
+          resultData: maskedResult,
+        });
+      } else {
+        // Enviar completo no canal público
+        await pusherServer.trigger(`public-campaign-${campaignId}`, "new-roll", serializedRoll);
+      }
+    } catch (pushErr) {
+      console.error("Erro ao disparar Pusher na rolagem:", pushErr);
+    }
+
+    return { success: true, id: insertedId };
   } catch (error: any) {
     console.error("Erro ao salvar rolagem:", error);
     return { success: false, error: error?.message || "Falha ao gravar rolagem no banco" };
@@ -77,7 +136,7 @@ export async function getRecentRolls(campaignId: string) {
 }
 
 /**
- * Executa a rerrolagem de Força de Vontade (Willpower Reroll) para um teste padrão.
+ * Executa a rerrolagem de Força de Vontade (Willpower Reroll) para um teste padrão e notifica via WebSocket.
  */
 export async function executeWillpowerReroll(
   originalRollId: string,
@@ -124,6 +183,7 @@ export async function executeWillpowerReroll(
 
       // 3. Executar o cálculo lógico da rerrolagem
       const newResultData = rerollV5(resultData, diceIndices);
+      const newHungerCount = newResultData.hungerDice ? newResultData.hungerDice.length : 0;
 
       // 4. Marcar a original como já rerrolada
       await tx
@@ -140,15 +200,74 @@ export async function executeWillpowerReroll(
           characterName: originalRoll.characterName,
           poolName: `Rerrolagem: ${originalRoll.poolName}`,
           resultData: newResultData,
+          hungerDice: newHungerCount,
           isRerolled: true,
           isSecret: originalRoll.isSecret,
         })
         .returning({ id: rolls.id });
 
-      return inserted[0].id;
+      return {
+        newRollId: inserted[0].id,
+        campaignId: originalRoll.campaignId,
+        isSecret: originalRoll.isSecret,
+        originalName: originalRoll.characterName,
+        originalPoolName: originalRoll.poolName,
+        newResultData,
+        newHungerCount
+      };
     });
 
-    return { success: true, id: transactionResult };
+    // Disparar WebSocket no Pusher
+    try {
+      const channelPrefix = transactionResult.isSecret ? "private-gm" : "public-campaign";
+      const campaignId = transactionResult.campaignId;
+
+      // 1. Notificar alteração de isRerolled na rolagem original
+      await pusherServer.trigger(`${channelPrefix}-${campaignId}`, "update-roll", {
+        id: originalRollId,
+        isRerolled: true
+      });
+
+      // 2. Notificar a nova rolagem de rerrolagem
+      const serializedReroll = {
+        id: transactionResult.newRollId,
+        campaignId,
+        characterId,
+        characterName: transactionResult.originalName,
+        poolName: `Rerrolagem: ${transactionResult.originalName}`,
+        resultData: transactionResult.newResultData,
+        hungerDice: transactionResult.newHungerCount,
+        isRerolled: true,
+        isSecret: transactionResult.isSecret,
+        createdAt: new Date().toISOString()
+      };
+
+      if (transactionResult.isSecret) {
+        await pusherServer.trigger(`private-gm-${campaignId}`, "new-roll", serializedReroll);
+        
+        // Enviar fantasma mascarado para os jogadores
+        const maskedResult = {
+          type: "standard",
+          normalDice: Array(transactionResult.newResultData.normalDice?.length || 0).fill(null),
+          hungerDice: Array(transactionResult.newResultData.hungerDice?.length || 0).fill(null),
+          totalSuccesses: 0,
+          isSuccess: false
+        };
+        await pusherServer.trigger(`public-campaign-${campaignId}`, "new-roll", {
+          ...serializedReroll,
+          characterId: null,
+          characterName: "Narrador",
+          poolName: "O Narrador realizou uma rolagem em segredo...",
+          resultData: maskedResult
+        });
+      } else {
+        await pusherServer.trigger(`public-campaign-${campaignId}`, "new-roll", serializedReroll);
+      }
+    } catch (pushErr) {
+      console.error("Erro ao disparar Pusher na rerrolagem:", pushErr);
+    }
+
+    return { success: true, id: transactionResult.newRollId };
   } catch (error: any) {
     console.error("Erro em executeWillpowerReroll:", error);
     return { success: false, error: error?.message || "Falha ao executar rerrolagem no banco" };

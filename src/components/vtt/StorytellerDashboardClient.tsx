@@ -13,6 +13,7 @@ import { updateCharacterSheet } from "@/app/actions/characterActions";
 import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
 import { characters } from "@/db/schema";
 import { CharacterSheetData } from "@/types/character";
+import Pusher from "pusher-js";
 
 type CampaignCharacter = typeof characters.$inferSelect;
 
@@ -115,24 +116,87 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     }
   }, [campaign.id]);
 
-  // Configuração Geral dos Pollings
+  // Configuração Geral das Escutas do Pusher (WebSocket) e Sincronizações Resilientes
   useEffect(() => {
-    // Carga inicial assíncrona
+    // 1. Carga Inicial de Dados (envolvido em microtask para evitar cascading renders no linter)
     Promise.resolve().then(() => {
       fetchRecentRolls();
       fetchSceneTokens();
       fetchCampaignCharacters();
     });
 
-    const rollsInterval = setInterval(fetchRecentRolls, 2500);
-    const tokensInterval = setInterval(fetchSceneTokens, 2500);
-    // Personagens podem ter polling mais lento para economizar recursos (ex: a cada 8s)
-    const charsInterval = setInterval(fetchCampaignCharacters, 8000);
+    // 2. Conectar Cliente Pusher
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      channelAuthorization: {
+        endpoint: "/api/pusher/auth",
+        transport: "ajax",
+      },
+    });
+
+    const publicChannelName = `public-campaign-${campaign.id}`;
+    const privateChannelName = `private-gm-${campaign.id}`;
+
+    const publicChannel = pusher.subscribe(publicChannelName);
+    const privateChannel = pusher.subscribe(privateChannelName);
+
+    // Handlers de atualização dos Tokens
+    const handleTokenCreated = (token: TokenData) => {
+      setTokensList((prev) => {
+        if (prev.some((t) => t.id === token.id)) return prev;
+        return [...prev, token];
+      });
+    };
+
+    const handleTokenUpdated = (updatedToken: TokenData | (Partial<TokenData> & { id: string })) => {
+      setTokensList((prev) =>
+        prev.map((t) => (t.id === updatedToken.id ? { ...t, ...updatedToken } : t))
+      );
+    };
+
+    const handleTokenDeleted = (data: { id: string }) => {
+      setTokensList((prev) => prev.filter((t) => t.id !== data.id));
+    };
+
+    const handleRoundReset = () => {
+      setTokensList((prev) => prev.map((t) => ({ ...t, hasActed: false })));
+    };
+
+    // Registrar binds em ambos os canais (Público e Privado do Narrador)
+    publicChannel.bind("token-created", handleTokenCreated);
+    publicChannel.bind("token-updated", handleTokenUpdated);
+    publicChannel.bind("token-deleted", handleTokenDeleted);
+    publicChannel.bind("round-reset", handleRoundReset);
+
+    privateChannel.bind("token-created", handleTokenCreated);
+    privateChannel.bind("token-updated", handleTokenUpdated);
+    privateChannel.bind("token-deleted", handleTokenDeleted);
+    privateChannel.bind("round-reset", handleRoundReset);
+
+    // 3. Lógica de Resiliência: fetch pontual em reconexão ou foco ativo da aba do navegador
+    const handleSync = () => {
+      fetchRecentRolls();
+      fetchSceneTokens();
+      fetchCampaignCharacters();
+    };
+
+    pusher.connection.bind("connected", handleSync);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleSync();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      clearInterval(rollsInterval);
-      clearInterval(tokensInterval);
-      clearInterval(charsInterval);
+      publicChannel.unbind_all();
+      privateChannel.unbind_all();
+      pusher.unsubscribe(publicChannelName);
+      pusher.unsubscribe(privateChannelName);
+      pusher.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [campaign.id, fetchRecentRolls, fetchSceneTokens, fetchCampaignCharacters]);
 
@@ -474,7 +538,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       </div>
 
       {/* 2. FEED DE ROlagens MULTIPLAYER (flutua na esquerda) */}
-      <ActionFeed rolls={rollsList} isStoryteller={true} />
+      <ActionFeed rolls={rollsList} campaignId={campaign.id} isStoryteller={true} />
 
       {/* 3. DOCK DO NARRADOR (inferior central) */}
       <div className="absolute bottom-4 left-80 right-88 flex justify-center z-40 pointer-events-none">

@@ -3,6 +3,7 @@
 import { db } from "@/db";
 import { sceneTokens } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { pusherServer } from "@/lib/pusher";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -104,7 +105,19 @@ export async function createSceneToken(
         isVisible,
         quickStats: quickStats || null
       })
-      .returning({ id: sceneTokens.id });
+      .returning();
+
+    if (inserted.length > 0) {
+      const token = inserted[0];
+      try {
+        await pusherServer.trigger(`private-gm-${campaignId}`, "token-created", token);
+        if (isVisible) {
+          await pusherServer.trigger(`public-campaign-${campaignId}`, "token-created", token);
+        }
+      } catch (pushErr) {
+        console.error("Erro no Pusher em createSceneToken:", pushErr);
+      }
+    }
 
     return { success: true, id: inserted[0].id };
   } catch (error) {
@@ -127,10 +140,29 @@ export async function updateTokenPosition(
       return { success: false, error: "ID de token inválido" };
     }
 
-    await db
+    const updated = await db
       .update(sceneTokens)
       .set({ x, y, isVisible })
-      .where(eq(sceneTokens.id, tokenId));
+      .where(eq(sceneTokens.id, tokenId))
+      .returning();
+
+    if (updated.length > 0) {
+      const token = updated[0];
+      const campaignId = token.campaignId;
+      try {
+        await pusherServer.trigger(`private-gm-${campaignId}`, "token-updated", token);
+        if (isVisible) {
+          await pusherServer.trigger(`public-campaign-${campaignId}`, "token-updated", token);
+        } else {
+          await pusherServer.trigger(`public-campaign-${campaignId}`, "token-updated", {
+            id: token.id,
+            isVisible: false
+          });
+        }
+      } catch (pushErr) {
+        console.error("Erro no Pusher em updateTokenPosition:", pushErr);
+      }
+    }
 
     return { success: true };
   } catch (error) {
@@ -148,7 +180,23 @@ export async function deleteSceneToken(tokenId: string) {
       return { success: false, error: "ID de token inválido" };
     }
 
-    await db.delete(sceneTokens).where(eq(sceneTokens.id, tokenId));
+    const deleted = await db
+      .delete(sceneTokens)
+      .where(eq(sceneTokens.id, tokenId))
+      .returning();
+
+    if (deleted.length > 0) {
+      const token = deleted[0];
+      const campaignId = token.campaignId;
+      try {
+        await pusherServer.trigger(`private-gm-${campaignId}`, "token-deleted", { id: tokenId });
+        if (token.isVisible) {
+          await pusherServer.trigger(`public-campaign-${campaignId}`, "token-deleted", { id: tokenId });
+        }
+      } catch (pushErr) {
+        console.error("Erro no Pusher em deleteSceneToken:", pushErr);
+      }
+    }
 
     return { success: true };
   } catch (error) {
@@ -166,10 +214,24 @@ export async function toggleTokenAction(tokenId: string, hasActed: boolean) {
       return { success: false, error: "ID de token inválido" };
     }
 
-    await db
+    const updated = await db
       .update(sceneTokens)
       .set({ hasActed })
-      .where(eq(sceneTokens.id, tokenId));
+      .where(eq(sceneTokens.id, tokenId))
+      .returning();
+
+    if (updated.length > 0) {
+      const token = updated[0];
+      const campaignId = token.campaignId;
+      try {
+        await pusherServer.trigger(`private-gm-${campaignId}`, "token-updated", token);
+        if (token.isVisible) {
+          await pusherServer.trigger(`public-campaign-${campaignId}`, "token-updated", token);
+        }
+      } catch (pushErr) {
+        console.error("Erro no Pusher em toggleTokenAction:", pushErr);
+      }
+    }
 
     return { success: true };
   } catch (error) {
@@ -191,6 +253,13 @@ export async function resetRound(campaignId: string) {
       .update(sceneTokens)
       .set({ hasActed: false })
       .where(eq(sceneTokens.campaignId, campaignId));
+
+    try {
+      await pusherServer.trigger(`private-gm-${campaignId}`, "round-reset", {});
+      await pusherServer.trigger(`public-campaign-${campaignId}`, "round-reset", {});
+    } catch (pushErr) {
+      console.error("Erro no Pusher em resetRound:", pushErr);
+    }
 
     return { success: true };
   } catch (error) {
@@ -232,10 +301,24 @@ export async function updateTokenQuickHealth(
       health: healthData
     };
 
-    await db
+    const updated = await db
       .update(sceneTokens)
       .set({ quickStats: updatedStats })
-      .where(eq(sceneTokens.id, tokenId));
+      .where(eq(sceneTokens.id, tokenId))
+      .returning();
+
+    if (updated.length > 0) {
+      const token = updated[0];
+      const campaignId = token.campaignId;
+      try {
+        await pusherServer.trigger(`private-gm-${campaignId}`, "token-updated", token);
+        if (token.isVisible) {
+          await pusherServer.trigger(`public-campaign-${campaignId}`, "token-updated", token);
+        }
+      } catch (pushErr) {
+        console.error("Erro no Pusher em updateTokenQuickHealth:", pushErr);
+      }
+    }
 
     return { success: true };
   } catch (error) {

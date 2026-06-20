@@ -37,6 +37,7 @@ export const rolls = pgTable("rolls", {
   characterName: text("character_name").notNull(),
   poolName: text("pool_name").notNull(),
   resultData: jsonb("result_data").$type<unknown>().notNull(), // Estrutura V5RollResult ou RouseCheckResult
+  hungerDice: integer("hunger_dice").default(0).notNull(),
   isRerolled: boolean("is_rerolled").default(false).notNull(),
   isSecret: boolean("is_secret").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
