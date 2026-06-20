@@ -5,6 +5,9 @@ import { db } from "@/db";
 import { campaigns } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+// Garante que a rota não seja pré-renderizada em build time (depende de env vars em runtime)
+export const dynamic = "force-dynamic";
+
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: Request) {
