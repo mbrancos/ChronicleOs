@@ -11,6 +11,7 @@ export interface TokenData {
   x: number;
   y: number;
   isVisible: boolean;
+  hasActed: boolean;
   quickStats?: { physical: number; social: number; health: number } | null;
 }
 
@@ -21,6 +22,7 @@ interface TokenProps {
   onDoubleClick?: (characterId: string) => void;
   onQuickRoll?: (tokenId: string, name: string, statName: string, value: number, isSecret: boolean) => void;
   onDelete?: (tokenId: string) => void;
+  onToggleActed?: (tokenId: string, hasActed: boolean) => void;
 }
 
 export default function Token({
@@ -30,6 +32,7 @@ export default function Token({
   onDoubleClick,
   onQuickRoll,
   onDelete,
+  onToggleActed,
 }: TokenProps) {
   const [showPopover, setShowPopover] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -101,8 +104,15 @@ export default function Token({
     shadowColor = "rgba(14,165,233,0.4)";
   }
 
-  // Estilo de opacidade para bastidores se for Narrador
-  const opacityStyle = isStoryteller && !token.isVisible ? "opacity-50" : "";
+  // Estilo de opacidade inteligente e escala de cinza
+  let opacityClass = "";
+  if (!token.isVisible) {
+    opacityClass = "opacity-50"; // Bastidores (legibilidade Narrador)
+  } else if (token.hasActed) {
+    opacityClass = "opacity-70"; // Agiu no Palco
+  }
+
+  const grayscaleClass = token.hasActed ? "grayscale-[0.8]" : "";
 
   return (
     <div
@@ -113,8 +123,26 @@ export default function Token({
         transform: "translate(-50%, -50%)",
         transition: isStoryteller ? "none" : "all 2.5s ease",
       }}
-      className={`z-30 select-none flex flex-col items-center group ${opacityStyle}`}
+      className={`z-30 select-none flex flex-col items-center group transition-all duration-300 ${opacityClass} ${grayscaleClass}`}
     >
+      {/* Botão de Check para o Narrador (Alternar Ação Concluída) */}
+      {isStoryteller && onToggleActed && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleActed(token.id, !token.hasActed);
+          }}
+          className={`absolute -top-2 -left-2 w-5 h-5 border border-white/20 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-200 cursor-pointer shadow-md z-40 focus:outline-none ${
+            token.hasActed 
+              ? "bg-green-600 hover:bg-green-500 text-white" 
+              : "bg-black/60 hover:bg-black/80 text-white/50 hover:text-white"
+          }`}
+          title={token.hasActed ? "Marcar como Ativo" : "Marcar como Concluído"}
+        >
+          ✓
+        </button>
+      )}
+
       {/* Botão de Deletar para o Narrador (aparece no hover) */}
       {isStoryteller && onDelete && (
         <button

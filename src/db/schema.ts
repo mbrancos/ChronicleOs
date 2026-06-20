@@ -54,5 +54,6 @@ export const sceneTokens = pgTable("scene_tokens", {
   x: integer("x").default(100).notNull(),
   y: integer("y").default(100).notNull(),
   isVisible: boolean("is_visible").default(false).notNull(), // true se estiver dentro do "Palco"
+  hasActed: boolean("has_acted").default(false).notNull(),
   quickStats: jsonb("quick_stats").$type<{ physical: number; social: number; health: number }>() // Nulo se type !== "quick_npc"
 });

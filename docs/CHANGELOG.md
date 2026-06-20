@@ -2,6 +2,19 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.18.0] - 2026-06-20
+
+### Adicionado
+- **Rastreamento Simples de Turnos (Combate Narrativo - Fase 18):**
+  - Coluna `hasActed` (boolean, default false) na tabela `scene_tokens` no Neon Database via Drizzle.
+  - Server Action `toggleTokenAction(tokenId, hasActed)` para marcar/desmarcar ações de forma persistente no banco de dados.
+  - Server Action `resetRound(campaignId)` para limpar reativamente e em lote o status de ação de todos os tokens da crônica.
+  - Mini-botão de Check (`✔️`) gótico e translúcido posicionado no canto superior esquerdo (`-top-2 -left-2`) do medalhão, visível apenas ao Narrador, para controle instantâneo de turnos.
+  - Filtro visual premium de escala de cinza (`grayscale-[0.8]`) e opacidade reduzida a `70%` no Palco para destacar instantaneamente os tokens inativos que já agiram.
+  - Controle de opacidade inteligente nos Bastidores: fixado em `50%` quando o token inativo estiver fora do Palco para garantir que o Narrador continue a vê-lo claramente.
+  - Botão de controle flutuante `[ 🔄 Nova Rodada ]` no canto superior direito (`absolute top-4 right-4 z-40`) do tabuleiro, visível apenas ao Narrador, com modal de confirmação antes do reset em lote.
+  - Sincronização multiplayer transparente: o status de inatividade (`hasActed`) é retransmitido automaticamente a toda a mesa (jogadores comuns) via polling reativo a cada 2.5s.
+
 ## [0.17.0] - 2026-06-20
 
 ### Adicionado

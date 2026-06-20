@@ -7,7 +7,7 @@ import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import { TokenData } from "./Token";
 import { getRecentRolls, saveRoll } from "@/app/actions/rolls";
-import { getSceneTokens, createSceneToken, deleteSceneToken } from "@/app/actions/sceneActions";
+import { getSceneTokens, createSceneToken, deleteSceneToken, toggleTokenAction, resetRound } from "@/app/actions/sceneActions";
 import { getCampaignDashboard } from "@/app/actions/narratorActions";
 import { updateCharacterSheet } from "@/app/actions/characterActions";
 import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
@@ -196,6 +196,44 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     }
   };
 
+  // Ação: Alternar estado de ação do token (hasActed)
+  const handleToggleTokenActed = async (tokenId: string, hasActed: boolean) => {
+    // Optimistic UI
+    setTokensList((prev) =>
+      prev.map((t) => (t.id === tokenId ? { ...t, hasActed } : t))
+    );
+
+    try {
+      const res = await toggleTokenAction(tokenId, hasActed);
+      if (!res.success) {
+        console.error("Falha ao atualizar estado de ação do token:", res.error);
+        await fetchSceneTokens();
+      }
+    } catch (err) {
+      console.error("Erro ao chamar toggleTokenAction:", err);
+      await fetchSceneTokens();
+    }
+  };
+
+  // Ação: Reiniciar Rodada (hasActed = false para todos)
+  const handleResetRound = async () => {
+    // Optimistic UI
+    setTokensList((prev) =>
+      prev.map((t) => ({ ...t, hasActed: false }))
+    );
+
+    try {
+      const res = await resetRound(campaign.id);
+      if (!res.success) {
+        console.error("Falha ao reiniciar rodada no banco:", res.error);
+        await fetchSceneTokens();
+      }
+    } catch (err) {
+      console.error("Erro ao chamar resetRound:", err);
+      await fetchSceneTokens();
+    }
+  };
+
   // Ação: Duplo Clique para Abrir Ficha
   const handleDoubleClickToken = (characterId: string) => {
     setSelectedCharacterId(characterId);
@@ -306,6 +344,8 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           onDoubleClickToken={handleDoubleClickToken}
           onQuickRollToken={handleQuickRollToken}
           onDeleteToken={handleDeleteToken}
+          onToggleTokenActed={handleToggleTokenActed}
+          onResetRound={handleResetRound}
         />
       </div>
 

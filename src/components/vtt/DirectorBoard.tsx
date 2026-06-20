@@ -11,6 +11,8 @@ interface DirectorBoardProps {
   onDoubleClickToken?: (characterId: string) => void;
   onQuickRollToken?: (tokenId: string, name: string, statName: string, value: number, isSecret: boolean) => void;
   onDeleteToken?: (tokenId: string) => void;
+  onToggleTokenActed?: (tokenId: string, hasActed: boolean) => void;
+  onResetRound?: () => void;
 }
 
 export default function DirectorBoard({
@@ -20,6 +22,8 @@ export default function DirectorBoard({
   onDoubleClickToken,
   onQuickRollToken,
   onDeleteToken,
+  onToggleTokenActed,
+  onResetRound,
 }: DirectorBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const [draggedTokenId, setDraggedTokenId] = useState<string | null>(null);
@@ -146,6 +150,20 @@ export default function DirectorBoard({
           </div>
         </div>
 
+        {/* Botão de Nova Rodada (exclusivo Narrador) */}
+        {isStoryteller && onResetRound && (
+          <button
+            onClick={() => {
+              if (confirm("Reiniciar as ações de todos os personagens no tabuleiro?")) {
+                onResetRound();
+              }
+            }}
+            className="absolute top-4 right-4 z-40 py-1.5 px-3 bg-bg-card-dark/90 hover:bg-black border border-gold-accent/30 hover:border-gold-accent text-gold-accent font-data font-bold text-xs uppercase tracking-wider rounded-sm transition-all duration-300 shadow-md cursor-pointer select-none"
+          >
+            🔄 Nova Rodada
+          </button>
+        )}
+
         {/* Indicadores de Bastidores (exclusivo Narrador) */}
         {isStoryteller && (
           <>
@@ -170,6 +188,7 @@ export default function DirectorBoard({
             onDoubleClick={onDoubleClickToken}
             onQuickRoll={onQuickRollToken}
             onDelete={onDeleteToken}
+            onToggleActed={onToggleTokenActed}
           />
         ))}
       </div>

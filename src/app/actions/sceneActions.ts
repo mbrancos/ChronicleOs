@@ -147,3 +147,45 @@ export async function deleteSceneToken(tokenId: string) {
     return { success: false, error: error instanceof Error ? error.message : "Falha ao remover token" };
   }
 }
+
+/**
+ * Alterna a flag hasActed de um token específico no banco de dados.
+ */
+export async function toggleTokenAction(tokenId: string, hasActed: boolean) {
+  try {
+    if (!uuidRegex.test(tokenId)) {
+      return { success: false, error: "ID de token inválido" };
+    }
+
+    await db
+      .update(sceneTokens)
+      .set({ hasActed })
+      .where(eq(sceneTokens.id, tokenId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro em toggleTokenAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Falha ao alternar ação do token" };
+  }
+}
+
+/**
+ * Reinicia a rodada definindo hasActed = false para todos os tokens da campanha.
+ */
+export async function resetRound(campaignId: string) {
+  try {
+    if (!uuidRegex.test(campaignId)) {
+      return { success: false, error: "ID de campanha inválido" };
+    }
+
+    await db
+      .update(sceneTokens)
+      .set({ hasActed: false })
+      .where(eq(sceneTokens.campaignId, campaignId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro em resetRound:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Falha ao reiniciar rodada" };
+  }
+}
