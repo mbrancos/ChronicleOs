@@ -7,7 +7,7 @@ import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import { TokenData } from "./Token";
 import { getRecentRolls, saveRoll } from "@/app/actions/rolls";
-import { getSceneTokens, createSceneToken, deleteSceneToken, toggleTokenAction, resetRound } from "@/app/actions/sceneActions";
+import { getSceneTokens, createSceneToken, deleteSceneToken, toggleTokenAction, resetRound, updateTokenQuickHealth } from "@/app/actions/sceneActions";
 import { getCampaignDashboard } from "@/app/actions/narratorActions";
 import { updateCharacterSheet } from "@/app/actions/characterActions";
 import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
@@ -29,6 +29,20 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   // Estados para rolagens e tokens
   const [rollsList, setRollsList] = useState<RollItem[]>([]);
   const [tokensList, setTokensList] = useState<TokenData[]>([]);
+  
+  // Referências para gerenciar debounces de chamadas assíncronas ao banco de dados por token/ficha
+  const quickHealthDebounceRefs = useRef<{ [tokenId: string]: NodeJS.Timeout }>({});
+  const charStatusDebounceRefs = useRef<{ [characterId: string]: NodeJS.Timeout }>({});
+
+  // Limpar timeouts pendentes no unmount
+  useEffect(() => {
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      Object.values(quickHealthDebounceRefs.current).forEach(clearTimeout);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      Object.values(charStatusDebounceRefs.current).forEach(clearTimeout);
+    };
+  }, []);
   
   // Personagens da campanha (Players e NPCs completos)
   const [playersList, setPlayersList] = useState<CampaignCharacter[]>([]);
@@ -169,7 +183,12 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
         {
           physical: quickPhysical,
           social: quickSocial,
-          health: quickHealth,
+          combat: quickHealth,
+          health: {
+            max: 5,
+            superficial: 0,
+            aggravated: 0,
+          },
         }
       );
 
@@ -269,6 +288,108 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     }
   };
 
+  // Busca dados da ficha do personagem localmente a partir de playersList ou npcsList
+  const getCharacterSheetData = useCallback((characterId: string): CharacterSheetData | null => {
+    const char = playersList.find((p) => p.id === characterId) || npcsList.find((n) => n.id === characterId);
+    return char ? (char.sheetData as CharacterSheetData) : null;
+  }, [playersList, npcsList]);
+
+  // Ação: Sincronizar saúde de Quick NPCs (figurantes rápidos) no banco com Optimistic UI + Debounce
+  const handleUpdateQuickHealth = useCallback((
+    tokenId: string,
+    health: { max: number; superficial: number; aggravated: number }
+  ) => {
+    // 1. Optimistic UI local nos tokens
+    setTokensList((prev) =>
+      prev.map((t) => {
+        if (t.id === tokenId && t.quickStats) {
+          return {
+            ...t,
+            quickStats: {
+              ...t.quickStats,
+              health,
+            },
+          };
+        }
+        return t;
+      })
+    );
+
+    // 2. Cancelar debounce anterior para esse token
+    if (quickHealthDebounceRefs.current[tokenId]) {
+      clearTimeout(quickHealthDebounceRefs.current[tokenId]);
+    }
+
+    // 3. Agendar a chamada da Server Action com debounce de 800ms
+    quickHealthDebounceRefs.current[tokenId] = setTimeout(async () => {
+      try {
+        const res = await updateTokenQuickHealth(tokenId, health);
+        if (!res.success) {
+          console.error("Erro ao sincronizar vida do figurante:", res.error);
+        }
+      } catch (err) {
+        console.error("Falha ao salvar vida do figurante:", err);
+      } finally {
+        delete quickHealthDebounceRefs.current[tokenId];
+      }
+    }, 800);
+  }, []);
+
+  // Ação: Sincronizar status da ficha de personagens completos no banco com Optimistic UI + Debounce
+  const handleUpdateCharacterStatus = useCallback((
+    characterId: string,
+    status: {
+      health?: { max: number; superficial: number; aggravated: number };
+      willpower?: { max: number; superficial: number; aggravated: number };
+    }
+  ) => {
+    // 1. Encontrar o personagem nas listas e clonar seu sheetData
+    const isPlayer = playersList.some((p) => p.id === characterId);
+    const targetList = isPlayer ? playersList : npcsList;
+    const char = targetList.find((c) => c.id === characterId);
+    if (!char) return;
+
+    const sheet = char.sheetData as CharacterSheetData;
+    const updatedSheetData: CharacterSheetData = {
+      ...sheet,
+      status: {
+        ...sheet.status,
+        health: status.health ? { ...sheet.status.health, ...status.health } : sheet.status.health,
+        willpower: status.willpower ? { ...sheet.status.willpower, ...status.willpower } : sheet.status.willpower,
+      },
+    };
+
+    // 2. Optimistic UI local nas listas correspondentes
+    if (isPlayer) {
+      setPlayersList((prev) =>
+        prev.map((p) => (p.id === characterId ? { ...p, sheetData: updatedSheetData } : p))
+      );
+    } else {
+      setNpcsList((prev) =>
+        prev.map((n) => (n.id === characterId ? { ...n, sheetData: updatedSheetData } : n))
+      );
+    }
+
+    // 3. Cancelar debounce anterior para esse personagem
+    if (charStatusDebounceRefs.current[characterId]) {
+      clearTimeout(charStatusDebounceRefs.current[characterId]);
+    }
+
+    // 4. Agendar a chamada da Server Action com debounce de 800ms
+    charStatusDebounceRefs.current[characterId] = setTimeout(async () => {
+      try {
+        const res = await updateCharacterSheet(characterId, updatedSheetData);
+        if (!res.success) {
+          console.error("Erro ao sincronizar ficha de personagem:", res.error);
+        }
+      } catch (err) {
+        console.error("Falha ao salvar dados de personagem:", err);
+      } finally {
+        delete charStatusDebounceRefs.current[characterId];
+      }
+    }, 800);
+  }, [playersList, npcsList]);
+
   // Ação: Rolar Dados pelo Dock do Narrador
   const handleNarratorRoll = async (isSecret: boolean) => {
     // O Narrador rola sem Fome (Fome = 0)
@@ -341,10 +462,13 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
         <DirectorBoard
           tokens={tokensList}
           isStoryteller={true}
+          getCharacterSheetData={getCharacterSheetData}
           onDoubleClickToken={handleDoubleClickToken}
           onQuickRollToken={handleQuickRollToken}
           onDeleteToken={handleDeleteToken}
           onToggleTokenActed={handleToggleTokenActed}
+          onUpdateQuickHealth={handleUpdateQuickHealth}
+          onUpdateCharacterStatus={handleUpdateCharacterStatus}
           onResetRound={handleResetRound}
         />
       </div>

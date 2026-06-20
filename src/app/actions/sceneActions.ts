@@ -54,7 +54,16 @@ export async function createSceneToken(
   x: number,
   y: number,
   isVisible: boolean,
-  quickStats?: { physical: number; social: number; health: number }
+  quickStats?: {
+    physical: number;
+    social: number;
+    combat: number;
+    health: {
+      max: number;
+      superficial: number;
+      aggravated: number;
+    };
+  }
 ) {
   try {
     if (!uuidRegex.test(campaignId)) {
@@ -187,5 +196,50 @@ export async function resetRound(campaignId: string) {
   } catch (error) {
     console.error("Erro em resetRound:", error);
     return { success: false, error: error instanceof Error ? error.message : "Falha ao reiniciar rodada" };
+  }
+}
+
+/**
+ * Atualiza especificamente o estado de vida (Vitalidade) de um Quick NPC dentro de quickStats.
+ */
+export async function updateTokenQuickHealth(
+  tokenId: string,
+  healthData: { max: number; superficial: number; aggravated: number }
+) {
+  try {
+    if (!uuidRegex.test(tokenId)) {
+      return { success: false, error: "ID de token inválido" };
+    }
+
+    // Buscar o token atual para preservar os outros campos de quickStats
+    const current = await db
+      .select({ quickStats: sceneTokens.quickStats })
+      .from(sceneTokens)
+      .where(eq(sceneTokens.id, tokenId))
+      .limit(1);
+
+    if (current.length === 0) {
+      return { success: false, error: "Token não encontrado" };
+    }
+
+    const stats = current[0].quickStats;
+    if (!stats) {
+      return { success: false, error: "Token não possui quickStats cadastrado" };
+    }
+
+    const updatedStats = {
+      ...stats,
+      health: healthData
+    };
+
+    await db
+      .update(sceneTokens)
+      .set({ quickStats: updatedStats })
+      .where(eq(sceneTokens.id, tokenId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro em updateTokenQuickHealth:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Falha ao atualizar vida do figurante" };
   }
 }

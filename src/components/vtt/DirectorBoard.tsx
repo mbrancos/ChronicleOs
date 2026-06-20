@@ -3,26 +3,39 @@
 import React, { useRef, useState } from "react";
 import Token, { TokenData } from "./Token";
 import { updateTokenPosition } from "@/app/actions/sceneActions";
+import { CharacterSheetData } from "@/types/character";
 
 interface DirectorBoardProps {
   tokens: TokenData[];
   isStoryteller: boolean;
+  getCharacterSheetData?: (characterId: string) => CharacterSheetData | null;
   onTokensChange?: (updatedTokens: TokenData[]) => void;
   onDoubleClickToken?: (characterId: string) => void;
   onQuickRollToken?: (tokenId: string, name: string, statName: string, value: number, isSecret: boolean) => void;
   onDeleteToken?: (tokenId: string) => void;
   onToggleTokenActed?: (tokenId: string, hasActed: boolean) => void;
+  onUpdateQuickHealth?: (tokenId: string, health: { max: number; superficial: number; aggravated: number }) => void;
+  onUpdateCharacterStatus?: (
+    characterId: string,
+    status: {
+      health?: { max: number; superficial: number; aggravated: number };
+      willpower?: { max: number; superficial: number; aggravated: number };
+    }
+  ) => void;
   onResetRound?: () => void;
 }
 
 export default function DirectorBoard({
   tokens,
   isStoryteller,
+  getCharacterSheetData,
   onTokensChange,
   onDoubleClickToken,
   onQuickRollToken,
   onDeleteToken,
   onToggleTokenActed,
+  onUpdateQuickHealth,
+  onUpdateCharacterStatus,
   onResetRound,
 }: DirectorBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
@@ -184,11 +197,14 @@ export default function DirectorBoard({
             key={t.id}
             token={t}
             isStoryteller={isStoryteller}
+            characterSheetData={t.characterId && getCharacterSheetData ? getCharacterSheetData(t.characterId) : null}
             onDragStart={handleDragStart}
             onDoubleClick={onDoubleClickToken}
             onQuickRoll={onQuickRollToken}
             onDelete={onDeleteToken}
             onToggleActed={onToggleTokenActed}
+            onUpdateQuickHealth={onUpdateQuickHealth}
+            onUpdateCharacterStatus={onUpdateCharacterStatus}
           />
         ))}
       </div>

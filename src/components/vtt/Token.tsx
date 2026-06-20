@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import TokenPopover from "./TokenPopover";
+import { CharacterSheetData } from "@/types/character";
 
 export interface TokenData {
   id: string;
@@ -12,27 +14,48 @@ export interface TokenData {
   y: number;
   isVisible: boolean;
   hasActed: boolean;
-  quickStats?: { physical: number; social: number; health: number } | null;
+  quickStats?: {
+    physical: number;
+    social: number;
+    combat: number;
+    health: {
+      max: number;
+      superficial: number;
+      aggravated: number;
+    };
+  } | null;
 }
 
 interface TokenProps {
   token: TokenData;
   isStoryteller: boolean;
+  characterSheetData?: CharacterSheetData | null;
   onDragStart?: (e: React.PointerEvent<HTMLDivElement>, tokenId: string) => void;
   onDoubleClick?: (characterId: string) => void;
   onQuickRoll?: (tokenId: string, name: string, statName: string, value: number, isSecret: boolean) => void;
   onDelete?: (tokenId: string) => void;
   onToggleActed?: (tokenId: string, hasActed: boolean) => void;
+  onUpdateQuickHealth?: (tokenId: string, health: { max: number; superficial: number; aggravated: number }) => void;
+  onUpdateCharacterStatus?: (
+    characterId: string,
+    status: {
+      health?: { max: number; superficial: number; aggravated: number };
+      willpower?: { max: number; superficial: number; aggravated: number };
+    }
+  ) => void;
 }
 
 export default function Token({
   token,
   isStoryteller,
+  characterSheetData,
   onDragStart,
   onDoubleClick,
   onQuickRoll,
   onDelete,
   onToggleActed,
+  onUpdateQuickHealth,
+  onUpdateCharacterStatus,
 }: TokenProps) {
   const [showPopover, setShowPopover] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -77,6 +100,7 @@ export default function Token({
   };
 
   const handleDoubleClick = () => {
+    setShowPopover(false);
     if (onDoubleClick && token.characterId) {
       onDoubleClick(token.characterId);
     }
@@ -84,7 +108,7 @@ export default function Token({
 
   const handleTokenClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isStoryteller && token.type === "quick_npc") {
+    if (isStoryteller) {
       setShowPopover(!showPopover);
     }
   };
@@ -179,109 +203,20 @@ export default function Token({
         </div>
       </div>
 
-      {/* Popover de Rolagens Rápidas (Apenas Quick NPCs e se for Narrador) */}
-      {showPopover && isStoryteller && token.type === "quick_npc" && token.quickStats && (
-        <div
-          ref={popoverRef}
-          className="popover-container absolute bottom-16 bg-bg-card-dark/95 border border-white/10 p-3 rounded shadow-2xl z-50 w-44 text-xs font-data flex flex-col space-y-2 select-text"
-        >
-          <div className="flex justify-between items-center border-b border-white/5 pb-1">
-            <span className="text-[10px] text-gold-accent font-bold uppercase tracking-wider truncate">
-              {token.name}
-            </span>
-            <button
-              onClick={() => setShowPopover(false)}
-              className="text-text-muted hover:text-white text-[10px] cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="space-y-2.5 pt-1">
-            {/* Status Físico */}
-            <div className="flex flex-col space-y-1">
-              <div className="flex justify-between text-[10px] text-text-muted">
-                <span>FÍSICO</span>
-                <span className="font-bold text-text-primary">{token.quickStats.physical} Dados</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <button
-                  onClick={() => {
-                    onQuickRoll?.(token.id, token.name, "Físico", token.quickStats!.physical, false);
-                    setShowPopover(false);
-                  }}
-                  className="py-0.5 bg-white/5 hover:bg-white/15 text-[9px] font-bold text-text-primary uppercase border border-white/5 rounded-xs transition-colors cursor-pointer"
-                >
-                  Público
-                </button>
-                <button
-                  onClick={() => {
-                    onQuickRoll?.(token.id, token.name, "Físico (Secreto)", token.quickStats!.physical, true);
-                    setShowPopover(false);
-                  }}
-                  className="py-0.5 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-[9px] font-bold text-willpower-blue border border-willpower-blue/30 rounded-xs transition-colors cursor-pointer"
-                >
-                  Secreto
-                </button>
-              </div>
-            </div>
-
-            {/* Status Social */}
-            <div className="flex flex-col space-y-1">
-              <div className="flex justify-between text-[10px] text-text-muted">
-                <span>SOCIAL</span>
-                <span className="font-bold text-text-primary">{token.quickStats.social} Dados</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <button
-                  onClick={() => {
-                    onQuickRoll?.(token.id, token.name, "Social", token.quickStats!.social, false);
-                    setShowPopover(false);
-                  }}
-                  className="py-0.5 bg-white/5 hover:bg-white/15 text-[9px] font-bold text-text-primary uppercase border border-white/5 rounded-xs transition-colors cursor-pointer"
-                >
-                  Público
-                </button>
-                <button
-                  onClick={() => {
-                    onQuickRoll?.(token.id, token.name, "Social (Secreto)", token.quickStats!.social, true);
-                    setShowPopover(false);
-                  }}
-                  className="py-0.5 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-[9px] font-bold text-willpower-blue border border-willpower-blue/30 rounded-xs transition-colors cursor-pointer"
-                >
-                  Secreto
-                </button>
-              </div>
-            </div>
-
-            {/* Status Combate (usando a propriedade health) */}
-            <div className="flex flex-col space-y-1">
-              <div className="flex justify-between text-[10px] text-text-muted">
-                <span>COMBATE</span>
-                <span className="font-bold text-text-primary">{token.quickStats.health} Dados</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <button
-                  onClick={() => {
-                    onQuickRoll?.(token.id, token.name, "Combate", token.quickStats!.health, false);
-                    setShowPopover(false);
-                  }}
-                  className="py-0.5 bg-white/5 hover:bg-white/15 text-[9px] font-bold text-text-primary uppercase border border-white/5 rounded-xs transition-colors cursor-pointer"
-                >
-                  Público
-                </button>
-                <button
-                  onClick={() => {
-                    onQuickRoll?.(token.id, token.name, "Combate (Secreto)", token.quickStats!.health, true);
-                    setShowPopover(false);
-                  }}
-                  className="py-0.5 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-[9px] font-bold text-willpower-blue border border-willpower-blue/30 rounded-xs transition-colors cursor-pointer"
-                >
-                  Secreto
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Popover Universal (Apenas se for Narrador) */}
+      {showPopover && isStoryteller && (
+        <div ref={popoverRef}>
+          <TokenPopover
+            token={token}
+            characterSheetData={characterSheetData}
+            onClose={() => setShowPopover(false)}
+            onQuickRoll={(tid, nm, stat, val, sec) => {
+              onQuickRoll?.(tid, nm, stat, val, sec);
+              setShowPopover(false);
+            }}
+            onUpdateQuickHealth={onUpdateQuickHealth}
+            onUpdateCharacterStatus={onUpdateCharacterStatus}
+          />
         </div>
       )}
     </div>
