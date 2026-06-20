@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PlayerDock from "./PlayerDock";
 import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
+import ActionFeed, { RollItem } from "./ActionFeed";
+import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
+import { saveRoll, getRecentRolls } from "@/app/actions/rolls";
 
 interface VttRoomClientProps {
   character: {
@@ -20,6 +23,30 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [localCharacter, setLocalCharacter] = useState(character);
   const [dicePool, setDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
+  const [rollsList, setRollsList] = useState<RollItem[]>([]);
+
+  // Carregar rolagens recentes e atualizar estado
+  const fetchRecentRolls = async () => {
+    try {
+      const res = await getRecentRolls(character.campaignId);
+      if (res.success && res.data) {
+        setRollsList(res.data as RollItem[]);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar rolagens do banco:", err);
+    }
+  };
+
+  // Configurar polling a cada 2.5 segundos
+  useEffect(() => {
+    fetchRecentRolls();
+
+    const interval = setInterval(() => {
+      fetchRecentRolls();
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [character.campaignId]);
 
   const handleTraitClick = (trait: { id: string, label: string, value: number }) => {
     setDicePool(prev => {
@@ -45,6 +72,48 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
     setDicePool([]);
   };
 
+  // Disparar rolagem padrão do V5
+  const handleStandardRoll = async (totalPool: number, difficulty: number, poolName: string) => {
+    const hunger = localCharacter.sheetData.status?.hunger ?? 2;
+    const result = rollV5(totalPool, hunger, difficulty);
+
+    const saveRes = await saveRoll(
+      character.campaignId,
+      character.id,
+      character.name,
+      poolName,
+      result
+    );
+
+    if (saveRes.success) {
+      // Atualizar o feed local imediatamente para resposta ágil
+      fetchRecentRolls();
+      clearPool();
+    } else {
+      console.error("Erro ao salvar rolagem padrão:", saveRes.error);
+    }
+  };
+
+  // Disparar teste de despertar (Rouse Check)
+  const handleRouseCheck = async () => {
+    const result = rollRouseCheck();
+
+    const saveRes = await saveRoll(
+      character.campaignId,
+      character.id,
+      character.name,
+      "Teste de Despertar",
+      result
+    );
+
+    if (saveRes.success) {
+      // Atualizar o feed local imediatamente
+      fetchRecentRolls();
+    } else {
+      console.error("Erro ao salvar teste de despertar:", saveRes.error);
+    }
+  };
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary">
       
@@ -67,12 +136,17 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
         </div>
       </div>
 
+      {/* FEED DE ROlagens MULTIPLAYER (z-30) */}
+      <ActionFeed rolls={rollsList} />
+
       {/* DOCK DE CONTROLE (z-40) */}
       <PlayerDock 
         character={localCharacter} 
         onOpenSheet={() => setIsSheetOpen(true)} 
         dicePool={dicePool}
         clearPool={clearPool}
+        onStandardRoll={handleStandardRoll}
+        onRouseCheck={handleRouseCheck}
       />
 
       {/* GAVETA DA FICHA (z-50) */}

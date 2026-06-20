@@ -15,13 +15,17 @@ interface PlayerDockProps {
   onOpenSheet: () => void;
   dicePool?: Array<{ id: string, label: string, value: number }>;
   clearPool?: () => void;
+  onStandardRoll?: (totalPool: number, difficulty: number, poolName: string) => void;
+  onRouseCheck?: () => void;
 }
 
 export default function PlayerDock({ 
   character, 
   onOpenSheet,
   dicePool = [],
-  clearPool
+  clearPool,
+  onStandardRoll,
+  onRouseCheck
 }: PlayerDockProps) {
   const sheet = character.sheetData as CharacterSheetData;
   
@@ -30,6 +34,17 @@ export default function PlayerDock({
 
   // Saúde limpa restante (sem nenhum dano)
   const currentHealth = Math.max(0, health.max - health.superficial - health.aggravated);
+
+  const [modifier, setModifier] = React.useState(0);
+  const [difficulty, setDifficulty] = React.useState(0);
+
+  // Limpar os steppers quando o carrinho for esvaziado
+  React.useEffect(() => {
+    if (dicePool.length === 0) {
+      setModifier(0);
+      setDifficulty(0);
+    }
+  }, [dicePool.length]);
 
   const getInitials = (name: string) => {
     return name.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
@@ -64,6 +79,21 @@ export default function PlayerDock({
 
       {/* CENTRO: CARRINHO DE ROLAGENS (VTT) */}
       <div className="hidden md:flex items-center space-x-4">
+        {/* Botão de Despertar (Sempre Visível) */}
+        <div>
+          <button
+            onClick={onRouseCheck}
+            className="h-8 px-3 rounded-sm border border-hunger-red/35 bg-hunger-red/10 text-hunger-red hover:bg-hunger-red/20 transition-all duration-150 cursor-pointer text-[10px] font-bold font-data uppercase tracking-wider flex items-center space-x-1 hover:scale-102 select-none shadow-[0_0_8px_rgba(255,92,92,0.15)] hover:shadow-[0_0_12px_rgba(255,92,92,0.3)]"
+            title="Fazer um Teste de Despertar"
+          >
+            <span>🩸</span>
+            <span>Despertar</span>
+          </button>
+        </div>
+
+        {/* Separador */}
+        <div className="h-8 w-px bg-white/10" />
+
         {/* Badges de Seleção */}
         <div className="flex flex-col items-center">
           <span className="text-[9px] text-text-dim uppercase tracking-widest font-data font-semibold">
@@ -101,6 +131,59 @@ export default function PlayerDock({
           </div>
         </div>
 
+        {/* Steppers de Modificador e Dificuldade */}
+        {dicePool.length > 0 && (
+          <>
+            <div className="h-8 w-px bg-white/10" />
+            
+            <div className="flex items-center space-x-4 text-xs font-data select-none">
+              {/* Stepper de Modificador */}
+              <div className="flex items-center space-x-2">
+                <span className="text-[9px] text-text-dim uppercase tracking-wider font-semibold">MOD</span>
+                <div className="flex items-center space-x-1.5 bg-bg-main border border-white/5 rounded-sm px-1.5 py-0.5">
+                  <button 
+                    onClick={() => setModifier(prev => prev - 1)}
+                    className="text-text-muted hover:text-white font-bold px-1 hover:bg-white/5 rounded-xs transition-colors shrink-0"
+                  >
+                    −
+                  </button>
+                  <span className={`w-6 text-center font-bold font-mono text-[11px] ${modifier > 0 ? "text-green-400" : modifier < 0 ? "text-hunger-red" : "text-text-muted"}`}>
+                    {modifier >= 0 ? `+${modifier}` : modifier}
+                  </span>
+                  <button 
+                    onClick={() => setModifier(prev => prev + 1)}
+                    className="text-text-muted hover:text-white font-bold px-1 hover:bg-white/5 rounded-xs transition-colors shrink-0"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Stepper de Dificuldade */}
+              <div className="flex items-center space-x-2">
+                <span className="text-[9px] text-gold-accent/80 uppercase tracking-wider font-semibold">DIF</span>
+                <div className="flex items-center space-x-1.5 bg-bg-main border border-gold-accent/15 rounded-sm px-1.5 py-0.5">
+                  <button 
+                    onClick={() => setDifficulty(prev => Math.max(0, prev - 1))}
+                    className="text-gold-accent/80 hover:text-gold-accent font-bold px-1 hover:bg-gold-accent/10 rounded-xs transition-colors shrink-0"
+                  >
+                    −
+                  </button>
+                  <span className="w-5 text-center font-bold font-mono text-[11px] text-gold-accent">
+                    {difficulty}
+                  </span>
+                  <button 
+                    onClick={() => setDifficulty(prev => Math.min(10, prev + 1))}
+                    className="text-gold-accent/80 hover:text-gold-accent font-bold px-1 hover:bg-gold-accent/10 rounded-xs transition-colors shrink-0"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Separador */}
         <div className="h-8 w-px bg-white/10" />
 
@@ -109,8 +192,10 @@ export default function PlayerDock({
           <button
             disabled={dicePool.length === 0}
             onClick={() => {
-              const totalDice = dicePool.reduce((sum, trait) => sum + trait.value, 0);
-              alert(`Rolando ${totalDice} dados! (${dicePool.map(d => `${d.label} ${d.value}`).join(" + ")})`);
+              const baseDice = dicePool.reduce((sum, trait) => sum + trait.value, 0);
+              const totalDice = Math.max(1, baseDice + modifier);
+              const poolName = dicePool.map(d => d.label).join(" + ");
+              onStandardRoll?.(totalDice, difficulty, poolName);
             }}
             className={`h-9 px-4 rounded-sm border uppercase font-data font-bold text-xs tracking-wider select-none transition-all duration-150 ${
               dicePool.length > 0
@@ -118,7 +203,7 @@ export default function PlayerDock({
                 : "bg-bg-main text-text-dim border-white/10 opacity-40 cursor-not-allowed"
             }`}
           >
-            Rolar {dicePool.reduce((sum, trait) => sum + trait.value, 0)} {dicePool.reduce((sum, trait) => sum + trait.value, 0) === 1 ? "Dado" : "Dados"}
+            Rolar {dicePool.length > 0 ? Math.max(1, dicePool.reduce((sum, trait) => sum + trait.value, 0) + modifier) : 0} {Math.max(1, dicePool.reduce((sum, trait) => sum + trait.value, 0) + modifier) === 1 ? "Dado" : "Dados"}
           </button>
         </div>
       </div>

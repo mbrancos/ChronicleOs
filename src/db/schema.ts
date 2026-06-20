@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, jsonb, timestamp } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(), // UUID associado ao Neon Auth
@@ -25,4 +25,17 @@ export const characters = pgTable("characters", {
   name: text("name").notNull(),
   type: text("type").$type<"jogador" | "npc" | "coterie">().notNull(),
   sheetData: jsonb("sheet_data").notNull(), // Tipo JSONB rígido para a ficha reativa
+});
+
+export const rolls = pgTable("rolls", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  campaignId: uuid("campaign_id")
+    .references(() => campaigns.id, { onDelete: "cascade" })
+    .notNull(),
+  characterId: uuid("character_id")
+    .references(() => characters.id, { onDelete: "cascade" }),
+  characterName: text("character_name").notNull(),
+  poolName: text("pool_name").notNull(),
+  resultData: jsonb("result_data").$type<any>().notNull(), // Estrutura V5RollResult ou RouseCheckResult
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

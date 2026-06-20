@@ -2,6 +2,29 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.15.0] - 2026-06-20
+
+### Adicionado
+- **Histórico Multiplayer em Tempo Real (Feed de Ações):**
+  - Tabela `rolls` no Neon Database via Drizzle para persistência.
+  - Server Actions `saveRoll` e `getRecentRolls` para salvar e obter as rolagens.
+  - Componente `<ActionFeed>` na lateral esquerda com cards translúcidos dark-morphism e animação de entrada `slide-in` a partir da esquerda.
+  - Polling periódico de 2.5s no `<VttRoomClient>` para sincronização em tempo real entre jogadores na mesa.
+- **Visualizador Imersivo de Dados V5:**
+  - Componente `<DiceVisualizer>` com renderização estilizada: dados normais (pretos/cinzas com destaque dourado para 10, branco para sucessos 6-9) e dados de fome (vermelhos com destaque dourado pulsante para 10, vermelho alarmante para 1, normal para falhas).
+  - Suporte a Teste de Despertar (Rouse Check), exibindo 1 único dado com indicação reativa sobre alteração de Fome.
+
+## [0.14.0] - 2026-06-20
+
+### Adicionado
+- **O Motor de Regras V5 (BloodEngine):**
+  - Módulo utilitário `src/lib/vtt/BloodEngine.ts` com funções `rollV5` e `rollRouseCheck`.
+  - Tratamento de parada total com floor de 1, divisão de dados normais e dados de fome, cálculo de sucessos básicos e bônus por par de 10 (+2 sucessos adicionais por par).
+  - Regra de Crítico Messiânico (par de 10 contendo dado de fome) e Falha Bestial corrigida (sucessos < dificuldade alvo e dado de fome resultando em 1).
+- **Steppers de Modificadores e Dificuldade no Dock:**
+  - Steppers `MOD [-] +0 [+]` e `DIF [-] 0 [+]` dourado no `PlayerDock.tsx` para permitir que o jogador configure a dificuldade do teste e bônus situacionais antes de disparar.
+  - Botão de Despertar `[ 🩸 Despertar ]` integrado ao dock para rolar Testes de Despertar instantaneamente.
+
 ## [0.13.0] - 2026-06-19
 
 ### Adicionado
