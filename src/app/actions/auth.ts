@@ -24,6 +24,9 @@ export async function signUpAction(prevState: any, formData: FormData) {
       email,
       password,
       name,
+      fetchOptions: {
+        headers: await headers(),
+      },
     });
 
     if (error) {
@@ -87,6 +90,9 @@ export async function signInAction(prevState: any, formData: FormData) {
     const { error } = await auth.signIn.email({
       email,
       password,
+      fetchOptions: {
+        headers: await headers(),
+      },
     });
 
     if (error) {

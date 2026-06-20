@@ -3,7 +3,11 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth/server";
 
 export async function proxy(request: NextRequest) {
-  const { data: session } = await auth.getSession();
+  const { data: session } = await auth.getSession({
+    fetchOptions: {
+      headers: request.headers,
+    },
+  });
   const { pathname } = request.nextUrl;
 
   const isAuthRoute = pathname === "/" || pathname === "/cadastro";
