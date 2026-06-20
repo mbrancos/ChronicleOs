@@ -4,6 +4,7 @@ import { characters } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { redirect, notFound } from "next/navigation";
 import VttRoomClient from "@/components/vtt/VttRoomClient";
+import { CharacterSheetData } from "@/types/character";
 
 interface PageProps {
   params: Promise<{
@@ -53,7 +54,7 @@ export default async function MesaPage({ params }: PageProps) {
         userId: character.userId,
         name: character.name,
         type: character.type,
-        sheetData: character.sheetData
+        sheetData: character.sheetData as CharacterSheetData
       }} 
     />
   );
