@@ -34,7 +34,9 @@ export async function getSceneTokens(campaignId: string, isNarrator: boolean) {
         );
     }
 
-    return { success: true, data: result };
+    return JSON.parse(
+      JSON.stringify({ success: true, data: result })
+    );
   } catch (error) {
     console.error("Erro em getSceneTokens:", error);
     return { success: false, error: error instanceof Error ? error.message : "Falha ao buscar tokens do cenário" };

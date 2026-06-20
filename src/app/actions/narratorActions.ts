@@ -45,16 +45,18 @@ export async function getCampaignDashboard(campaignId: string) {
     const players = campaignCharacters.filter(c => c.type === "jogador");
     const npcs = campaignCharacters.filter(c => c.type === "npc");
 
-    return {
-      success: true,
-      data: {
-        campaign,
-        players,
-        npcs
-      }
-    };
-  } catch (err: any) {
+    return JSON.parse(
+      JSON.stringify({
+        success: true,
+        data: {
+          campaign,
+          players,
+          npcs
+        }
+      })
+    );
+  } catch (err) {
     console.error("Erro em getCampaignDashboard:", err);
-    return { success: false, error: err?.message || "Erro ao carregar o painel da crônica." };
+    return { success: false, error: err instanceof Error ? err.message : "Erro ao carregar o painel da crônica." };
   }
 }

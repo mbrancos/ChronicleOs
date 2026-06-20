@@ -67,10 +67,12 @@ export async function getRecentRolls(campaignId: string) {
       createdAt: roll.createdAt instanceof Date ? roll.createdAt.toISOString() : String(roll.createdAt),
     }));
 
-    return { success: true, data: serialized };
-  } catch (error: any) {
+    return JSON.parse(
+      JSON.stringify({ success: true, data: serialized })
+    );
+  } catch (error) {
     console.error("Erro em getRecentRolls:", error);
-    return { success: false, error: error?.message || "Falha ao buscar rolagens do banco" };
+    return { success: false, error: error instanceof Error ? error.message : "Falha ao buscar rolagens do banco" };
   }
 }
 
