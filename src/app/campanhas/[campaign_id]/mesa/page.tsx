@@ -49,7 +49,9 @@ export default async function MesaPage({ params }: PageProps) {
           id: campaign.id,
           name: campaign.name,
           narratorId: campaign.narratorId,
-          description: campaign.description
+          description: campaign.description,
+          rollEffectMode: campaign.rollEffectMode,
+          comedyImageUrl: campaign.comedyImageUrl
         }}
       />
     );
@@ -86,6 +88,10 @@ export default async function MesaPage({ params }: PageProps) {
         status: character.status,
         buildState: character.buildState
       }} 
+      campaignSettings={{
+        rollEffectMode: campaign.rollEffectMode,
+        comedyImageUrl: campaign.comedyImageUrl
+      }}
     />
   );
 }

@@ -244,6 +244,8 @@ export async function updateCampaignSettingsAction(
     powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
     extraXp: number;
     allowedClans: string[];
+    rollEffectMode: "NONE" | "HORROR" | "COMEDY";
+    comedyImageUrl?: string | null;
   }
 ) {
   try {
@@ -280,11 +282,14 @@ export async function updateCampaignSettingsAction(
         powerLevel: settings.powerLevel,
         extraXp: Math.max(0, Number(settings.extraXp) || 0),
         allowedClans: settings.allowedClans,
+        rollEffectMode: settings.rollEffectMode,
+        comedyImageUrl: settings.comedyImageUrl?.trim() || null,
       })
       .where(eq(campaigns.id, campaignId));
 
     revalidatePath("/hub");
     revalidatePath(`/campanhas/${campaignId}/narrador`);
+    revalidatePath(`/campanhas/${campaignId}/mesa`);
     return { success: true };
   } catch (err: any) {
     console.error("Erro em updateCampaignSettingsAction:", err);

@@ -19,6 +19,7 @@ import {
   vetoXpSpendAction, 
   getRecentCampaignXpSpends 
 } from "@/app/actions/xpActions";
+import RollEffects from "./RollEffects";
 
 type CampaignCharacter = typeof characters.$inferSelect;
 
@@ -28,6 +29,8 @@ interface StorytellerDashboardClientProps {
     name: string;
     narratorId: string;
     description: string | null;
+    rollEffectMode: "NONE" | "HORROR" | "COMEDY";
+    comedyImageUrl: string | null;
   };
 }
 
@@ -536,6 +539,12 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary flex">
+      <RollEffects
+        campaignId={campaign.id}
+        rollEffectMode={campaign.rollEffectMode}
+        comedyImageUrl={campaign.comedyImageUrl}
+        isStoryteller={true}
+      />
       {/* 1. MESA CENTRAL COM TABULEIRO 2D (DirectorBoard) */}
       <div className="flex-1 h-full relative flex items-center justify-center p-4">
         {/* Título de Contexto no topo central */}

@@ -18,6 +18,11 @@ export const campaigns = pgTable("campaigns", {
   powerLevel: text("power_level").$type<"FLEDGLING" | "NEONATE" | "ANCILLAE">().default("NEONATE").notNull(),
   extraXp: integer("extra_xp").default(0).notNull(),
   allowedClans: jsonb("allowed_clans").$type<string[]>(), // Nulo significa todos permitidos
+  rollEffectMode: text("roll_effect_mode", { enum: ["NONE", "HORROR", "COMEDY"] })
+    .$type<"NONE" | "HORROR" | "COMEDY">()
+    .default("HORROR")
+    .notNull(),
+  comedyImageUrl: text("comedy_image_url"),
 });
 
 export const characters = pgTable("characters", {

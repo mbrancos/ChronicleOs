@@ -208,10 +208,25 @@ function executeSimulationRoll(
   };
 }
 
+const POWER_LEVEL_OPTIONS = ["Cria", "Neófito", "Ancila"];
+
+function getPowerLevelRules(concept: string) {
+  const normalized = String(concept).toLowerCase().trim();
+  if (normalized === "cria" || normalized === "fledgling") {
+    return { name: "Cria", disciplines: 2, advantages: 7, bloodPotency: 1 };
+  }
+  if (normalized === "ancila" || normalized === "ancillae") {
+    return { name: "Ancila", disciplines: 3, advantages: 9, bloodPotency: 2 };
+  }
+  // Padrão: Neófito / Neonate
+  return { name: "Neófito", disciplines: 2, advantages: 7, bloodPotency: 1 };
+}
+
 function calculateBaseAndXp(charData: CharacterSheetData) {
   const clan = charData.profile?.clan || "Sem Clã";
   const clanDisciplines = CLAN_DISCIPLINE_MAPPING[clan] || [];
   const isCaitiffOrThin = clan === "Caitiff" || clan === "Sem Clã" || clan === "Sangue-Ralo";
+  const rules = getPowerLevelRules(charData.profile?.concept || "Neófito");
 
   // --- ATRIBUTOS ---
   const allAttrs: { key: string; val: number }[] = [];
@@ -310,8 +325,8 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
   const totalPositivePoints = positiveAdvantages.reduce((acc, a) => acc + a.level, 0);
   
   let advantagesXpSpent = 0;
-  if (totalPositivePoints > 7) {
-    advantagesXpSpent = (totalPositivePoints - 7) * 3;
+  if (totalPositivePoints > rules.advantages) {
+    advantagesXpSpent = (totalPositivePoints - rules.advantages) * 3;
   }
 
   // --- ESPECIALIZAÇÕES ---
@@ -329,10 +344,11 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
   }
 
   // --- POTÊNCIA DE SANGUE ---
-  const currentBloodPotency = charData.status?.blood_potency || 1;
+  const baseBloodPotency = rules.bloodPotency;
+  const currentBloodPotency = charData.status?.blood_potency || baseBloodPotency;
   let bloodPotencyXpSpent = 0;
-  if (currentBloodPotency > 1) {
-    for (let lvl = 2; lvl <= currentBloodPotency; lvl++) {
+  if (currentBloodPotency > baseBloodPotency) {
+    for (let lvl = baseBloodPotency + 1; lvl <= currentBloodPotency; lvl++) {
       bloodPotencyXpSpent += lvl * 10;
     }
   }
@@ -361,8 +377,8 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
 
   const attributesRemaining = Math.max(0, 22 - attrSumDistributed);
   const skillsRemaining = Math.max(0, 20 - skillSumDistributed);
-  const disciplinesRemaining = Math.max(0, 3 - discSumDistributed);
-  const advantagesRemaining = Math.max(0, 7 - totalPositivePoints);
+  const disciplinesRemaining = Math.max(0, rules.disciplines - discSumDistributed);
+  const advantagesRemaining = Math.max(0, rules.advantages - totalPositivePoints);
 
   const isDraft = 
     attributesRemaining > 0 || 
@@ -469,6 +485,7 @@ export default function CharacterSheetClient({
 
   // Rodar o cálculo do esqueleto base e XP a cada render/alteração
   const alloc = calculateBaseAndXp(character);
+  const rules = getPowerLevelRules(character.profile?.concept || "Neófito");
 
   // Sincronizar o status calculado reativamente
   useEffect(() => {
@@ -487,13 +504,19 @@ export default function CharacterSheetClient({
 
   // Sincronizar o buildState calculado
   useEffect(() => {
+    const rules = getPowerLevelRules(character.profile?.concept || "Neófito");
     const newBuildState = {
       attributes: {},
       skills: {},
       disciplines: {},
       advantages: {},
       specialties: character.specialties ? character.specialties.map(s => ({ id: s.id, name: s.name, skill: s.skill, isXp: !alloc.specialtiesBase[s.id] })) : [],
-      blood_potency: { base: 1, xp: (character.status?.blood_potency || 1) > 1 ? (character.status?.blood_potency || 1) - 1 : 0 },
+      blood_potency: { 
+        base: rules.bloodPotency, 
+        xp: (character.status?.blood_potency || rules.bloodPotency) > rules.bloodPotency 
+          ? (character.status?.blood_potency || rules.bloodPotency) - rules.bloodPotency 
+          : 0 
+      },
       humanity: { base: 7, xp: (character.status?.humanity || 7) > 7 ? (character.status?.humanity || 7) - 7 : 0 }
     };
     
@@ -529,8 +552,8 @@ export default function CharacterSheetClient({
       const isPositive = adv.type === "background" || adv.type === "merit" || adv.type === "loresheet";
       if (isPositive) {
         currentPositiveSum += adv.level;
-        if (currentPositiveSum > 7) {
-          const excess = currentPositiveSum - 7;
+        if (currentPositiveSum > rules.advantages) {
+          const excess = currentPositiveSum - rules.advantages;
           const base = adv.level - excess;
           (newBuildState.advantages as any)[adv.id] = { base: Math.max(0, base), xp: excess };
         } else {
@@ -1148,21 +1171,10 @@ export default function CharacterSheetClient({
           
           {status === "DRAFT" && (
             <div className="flex flex-wrap items-center gap-4 text-xs font-data uppercase">
-              <span className="text-text-muted">Faltam no Esqueleto:</span>
-              {alloc.attributesRemaining > 0 && (
-                <span className="text-amber-400">Atributos: {alloc.attributesRemaining}</span>
-              )}
-              {alloc.skillsRemaining > 0 && (
-                <span className="text-amber-400">Habilidades: {alloc.skillsRemaining}</span>
-              )}
-              {alloc.disciplinesRemaining > 0 && (
-                <span className="text-amber-400">Disciplinas: {alloc.disciplinesRemaining}</span>
-              )}
-              {alloc.advantagesRemaining > 0 && (
-                <span className="text-amber-400">Vantagens: {alloc.advantagesRemaining}</span>
-              )}
-              {alloc.attributesRemaining === 0 && alloc.skillsRemaining === 0 && alloc.disciplinesRemaining === 0 && alloc.advantagesRemaining === 0 && (
-                <span className="text-emerald-400">Tudo Distribuído!</span>
+              {alloc.attributesRemaining === 0 && alloc.skillsRemaining === 0 && alloc.disciplinesRemaining === 0 && alloc.advantagesRemaining === 0 ? (
+                <span className="text-emerald-400">Tudo Distribuído! ✓</span>
+              ) : (
+                <span className="text-amber-400">Distribua os pontos restantes do esqueleto nas seções abaixo</span>
               )}
             </div>
           )}
@@ -1236,8 +1248,24 @@ export default function CharacterSheetClient({
               />
               <span className="text-text-dim">•</span>
               <InlineEdit
-                value={character.profile.concept}
-                onChange={(val) => handleProfileChange("concept", val)}
+                value={character.profile.concept || "Neófito"}
+                onChange={(val) => {
+                  handleProfileChange("concept", val);
+                  const newRules = getPowerLevelRules(val);
+                  setCharacter(prev => {
+                    const currentBloodPotency = prev.status.blood_potency;
+                    const updatedBloodPotency = Math.max(newRules.bloodPotency, currentBloodPotency);
+                    return {
+                      ...prev,
+                      status: {
+                        ...prev.status,
+                        blood_potency: updatedBloodPotency
+                      }
+                    };
+                  });
+                }}
+                type="select"
+                options={POWER_LEVEL_OPTIONS}
                 disabled={status === "IN_PLAY"}
                 className="text-text-primary hover:bg-white/5 font-bold"
               />
@@ -1364,8 +1392,13 @@ export default function CharacterSheetClient({
               
               {/* GRADE DE ATRIBUTOS */}
               <div>
-                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase">
-                  Atributos
+                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase flex items-center justify-between">
+                  <span>Atributos</span>
+                  {status === "DRAFT" && alloc.attributesRemaining > 0 && (
+                    <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
+                      Atributos: {alloc.attributesRemaining} {alloc.attributesRemaining === 1 ? "ponto restante" : "pontos restantes"}
+                    </span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   
@@ -1428,8 +1461,13 @@ export default function CharacterSheetClient({
 
               {/* GRADE DE HABILIDADES */}
               <div>
-                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase">
-                  Habilidades & Especializações
+                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase flex items-center justify-between">
+                  <span>Habilidades & Especializações</span>
+                  {status === "DRAFT" && alloc.skillsRemaining > 0 && (
+                    <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
+                      Habilidades: {alloc.skillsRemaining} {alloc.skillsRemaining === 1 ? "ponto restante" : "pontos restantes"}
+                    </span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   
@@ -1590,8 +1628,13 @@ export default function CharacterSheetClient({
             <div className="space-y-6">
               <div className="flex justify-between items-center flex-wrap gap-4 border-b border-white/5 pb-2 mb-4">
                 <div className="flex items-center space-x-4">
-                  <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
-                    Disciplinas Vampíricas (Poderes do Sangue)
+                  <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase flex items-center space-x-2">
+                    <span>Disciplinas Vampíricas (Poderes do Sangue)</span>
+                    {status === "DRAFT" && alloc.disciplinesRemaining > 0 && (
+                      <span className="text-xs font-data text-yellow-400 normal-case tracking-normal ml-3 bg-yellow-400/10 border border-yellow-400/20 px-2 py-0.5 rounded-sm">
+                        Disciplinas: {alloc.disciplinesRemaining} {alloc.disciplinesRemaining === 1 ? "ponto restante" : "pontos restantes"}
+                      </span>
+                    )}
                   </h3>
                   {status !== "IN_PLAY" && (
                     <button
@@ -1607,8 +1650,8 @@ export default function CharacterSheetClient({
                     label="Potência do Sangue"
                     value={character.status.blood_potency}
                     onChange={handleBloodPotencyChange}
-                    allowZero
-                    baseValue={1}
+                    allowZero={rules.bloodPotency === 0}
+                    baseValue={rules.bloodPotency}
                     showXpDistinction={status !== "IN_PLAY"}
                     disabled={status === "IN_PLAY" && !isEvolvingMode}
                     variant="gold"
@@ -1764,8 +1807,13 @@ export default function CharacterSheetClient({
 
             return (
               <div className="space-y-6">
-                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase">
-                  Vantagens, Qualidades, Defeitos & Fichas de Saber
+                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase flex items-center justify-between">
+                  <span>Vantagens, Qualidades, Defeitos & Fichas de Saber</span>
+                  {status === "DRAFT" && alloc.advantagesRemaining > 0 && (
+                    <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
+                      Vantagens: {alloc.advantagesRemaining} {alloc.advantagesRemaining === 1 ? "ponto restante" : "pontos restantes"}
+                    </span>
+                  )}
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -13,6 +13,7 @@ import { updateCharacterSheet } from "@/app/actions/characterActions";
 import { getSceneTokens } from "@/app/actions/sceneActions";
 import { CharacterSheetData } from "@/types/character";
 import Pusher from "pusher-js";
+import RollEffects from "./RollEffects";
 
 interface VttRoomClientProps {
   character: {
@@ -25,9 +26,13 @@ interface VttRoomClientProps {
     status: string;
     buildState: any;
   };
+  campaignSettings?: {
+    rollEffectMode: "NONE" | "HORROR" | "COMEDY";
+    comedyImageUrl: string | null;
+  };
 }
 
-export default function VttRoomClient({ character }: VttRoomClientProps) {
+export default function VttRoomClient({ character, campaignSettings }: VttRoomClientProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [localCharacter, setLocalCharacter] = useState(character);
   const [dicePool, setDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
@@ -297,6 +302,14 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary">
+      {campaignSettings && (
+        <RollEffects
+          campaignId={character.campaignId}
+          rollEffectMode={campaignSettings.rollEffectMode}
+          comedyImageUrl={campaignSettings.comedyImageUrl}
+          isStoryteller={false}
+        />
+      )}
       
       {/* O TABULEIRO 2D (DirectorBoard em modo Jogador) */}
       <div 

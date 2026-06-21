@@ -14,6 +14,8 @@ interface Campaign {
   powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
   extraXp: number;
   allowedClans: string[] | null;
+  rollEffectMode: "NONE" | "HORROR" | "COMEDY";
+  comedyImageUrl: string | null;
 }
 
 interface Character {
@@ -57,9 +59,45 @@ export default function NarratorDashboardClient({
       "Banu Haqim", "Brujah", "Gangrel", "Hecata", "Lasombra", "Malkaviano", "Malkavian", "Ministério", "Nosferatu", "Ravnos", "Salubri", "Toreador", "Tremere", "Tzimisce", "Ventrue", "Caitiff", "Sem Clã"
     ]
   );
+  const [rollEffectMode, setRollEffectMode] = useState<"NONE" | "HORROR" | "COMEDY">(campaign.rollEffectMode || "HORROR");
+  const [comedyImageUrl, setComedyImageUrl] = useState<string>(campaign.comedyImageUrl || "");
+  const [isImageValid, setIsImageValid] = useState<boolean>(true);
+
+  const sanitizeImageUrl = (url: string): string => {
+    if (!url) return "";
+    const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
+    const match = url.match(driveRegex);
+    if (match && match[1]) {
+      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+    }
+    return url;
+  };
+
+  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawUrl = e.target.value;
+    const sanitized = sanitizeImageUrl(rawUrl);
+    setComedyImageUrl(sanitized);
+    if (sanitized.trim() === "") {
+      setIsImageValid(false);
+    } else {
+      setIsImageValid(true);
+    }
+  };
+
+  const handleImageLoad = () => {
+    setIsImageValid(true);
+  };
+
+  const handleImageError = () => {
+    setIsImageValid(false);
+  };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (rollEffectMode === "COMEDY" && (!comedyImageUrl.trim() || !isImageValid)) {
+      return; // Trava de segurança extra
+    }
+
     setLoading(true);
     setErrorMsg(null);
 
@@ -68,6 +106,8 @@ export default function NarratorDashboardClient({
       powerLevel: campaignPowerLevel,
       extraXp: Number(campaignExtraXp) || 0,
       allowedClans: campaignAllowedClans,
+      rollEffectMode,
+      comedyImageUrl: rollEffectMode === "COMEDY" ? comedyImageUrl : null,
     });
 
     if (response.success) {
@@ -404,6 +444,84 @@ export default function NarratorDashboardClient({
                 </div>
               </div>
 
+              {/* Efeitos de Mesa */}
+              <div className="space-y-2 pt-2 border-t border-white/5">
+                <span className="text-[10px] uppercase tracking-widest text-text-muted block">Efeitos de Mesa</span>
+                
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-wider text-text-muted block">Modo de Efeito Audiovisual</label>
+                  <select
+                    value={rollEffectMode}
+                    onChange={(e) => {
+                      const val = e.target.value as "NONE" | "HORROR" | "COMEDY";
+                      setRollEffectMode(val);
+                      if (val !== "COMEDY") {
+                        setIsImageValid(true);
+                      } else {
+                        setIsImageValid(comedyImageUrl.trim() !== "");
+                      }
+                    }}
+                    className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-blood-red outline-none transition-colors cursor-pointer"
+                  >
+                    <option value="NONE" className="bg-bg-card text-text-primary">NENHUM</option>
+                    <option value="HORROR" className="bg-bg-card text-text-primary">SOMBRIO / HORROR (ARRASTAMENTO CARDÍACO)</option>
+                    <option value="COMEDY" className="bg-bg-card text-text-primary">ALÍVIO CÔMICO (TOASTY DO MASCOTE)</option>
+                  </select>
+                </div>
+
+                {rollEffectMode === "COMEDY" && (
+                  <div className="space-y-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider text-text-muted block">
+                        URL do Mascote (Link Direto PNG)
+                      </label>
+                      <input
+                        type="url"
+                        required={rollEffectMode === "COMEDY"}
+                        placeholder="https://i.imgur.com/exemplo.png"
+                        value={comedyImageUrl}
+                        onChange={handleImageUrlChange}
+                        className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-blood-red outline-none transition-colors"
+                      />
+                      <p className="text-[9px] text-text-dim leading-normal font-sans pt-1">
+                        ⚠️ <strong>Atenção aos &quot;Falsos PNGs&quot;</strong>: Use links diretos terminados em <code>.png</code>. Recomendamos links diretos do Discord ou Imgur. Links de páginas normais do Pinterest ou Google Imagens possuem bloqueio de exibição (CORS) e falharão no preview.
+                      </p>
+                    </div>
+
+                    <div className="flex items-start space-x-4 bg-black/20 p-2.5 border border-white/5 rounded-sm">
+                      <div className="flex flex-col items-center space-y-1">
+                        <span className="text-[9px] uppercase tracking-wider text-text-muted font-bold block">Preview</span>
+                        <div className="bg-gray-900 h-32 w-32 border border-white/10 rounded-sm flex items-center justify-center overflow-hidden relative">
+                          {comedyImageUrl.trim() ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={comedyImageUrl}
+                              alt="Mascote Preview"
+                              onLoad={handleImageLoad}
+                              onError={handleImageError}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-[9px] text-text-dim italic">Sem Imagem</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {!isImageValid && comedyImageUrl.trim() !== "" && (
+                        <div className="flex-1 text-hunger-red text-[10px] font-sans leading-relaxed self-center bg-hunger-red/10 border border-hunger-red/35 p-2.5 rounded-xs">
+                          ❌ <strong>Erro de Renderização:</strong> A URL fornecida é inválida ou possui bloqueio de proteção/CORS. O botão de salvar permanecerá desativado até que uma imagem válida seja renderizada no preview.
+                        </div>
+                      )}
+                      {rollEffectMode === "COMEDY" && !comedyImageUrl.trim() && (
+                        <div className="flex-1 text-yellow-500 text-[10px] font-sans leading-relaxed self-center bg-yellow-500/10 border border-yellow-500/35 p-2.5 rounded-xs">
+                          ⚠️ <strong>Campo Obrigatório:</strong> Por favor, informe uma URL de imagem válida para o mascote no modo Alívio Cômico.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Botões do Modal */}
               <div className="flex justify-end space-x-3 pt-2">
                 <button
@@ -415,8 +533,8 @@ export default function NarratorDashboardClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-5 py-2 bg-blood-red hover:bg-burgundy text-white text-xs uppercase tracking-widest font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(200,36,52,0.4)]"
+                  disabled={loading || (rollEffectMode === "COMEDY" && (!comedyImageUrl.trim() || !isImageValid))}
+                  className="px-5 py-2 bg-blood-red hover:bg-burgundy disabled:bg-gray-800 disabled:text-text-dim disabled:border-transparent disabled:cursor-not-allowed text-white text-xs uppercase tracking-widest font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(200,36,52,0.4)]"
                 >
                   {loading ? "Salvando..." : "Salvar Configurações"}
                 </button>
