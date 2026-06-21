@@ -85,7 +85,7 @@ export async function createCampaignAction(name: string, description?: string) {
 }
 
 // Cria um novo personagem inicializando a ficha com dados padrão
-export async function createCharacterAction(name: string, campaignId: string, type: "jogador" | "npc" = "jogador") {
+export async function createCharacterAction(name: string, campaignId?: string | null, type: "jogador" | "npc" = "jogador") {
   try {
     const { data: session } = await auth.getSession();
     if (!session?.user) {
@@ -97,14 +97,17 @@ export async function createCharacterAction(name: string, campaignId: string, ty
       return { success: false, error: "O nome do personagem é obrigatório." };
     }
 
-    // Validar se o ID da campanha é um UUID válido
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(campaignId)) {
-      return { success: false, error: "ID de campanha inválido." };
+    let targetCampaignId: string | null = null;
+    if (campaignId && campaignId.trim() !== "") {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(campaignId)) {
+        return { success: false, error: "ID de campanha inválido." };
+      }
+      targetCampaignId = campaignId;
     }
 
     const newChar = await db.insert(characters).values({
-      campaignId,
+      campaignId: targetCampaignId,
       userId: type === "jogador" ? session.user.id : null,
       name: trimmedName,
       type,
@@ -112,7 +115,9 @@ export async function createCharacterAction(name: string, campaignId: string, ty
     }).returning({ id: characters.id });
 
     revalidatePath("/hub");
-    revalidatePath(`/campanhas/${campaignId}/narrador`);
+    if (targetCampaignId) {
+      revalidatePath(`/campanhas/${targetCampaignId}/narrador`);
+    }
     return { success: true, characterId: newChar[0].id };
   } catch (err: any) {
     console.error("Erro em createCharacterAction:", err);
@@ -132,4 +137,93 @@ export async function signOutAction() {
     console.error("Erro no signOut:", error);
   }
   redirect("/");
+}
+
+// Server Action para atualizar nome e descrição de uma campanha (crônica)
+export async function updateCampaignAction(campaignId: string, name: string, description?: string) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(campaignId)) {
+      return { success: false, error: "ID de crônica inválido." };
+    }
+
+    const trimmedName = name.trim();
+    if (trimmedName.length < 3 || trimmedName.length > 50) {
+      return { success: false, error: "O nome da crônica deve ter entre 3 e 50 caracteres." };
+    }
+
+    // 1. Verificar se a campanha existe e se o usuário é o narrador
+    const campResult = await db
+      .select({ narratorId: campaigns.narratorId })
+      .from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1);
+
+    if (campResult.length === 0) {
+      return { success: false, error: "Crônica não encontrada." };
+    }
+
+    if (campResult[0].narratorId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Apenas o Narrador criador pode editar esta crônica." };
+    }
+
+    // 2. Atualizar no banco
+    await db
+      .update(campaigns)
+      .set({
+        name: trimmedName,
+        description: description?.trim() || null,
+      })
+      .where(eq(campaigns.id, campaignId));
+
+    revalidatePath("/hub");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em updateCampaignAction:", err);
+    return { success: false, error: err?.message || "Falha ao editar a crônica." };
+  }
+}
+
+// Server Action para excluir uma campanha (crônica)
+export async function deleteCampaignAction(campaignId: string) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(campaignId)) {
+      return { success: false, error: "ID de crônica inválido." };
+    }
+
+    // 1. Verificar se a campanha existe e se o usuário é o narrador
+    const campResult = await db
+      .select({ narratorId: campaigns.narratorId })
+      .from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1);
+
+    if (campResult.length === 0) {
+      return { success: false, error: "Crônica não encontrada." };
+    }
+
+    if (campResult[0].narratorId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Apenas o Narrador criador pode excluir esta crônica." };
+    }
+
+    // 2. Deletar do banco (Postgres lidará com CASCADE em rolagens e SET NULL em personagens)
+    await db.delete(campaigns).where(eq(campaigns.id, campaignId));
+
+    revalidatePath("/hub");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em deleteCampaignAction:", err);
+    return { success: false, error: err?.message || "Falha ao excluir a crônica." };
+  }
 }

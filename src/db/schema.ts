@@ -19,8 +19,7 @@ export const campaigns = pgTable("campaigns", {
 export const characters = pgTable("characters", {
   id: uuid("id").defaultRandom().primaryKey(),
   campaignId: uuid("campaign_id")
-    .references(() => campaigns.id, { onDelete: "cascade" })
-    .notNull(),
+    .references(() => campaigns.id, { onDelete: "set null" }),
   userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // Proteger contra exclusão: vira NPC sob controle do Narrador
   name: text("name").notNull(),
   type: text("type").$type<"jogador" | "npc" | "coterie">().notNull(),

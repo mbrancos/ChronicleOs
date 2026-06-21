@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { characters, campaigns } from "@/db/schema";
+import { characters, campaigns, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { CharacterSheetData } from "@/types/character";
 import { auth } from "@/lib/auth/server";
@@ -79,15 +79,13 @@ export async function deleteCharacterAction(characterId: string) {
       return { success: false, error: "ID de personagem inválido." };
     }
 
-    // 1. Buscar o personagem para validar autoria ou Narrador
+    // 1. Buscar o personagem para validar autoria
     const charResult = await db
       .select({
         userId: characters.userId,
         campaignId: characters.campaignId,
-        narratorId: campaigns.narratorId,
       })
       .from(characters)
-      .leftJoin(campaigns, eq(characters.campaignId, campaigns.id))
       .where(eq(characters.id, characterId))
       .limit(1);
 
@@ -97,11 +95,10 @@ export async function deleteCharacterAction(characterId: string) {
 
     const char = charResult[0];
 
-    // Permissão: Jogador dono OU Narrador da crônica
+    // Permissão: Apenas o jogador dono pode deletar seu próprio personagem permanentemente
     const isOwner = char.userId === session.user.id;
-    const isNarrator = char.narratorId === session.user.id;
 
-    if (!isOwner && !isNarrator) {
+    if (!isOwner) {
       return { success: false, error: "Acesso negado: Você não possui autorização para remover este personagem." };
     }
 
@@ -109,11 +106,135 @@ export async function deleteCharacterAction(characterId: string) {
     await db.delete(characters).where(eq(characters.id, characterId));
 
     revalidatePath("/hub");
-    revalidatePath(`/campanhas/${char.campaignId}/narrador`);
+    if (char.campaignId) {
+      revalidatePath(`/campanhas/${char.campaignId}/narrador`);
+    }
     return { success: true };
   } catch (err: any) {
     console.error("Erro em deleteCharacterAction:", err);
     return { success: false, error: err?.message || "Falha ao excluir personagem." };
+  }
+}
+
+// Server Action de duplicação de personagem
+export async function duplicateCharacterAction(characterId: string) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(characterId)) {
+      return { success: false, error: "ID de personagem inválido." };
+    }
+
+    // 1. Buscar o personagem original
+    const charResult = await db
+      .select()
+      .from(characters)
+      .where(eq(characters.id, characterId))
+      .limit(1);
+
+    if (charResult.length === 0) {
+      return { success: false, error: "Personagem original não encontrado." };
+    }
+
+    const originalChar = charResult[0];
+
+    // Segurança: apenas o dono pode duplicar o personagem
+    if (originalChar.userId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Você não é o proprietário deste personagem." };
+    }
+
+    // 2. Inserir clone no Cofre
+    await db.insert(characters).values({
+      name: `${originalChar.name} (Cópia)`,
+      type: originalChar.type,
+      userId: session.user.id,
+      campaignId: null, // Forçado a ir para o Cofre
+      sheetData: originalChar.sheetData,
+    });
+
+    revalidatePath("/hub");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em duplicateCharacterAction:", err);
+    return { success: false, error: err?.message || "Falha ao duplicar personagem." };
+  }
+}
+
+// Server Action de transferência de personagem para outro jogador
+export async function transferCharacterAction(characterId: string, targetUserEmail: string) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(characterId)) {
+      return { success: false, error: "ID de personagem inválido." };
+    }
+
+    const emailTrimmed = targetUserEmail.trim().toLowerCase();
+    if (!emailTrimmed) {
+      return { success: false, error: "O e-mail de destino é obrigatório." };
+    }
+
+    // 1. Buscar o personagem original
+    const charResult = await db
+      .select()
+      .from(characters)
+      .where(eq(characters.id, characterId))
+      .limit(1);
+
+    if (charResult.length === 0) {
+      return { success: false, error: "Personagem não encontrado." };
+    }
+
+    const char = charResult[0];
+
+    // Segurança: apenas o dono pode transferir o personagem
+    if (char.userId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Você não é o proprietário deste personagem." };
+    }
+
+    // Evitar transferir para si mesmo
+    if (session.user.email?.toLowerCase() === emailTrimmed) {
+      return { success: false, error: "Você já é o proprietário deste personagem." };
+    }
+
+    // 2. Buscar o usuário de destino pelo e-mail
+    const targetUserResult = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, emailTrimmed))
+      .limit(1);
+
+    if (targetUserResult.length === 0) {
+      return { success: false, error: "Usuário destinatário não encontrado na base de dados." };
+    }
+
+    const targetUserId = targetUserResult[0].id;
+
+    // 3. Atualizar o personagem: muda o dono e expulsa de qualquer crônica ativa (vai pro Cofre)
+    await db
+      .update(characters)
+      .set({
+        userId: targetUserId,
+        campaignId: null, // Expulsa da crônica ativa
+      })
+      .where(eq(characters.id, characterId));
+
+    revalidatePath("/hub");
+    if (char.campaignId) {
+      revalidatePath(`/campanhas/${char.campaignId}/narrador`);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em transferCharacterAction:", err);
+    return { success: false, error: err?.message || "Falha ao transferir personagem." };
   }
 }
 

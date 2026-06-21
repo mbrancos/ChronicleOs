@@ -78,7 +78,7 @@ export default async function MesaPage({ params }: PageProps) {
     <VttRoomClient 
       character={{
         id: character.id,
-        campaignId: character.campaignId,
+        campaignId: character.campaignId!,
         userId: character.userId,
         name: character.name,
         type: character.type,
