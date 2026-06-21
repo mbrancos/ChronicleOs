@@ -534,7 +534,7 @@ export default function CharacterSheetClient({
               )}
             </div>
             <div className="text-xs uppercase tracking-wider text-blood-red font-gothic text-right">
-              Crônica Ativa: {campaignId.slice(0, 8)}
+              {campaignId === "cofre" ? "Cofre (Sem Crônica) 🔒" : `Crônica Ativa: ${campaignId.slice(0, 8)}`}
             </div>
           </div>
         </div>

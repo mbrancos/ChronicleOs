@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { campaigns } from "@/db/schema";
+import { campaigns, characters } from "@/db/schema";
 import { auth } from "@/lib/auth/server";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import InviteClient from "@/components/invite/InviteClient";
@@ -68,7 +68,21 @@ export default async function InvitePage({ params }: PageProps) {
     redirect(`/cadastro?callbackUrl=/convite/${campaign_id}`);
   }
 
-  // 4. Renderizar a interface cliente de onboarding do jogador
+  // 4. Buscar os personagens do jogador que estão no Cofre (campaignId é nulo)
+  const vaultCharacters = await db
+    .select({
+      id: characters.id,
+      name: characters.name,
+    })
+    .from(characters)
+    .where(
+      and(
+        eq(characters.userId, session.user.id),
+        isNull(characters.campaignId)
+      )
+    );
+
+  // 5. Renderizar a interface cliente de onboarding do jogador
   return (
     <InviteClient
       campaign={{
@@ -80,6 +94,7 @@ export default async function InvitePage({ params }: PageProps) {
         name: session.user.name ?? "Membro da Camarilla",
         email: session.user.email,
       }}
+      vaultCharacters={vaultCharacters}
     />
   );
 }

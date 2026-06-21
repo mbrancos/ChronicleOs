@@ -238,3 +238,68 @@ export async function transferCharacterAction(characterId: string, targetUserEma
   }
 }
 
+// Server Action para associar um personagem livre do cofre a uma nova campanha (crônica)
+export async function joinCampaignWithCharacterAction(characterId: string, campaignId: string) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(characterId) || !uuidRegex.test(campaignId)) {
+      return { success: false, error: "IDs fornecidos são inválidos." };
+    }
+
+    // 1. Verificar se a campanha existe
+    const campResult = await db
+      .select({ id: campaigns.id })
+      .from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1);
+
+    if (campResult.length === 0) {
+      return { success: false, error: "Crônica não encontrada." };
+    }
+
+    // 2. Buscar o personagem para validar posse e se ele está no cofre
+    const charResult = await db
+      .select({ 
+        userId: characters.userId, 
+        campaignId: characters.campaignId 
+      })
+      .from(characters)
+      .where(eq(characters.id, characterId))
+      .limit(1);
+
+    if (charResult.length === 0) {
+      return { success: false, error: "Personagem não encontrado." };
+    }
+
+    const char = charResult[0];
+
+    // Segurança: o usuário atual deve ser o dono do personagem
+    if (char.userId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Você não é o proprietário deste personagem." };
+    }
+
+    // Segurança: o personagem deve estar no cofre (sem crônica ativa)
+    if (char.campaignId) {
+      return { success: false, error: "Este personagem já faz parte de outra crônica ativa." };
+    }
+
+    // 3. Atualizar o campaignId do personagem no banco
+    await db
+      .update(characters)
+      .set({ campaignId })
+      .where(eq(characters.id, characterId));
+
+    revalidatePath("/hub");
+    revalidatePath(`/campanhas/${campaignId}/narrador`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em joinCampaignWithCharacterAction:", err);
+    return { success: false, error: err?.message || "Falha ao entrar na crônica." };
+  }
+}
+

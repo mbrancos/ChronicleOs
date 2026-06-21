@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   createCampaignAction, 
   createCharacterAction, 
@@ -41,9 +42,10 @@ interface HubClientProps {
 }
 
 export default function HubClient({ user, campaigns, characters }: HubClientProps) {
+  const router = useRouter();
+
   // Controle de abertura dos modais
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
-  const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
 
   // Estados dos formulários de criação
   const [campaignName, setCampaignName] = useState("");
@@ -51,9 +53,6 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
   
   // Estado para feedback de cópia de convite
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  
-  const [characterName, setCharacterName] = useState("");
-  const [selectedCampaignId, setSelectedCampaignId] = useState("");
 
   // Feedbacks visuais
   const [loading, setLoading] = useState(false);
@@ -223,12 +222,6 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
     }
   };
 
-  // Abertura do modal de personagem
-  const openCharacterModal = () => {
-    setSelectedCampaignId(campaigns.length > 0 ? campaigns[0].id : "");
-    setIsCharacterModalOpen(true);
-  };
-
   // Handler para criar campanha
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,20 +240,18 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
     setLoading(false);
   };
 
-  // Handler para criar personagem
-  const handleCreateCharacter = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handler para criar personagem rapidamente no cofre e redirecionar
+  const handleQuickCreateCharacter = async () => {
     setLoading(true);
     setErrorMsg(null);
 
-    const response = await createCharacterAction(characterName, selectedCampaignId || null);
+    const response = await createCharacterAction("Novo Vampiro", null);
 
-    if (response.success) {
-      setCharacterName("");
-      setIsCharacterModalOpen(false);
+    if (response.success && response.characterId) {
       showToast("Vampiro forjado com sucesso! 🩸");
+      router.push(`/campanhas/cofre/personagens/${response.characterId}`);
     } else {
-      setErrorMsg(response.error || "Erro ao criar personagem.");
+      showToast(response.error || "Erro ao criar personagem.", "error");
     }
     setLoading(false);
   };
@@ -435,17 +426,18 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
               
               <div className="relative group">
                 <button
-                  onClick={openCharacterModal}
-                  className="px-3 py-1 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-semibold rounded-sm transition-all duration-200 cursor-pointer shadow-[0_0_6px_rgba(255,216,77,0.3)]"
+                  onClick={handleQuickCreateCharacter}
+                  disabled={loading}
+                  className="px-3 py-1 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-semibold rounded-sm transition-all duration-200 cursor-pointer shadow-[0_0_6px_rgba(255,216,77,0.3)] disabled:opacity-50"
                 >
-                  + Novo Personagem
+                  {loading ? "Criando..." : "+ Novo Personagem"}
                 </button>
               </div>
             </div>
 
             {characters.length === 0 ? (
               <div 
-                onClick={openCharacterModal}
+                onClick={handleQuickCreateCharacter}
                 className="border border-dashed border-gold-accent/30 hover:border-gold-accent/60 bg-bg-card/20 rounded-sm p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 h-64 group"
               >
                 <svg className="w-12 h-12 text-gold-accent/40 group-hover:text-gold-accent/75 transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -488,18 +480,12 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
                         <span className="text-[9px] uppercase tracking-wider text-text-dim font-data">
                           Crônica: {char.campaignName || "Cofre (Sem Crônica)"}
                         </span>
-                        {char.campaignId ? (
-                          <Link
-                            href={`/campanhas/${char.campaignId}/personagens/${char.id}`}
-                            className="text-xs uppercase tracking-widest font-data font-bold text-blood-red hover:text-white transition-colors"
-                          >
-                            Abrir Ficha →
-                          </Link>
-                        ) : (
-                          <span className="text-[10px] uppercase font-data text-text-dim select-none">
-                            Cofre 🔒
-                          </span>
-                        )}
+                        <Link
+                          href={`/campanhas/${char.campaignId || "cofre"}/personagens/${char.id}`}
+                          className="text-xs uppercase tracking-widest font-data font-bold text-blood-red hover:text-white transition-colors"
+                        >
+                          Abrir Ficha →
+                        </Link>
                       </div>
 
                       {/* Botão Kebab para Opções do Personagem */}
@@ -516,18 +502,12 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
                             className="absolute right-0 mt-1 w-40 bg-bg-card border border-white/15 rounded-sm shadow-2xl z-20 py-1 font-data text-[10px] uppercase tracking-wider text-left"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {char.campaignId ? (
-                              <Link
-                                href={`/campanhas/${char.campaignId}/personagens/${char.id}`}
-                                className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
-                              >
-                                🩸 Abrir Ficha
-                              </Link>
-                            ) : (
-                              <span className="w-full text-left block px-4 py-2 text-text-dim/45 cursor-not-allowed select-none">
-                                🔒 Abrir Ficha
-                              </span>
-                            )}
+                            <Link
+                              href={`/campanhas/${char.campaignId || "cofre"}/personagens/${char.id}`}
+                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
+                            >
+                              🩸 Abrir Ficha
+                            </Link>
                             <button
                               onClick={async () => {
                                 setActiveMenuId(null);
@@ -641,82 +621,7 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
         </div>
       )}
 
-      {/* ========================================== */}
-      {/* MODAL GÓTICO: GERAR NOVO PERSONAGEM */}
-      {/* ========================================== */}
-      {isCharacterModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div 
-            className="w-full max-w-md bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(255,216,77,0.1)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Botão de Fechar */}
-            <button 
-              onClick={() => setIsCharacterModalOpen(false)}
-              className="absolute top-4 right-4 text-text-muted hover:text-white text-lg font-data focus:outline-none cursor-pointer"
-            >
-              ✕
-            </button>
 
-            <h3 className="text-2xl font-gothic tracking-widest text-gold-accent uppercase pb-2 border-b border-white/5 mb-4">
-              Forjar Personagem
-            </h3>
-
-            {errorMsg && (
-              <div className="bg-hunger-red/10 border border-hunger-red text-hunger-red text-xs p-3 rounded-sm mb-4 font-data uppercase tracking-wider">
-                {errorMsg}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateCharacter} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-widest font-data text-text-muted block">Nome do Vampiro</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Marcus Vane, Thomas Thorne"
-                  value={characterName}
-                  onChange={(e) => setCharacterName(e.target.value)}
-                  className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-gold-accent outline-none transition-colors"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-widest font-data text-text-muted block">Abrigado na Crônica</label>
-                <select
-                  value={selectedCampaignId}
-                  onChange={(e) => setSelectedCampaignId(e.target.value)}
-                  className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-gold-accent outline-none transition-colors cursor-pointer"
-                >
-                  <option value="" className="bg-bg-card text-text-muted">COFRE (SEM CRÔNICA)</option>
-                  {campaigns.map(camp => (
-                    <option key={camp.id} value={camp.id} className="bg-bg-card text-text-primary">
-                      {camp.name.toUpperCase()} (ID: {camp.id.slice(0, 8)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCharacterModalOpen(false)}
-                  className="px-4 py-2 border border-white/10 hover:border-white text-text-muted hover:text-white text-xs uppercase tracking-widest font-data transition-colors rounded-sm cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-2 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(255,216,77,0.3)]"
-                >
-                  {loading ? "Gerando..." : "Gerar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ========================================== */}
       {/* MODAL GÓTICO: CONFIRMAR EXCLUSÃO DE PERSONAGEM */}
