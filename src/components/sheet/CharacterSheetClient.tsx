@@ -19,34 +19,57 @@ import { updateCharacterSheet, getCharacterXpLedger } from "@/app/actions/charac
 import InlineEdit from "@/components/sheet/InlineEdit";
 
 const CLAN_OPTIONS = [
+  "Banu Haqim",
   "Brujah",
   "Gangrel",
-  "Malkavian",
+  "Hecata",
+  "Lasombra",
+  "Malkaviano",
+  "Ministério",
   "Nosferatu",
+  "Ravnos",
+  "Salubri",
   "Toreador",
   "Tremere",
+  "Tzimisce",
   "Ventrue",
   "Caitiff",
   "Sem Clã"
 ];
 
 const CLAN_DISCIPLINE_MAPPING: Record<string, string[]> = {
+  "Banu Haqim": ["Feitiçaria de Sangue (Blood Sorcery)", "Rapidez (Celerity)", "Ofuscação (Obfuscate)"],
   "Brujah": ["Rapidez (Celerity)", "Potência (Potence)", "Presença (Presence)"],
   "Gangrel": ["Animalismo (Animalism)", "Fortitude", "Metamorfose (Protean)"],
+  "Hecata": ["Auspício (Auspex)", "Fortitude", "Oblivion (Esquecimento)"],
+  "Lasombra": ["Dominação (Dominate)", "Oblivion (Esquecimento)", "Potência (Potence)"],
+  "Malkaviano": ["Auspício (Auspex)", "Ofuscação (Obfuscate)", "Dominação (Dominate)"],
   "Malkavian": ["Auspício (Auspex)", "Ofuscação (Obfuscate)", "Dominação (Dominate)"],
+  "Ministério": ["Ofuscação (Obfuscate)", "Presença (Presence)", "Metamorfose (Protean)"],
   "Nosferatu": ["Animalismo (Animalism)", "Ofuscação (Obfuscate)", "Potência (Potence)"],
+  "Ravnos": ["Animalismo (Animalism)", "Ofuscação (Obfuscate)", "Presença (Presence)"],
+  "Salubri": ["Auspício (Auspex)", "Fortitude", "Presença (Presence)"],
   "Toreador": ["Auspício (Auspex)", "Rapidez (Celerity)", "Presença (Presence)"],
   "Tremere": ["Auspício (Auspex)", "Dominação (Dominate)", "Feitiçaria de Sangue (Blood Sorcery)"],
+  "Tzimisce": ["Animalismo (Animalism)", "Dominação (Dominate)", "Metamorfose (Protean)"],
   "Ventrue": ["Dominação (Dominate)", "Fortitude", "Presença (Presence)"]
 };
 
 const CLAN_BANE_MAPPING: Record<string, string> = {
+  "Banu Haqim": "Vício de Sangue: Quando o Banu Haqim prova o sangue de outro vampiro, corre o risco de entrar em frenesi de fome para consumi-lo por completo.",
   "Brujah": "Ira Violenta: Dificuldade aumentada para resistir ao Frenesi de Fúria.",
   "Gangrel": "Características Bestiais: Adquire traços animais temporários após um frenesi.",
+  "Hecata": "O Beijo Doloroso: O Beijo do Hecata causa dor física terrível ao invés de êxtase em mortais.",
+  "Lasombra": "Distorção da Imagem: Sua imagem em espelhos, câmeras e telas digitais é distorcida e possui falhas de funcionamento com tecnologias modernas.",
+  "Malkaviano": "Delírio: Sofre de perturbações mentais ativas sob tensão.",
   "Malkavian": "Delírio: Sofre de perturbações mentais ativas sob tensão.",
+  "Ministério": "Aversão à Luz: Recebe dano agravado extra sob a luz solar e sofre penalidades em áreas muito iluminadas.",
   "Nosferatu": "Aparência Repulsiva: Aparência monstruosa e deformada impossível de ocultar sem poderes.",
+  "Ravnos": "Destino Condenado: Deve estar em constante movimento. Sofrerá danos se dormir no mesmo local por mais de uma noite.",
+  "Salubri": "O Terceiro Olho: Possui um terceiro olho na testa que se abre e sangra ao usar poderes, e seu sangue é extremamente desejado por outros vampiros.",
   "Toreador": "Obsessão Estética: Distrai-se e fica paralisado diante de beleza extraordinária.",
   "Tremere": "Maldição do Sangue: Não podem criar laços de sangue normais com outros mortais/cainitas facilmente.",
+  "Tzimisce": "Apego Territorial: Deve dormir cercado por terra de um lugar de importância pessoal (como terra de seu país natal).",
   "Ventrue": "Paladar Seletivo: Só conseguem se alimentar de um tipo específico de presa escolhido.",
   "Caitiff": "Sem Clã: Não possuem uma maldição de clã específica, mas pagam mais XP por disciplinas.",
   "Sem Clã": "Sem Clã: Sem maldição específica."

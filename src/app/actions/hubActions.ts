@@ -58,7 +58,7 @@ export async function getUserHubData() {
 }
 
 const DEFAULT_ALLOWED_CLANS = [
-  "Brujah", "Gangrel", "Malkavian", "Nosferatu", "Toreador", "Tremere", "Ventrue", "Caitiff", "Sem Clã"
+  "Banu Haqim", "Brujah", "Gangrel", "Hecata", "Lasombra", "Malkaviano", "Malkavian", "Ministério", "Nosferatu", "Ravnos", "Salubri", "Toreador", "Tremere", "Tzimisce", "Ventrue", "Caitiff", "Sem Clã"
 ];
 
 // Cria uma nova campanha (crônica)

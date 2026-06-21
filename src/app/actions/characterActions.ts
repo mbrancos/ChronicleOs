@@ -530,12 +530,20 @@ const TECHNICAL_NAMES: Record<string, string> = {
 };
 
 const CLAN_DISCIPLINE_MAPPING: Record<string, string[]> = {
+  "Banu Haqim": ["Feitiçaria de Sangue (Blood Sorcery)", "Rapidez (Celerity)", "Ofuscação (Obfuscate)"],
   "Brujah": ["Rapidez (Celerity)", "Potência (Potence)", "Presença (Presence)"],
   "Gangrel": ["Animalismo (Animalism)", "Fortitude", "Metamorfose (Protean)"],
+  "Hecata": ["Auspício (Auspex)", "Fortitude", "Oblivion (Esquecimento)"],
+  "Lasombra": ["Dominação (Dominate)", "Oblivion (Esquecimento)", "Potência (Potence)"],
+  "Malkaviano": ["Auspício (Auspex)", "Ofuscação (Obfuscate)", "Dominação (Dominate)"],
   "Malkavian": ["Auspício (Auspex)", "Ofuscação (Obfuscate)", "Dominação (Dominate)"],
+  "Ministério": ["Ofuscação (Obfuscate)", "Presença (Presence)", "Metamorfose (Protean)"],
   "Nosferatu": ["Animalismo (Animalism)", "Ofuscação (Obfuscate)", "Potência (Potence)"],
+  "Ravnos": ["Animalismo (Animalism)", "Ofuscação (Obfuscate)", "Presença (Presence)"],
+  "Salubri": ["Auspício (Auspex)", "Fortitude", "Presença (Presence)"],
   "Toreador": ["Auspício (Auspex)", "Rapidez (Celerity)", "Presença (Presence)"],
   "Tremere": ["Auspício (Auspex)", "Dominação (Dominate)", "Feitiçaria de Sangue (Blood Sorcery)"],
+  "Tzimisce": ["Animalismo (Animalism)", "Dominação (Dominate)", "Metamorfose (Protean)"],
   "Ventrue": ["Dominação (Dominate)", "Fortitude", "Presença (Presence)"]
 };
 

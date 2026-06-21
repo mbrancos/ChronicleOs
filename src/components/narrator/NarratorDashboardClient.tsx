@@ -53,7 +53,9 @@ export default function NarratorDashboardClient({
   const [campaignPowerLevel, setCampaignPowerLevel] = useState(campaign.powerLevel || "NEONATE");
   const [campaignExtraXp, setCampaignExtraXp] = useState(campaign.extraXp || 0);
   const [campaignAllowedClans, setCampaignAllowedClans] = useState<string[]>(
-    campaign.allowedClans || ["Brujah", "Gangrel", "Malkavian", "Nosferatu", "Toreador", "Tremere", "Ventrue", "Caitiff", "Sem Clã"]
+    campaign.allowedClans || [
+      "Banu Haqim", "Brujah", "Gangrel", "Hecata", "Lasombra", "Malkaviano", "Malkavian", "Ministério", "Nosferatu", "Ravnos", "Salubri", "Toreador", "Tremere", "Tzimisce", "Ventrue", "Caitiff", "Sem Clã"
+    ]
   );
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -385,8 +387,10 @@ export default function NarratorDashboardClient({
               {/* Clãs Permitidos */}
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-widest text-text-muted block">Clãs Permitidos</label>
-                <div className="grid grid-cols-2 gap-2 bg-bg-main/50 p-3 border border-white/5 rounded-sm">
-                  {["Brujah", "Gangrel", "Malkavian", "Nosferatu", "Toreador", "Tremere", "Ventrue", "Caitiff", "Sem Clã"].map(clan => (
+                <div className="grid grid-cols-2 gap-2 bg-bg-main/50 p-3 border border-white/5 rounded-sm max-h-60 overflow-y-auto">
+                  {[
+                    "Banu Haqim", "Brujah", "Gangrel", "Hecata", "Lasombra", "Malkaviano", "Malkavian", "Ministério", "Nosferatu", "Ravnos", "Salubri", "Toreador", "Tremere", "Tzimisce", "Ventrue", "Caitiff", "Sem Clã"
+                  ].map(clan => (
                     <label key={clan} className="flex items-center space-x-2 cursor-pointer py-1 font-sans text-xs">
                       <input
                         type="checkbox"
