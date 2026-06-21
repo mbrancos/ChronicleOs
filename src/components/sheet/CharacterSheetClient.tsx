@@ -182,13 +182,13 @@ export default function CharacterSheetClient({
   onTraitClick
 }: CharacterSheetClientProps) {
   
-  // ESTADO LOCAL DA FICHA (Mescla com os dados padrão Brujah se for novo personagem no banco)
+  // ESTADO LOCAL DA FICHA (Mescla com os dados padrão se for novo personagem no banco)
   const [character, setCharacter] = useState<CharacterSheetData>(() => {
     const baseData = initialData ? deepMerge(DEFAULT_CHARACTER_DATA, initialData) : { ...DEFAULT_CHARACTER_DATA };
     if (baseData.profile) {
       // Sincronizar o nome público da tabela no profile do JSONB
-      if (!baseData.profile.name || baseData.profile.name === "Marcus Vane") {
-        baseData.profile.name = initialName || baseData.profile.name || "Marcus Vane";
+      if (!baseData.profile.name || baseData.profile.name === "Novo Vampiro") {
+        baseData.profile.name = initialName || baseData.profile.name || "Novo Vampiro";
       }
     }
     return baseData;
@@ -551,7 +551,9 @@ export default function CharacterSheetClient({
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
               </svg>
               <div className="absolute inset-0 bg-linear-to-t from-bg-main/80 via-transparent to-transparent flex items-end justify-center pb-1">
-                <span className="text-[10px] uppercase tracking-wider text-text-muted">Marcus</span>
+                <span className="text-[10px] uppercase tracking-wider text-text-muted">
+                  {character.profile.name?.split(" ")[0] || "Vampiro"}
+                </span>
               </div>
             </div>
           </div>
@@ -560,7 +562,7 @@ export default function CharacterSheetClient({
           <div className="lg:col-span-4 space-y-2 max-w-full">
             <h1 className="text-4xl font-gothic tracking-wider text-blood-red leading-none flex items-center gap-1">
               <InlineEdit
-                value={character.profile.name || "Marcus Vane"}
+                value={character.profile.name || "Novo Vampiro"}
                 onChange={(val) => handleProfileChange("name", val)}
                 className="text-4xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase"
               />

@@ -130,122 +130,58 @@ export interface CharacterSheetData {
 
 export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
   profile: {
-    name: "Marcus Vane",
+    name: "Novo Vampiro",
     portrait_url: "", // SVG fallback será usado
-    concept: "Revolucionário Anarquista",
-    clan: "Brujah",
-    bane: "Fúria Rebelde (Subtrai dados de testes para resistir a frenesi de raiva)",
-    predator_type: "Bagger (Ladrão de Sangue)",
-    sire: "Dread",
-    generation: 11
+    concept: "Neófito",
+    clan: "Sem Clã",
+    bane: "",
+    predator_type: "Nenhum",
+    sire: "",
+    generation: 13
   },
   status: {
-    hunger: 2,
+    hunger: 1,
     humanity: 7,
-    stains: 1,
-    blood_potency: 2,
-    health: { max: 6, superficial: 2, aggravated: 0 },
-    willpower: { max: 5, superficial: 1, aggravated: 0 },
-    experience: { total: 45, spent: 30 }
+    stains: 0,
+    blood_potency: 1,
+    health: { max: 4, superficial: 0, aggravated: 0 },
+    willpower: { max: 3, superficial: 0, aggravated: 0 },
+    experience: { total: 0, spent: 0 }
   },
   attributes: {
-    physical: { strength: 3, dexterity: 3, stamina: 4 },
-    social: { charisma: 3, manipulation: 2, composure: 2 },
-    mental: { intelligence: 2, wits: 3, resolve: 3 }
+    physical: { strength: 1, dexterity: 1, stamina: 1 },
+    social: { charisma: 1, manipulation: 1, composure: 1 },
+    mental: { intelligence: 1, wits: 1, resolve: 1 }
   },
   skills: {
-    athletics: 2, brawl: 3, craft: 0, drive: 1, firearms: 2, melee: 3, larceny: 1, stealth: 2, survival: 1,
-    animal_ken: 0, etiquette: 1, insight: 2, intimidation: 3, leadership: 2, performance: 0, persuasion: 2, streetwise: 3, subterfuge: 1,
-    academics: 1, awareness: 2, finance: 0, investigation: 1, medicine: 0, occult: 1, politics: 2, science: 0, technology: 1
+    athletics: 0, brawl: 0, craft: 0, drive: 0, firearms: 0, melee: 0, larceny: 0, stealth: 0, survival: 0,
+    animal_ken: 0, etiquette: 0, insight: 0, intimidation: 0, leadership: 0, performance: 0, persuasion: 0, streetwise: 0, subterfuge: 0,
+    academics: 0, awareness: 0, finance: 0, investigation: 0, medicine: 0, occult: 0, politics: 0, science: 0, technology: 0
   },
-  specialties: [
-    { id: "s1", skill: "brawl", name: "Briga de Rua" },
-    { id: "s2", skill: "melee", name: "Machados de Mão" },
-    { id: "s3", skill: "streetwise", name: "Contatos com Traficantes" }
-  ],
-  disciplines: [
-    {
-      id: "d1",
-      name: "Rapidez (Celerity)",
-      level: 2,
-      powers: ["Graça Felina (Cat's Grace)", "Julgamento Rápido (Rapid Reflexes)"]
-    },
-    {
-      id: "d2",
-      name: "Potência (Potence)",
-      level: 2,
-      powers: ["Corpo Letal (Lethal Body)", "Salto de Fé (Soaring Leap)"]
-    },
-    {
-      id: "d3",
-      name: "Presença (Presence)",
-      level: 1,
-      powers: ["Olhar Aterrorizante (Awe)"]
-    }
-  ],
-  advantages: [
-    {
-      id: "a1",
-      name: "Refúgio Seguro",
-      type: "background",
-      level: 2,
-      description: "Galpão abandonado na zona industrial fortificado contra luz."
-    },
-    {
-      id: "a2",
-      name: "Recursos",
-      type: "background",
-      level: 1,
-      description: "Pequeno fundo financeiro em dinheiro vivo não rastreável."
-    },
-    {
-      id: "a3",
-      name: "Sangue de Ferro",
-      type: "merit",
-      level: 3,
-      description: "Excelente resistência física, reduz ferimentos de fontes específicas."
-    },
-    {
-      id: "a4",
-      name: "Viciado (Sangue Frio)",
-      type: "flaw",
-      level: 2,
-      description: "Dificuldade em se alimentar de vítimas que não estejam sob estresse intenso."
-    },
-    {
-      id: "a5",
-      name: "Segredos da Camarilla de São Paulo",
-      type: "loresheet",
-      level: 2,
-      description: "Conhecimento sobre os túneis ocultos dominados por Nosferatu na capital paulista."
-    }
-  ],
+  specialties: [],
+  disciplines: [],
+  advantages: [],
   macros: [
     {
       id: "m1",
-      name: "Soco de Impacto",
+      name: "Ataque Físico (Briga)",
       pool: ["strength", "brawl"],
       rouse_check: false
     },
     {
       id: "m2",
-      name: "Golpe de Machado",
-      pool: ["strength", "melee"],
+      name: "Furtividade",
+      pool: ["dexterity", "stealth"],
       rouse_check: false
     },
     {
       id: "m3",
-      name: "Coagir Capanga",
-      pool: ["manipulation", "intimidation"],
-      rouse_check: true
-    },
-    {
-      id: "m4",
-      name: "Furtividade nas Sombras",
-      pool: ["dexterity", "stealth"],
+      name: "Percepção",
+      pool: ["wits", "awareness"],
       rouse_check: false
     }
   ],
-  notes: "Marcus foi abraçado nas noites rebeldes da década de 90. Sua maldição de clã o faz explodir de raiva com frequência, mas ele mantém sua busca por justiça entre os anarquistas locais."
+  notes: ""
 };
+
 
