@@ -8,9 +8,10 @@ interface CharacterMiniCardProps {
   character: {
     id: string;
     name: string;
-    campaignId: string;
+    campaignId: string | null;
     type: string;
     sheetData: any; // JSONB
+    status?: "DRAFT" | "READY" | "IN_PLAY";
   };
 }
 
@@ -134,12 +135,34 @@ export default function CharacterMiniCard({ character }: CharacterMiniCardProps)
       {/* Rodapé e Link de Acesso */}
       <div className="flex justify-between items-center text-[10px] font-data">
         <span className="text-text-dim uppercase">ID: {character.id.slice(0, 8)}</span>
-        <Link
-          href={`/campanhas/${character.campaignId}/personagens/${character.id}`}
-          className="text-xs uppercase tracking-widest font-bold text-blood-red hover:text-white transition-colors"
-        >
-          Abrir Ficha →
-        </Link>
+        
+        <div className="flex items-center space-x-3">
+          {character.type === "jogador" && character.status === "IN_PLAY" && (
+            <button
+              onClick={async () => {
+                if (confirm(`Deseja destravar a ficha de ${character.name.toUpperCase()} para edições e correções?`)) {
+                  const { anistiaCharacterAction } = await import("@/app/actions/characterActions");
+                  const res = await anistiaCharacterAction(character.id);
+                  if (res.success) {
+                    alert("Edição destravada! O personagem agora está com status READY.");
+                    window.location.reload();
+                  } else {
+                    alert(res.error || "Falha ao destravar edição.");
+                  }
+                }
+              }}
+              className="text-gold-accent hover:text-white transition-colors uppercase tracking-widest font-bold text-[10px] cursor-pointer"
+            >
+              Destravar 🔓
+            </button>
+          )}
+          <Link
+            href={character.campaignId ? `/campanhas/${character.campaignId}/personagens/${character.id}` : `/campanhas/cofre/personagens/${character.id}`}
+            className="text-xs uppercase tracking-widest font-bold text-blood-red hover:text-white transition-colors"
+          >
+            Abrir Ficha →
+          </Link>
+        </div>
       </div>
 
     </div>

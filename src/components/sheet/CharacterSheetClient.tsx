@@ -15,7 +15,7 @@ import DotSlider from "@/components/sheet/DotSlider";
 import DamageTracker from "@/components/sheet/DamageTracker";
 import HumanityTracker from "@/components/sheet/HumanityTracker";
 import { useAutosave } from "@/hooks/useAutosave";
-import { updateCharacterSheet } from "@/app/actions/characterActions";
+import { updateCharacterSheet, getCharacterXpLedger } from "@/app/actions/characterActions";
 import InlineEdit from "@/components/sheet/InlineEdit";
 
 const CLAN_OPTIONS = [
@@ -29,6 +29,28 @@ const CLAN_OPTIONS = [
   "Caitiff",
   "Sem Clã"
 ];
+
+const CLAN_DISCIPLINE_MAPPING: Record<string, string[]> = {
+  "Brujah": ["Rapidez (Celerity)", "Potência (Potence)", "Presença (Presence)"],
+  "Gangrel": ["Animalismo (Animalism)", "Fortitude", "Metamorfose (Protean)"],
+  "Malkavian": ["Auspício (Auspex)", "Ofuscação (Obfuscate)", "Dominação (Dominate)"],
+  "Nosferatu": ["Animalismo (Animalism)", "Ofuscação (Obfuscate)", "Potência (Potence)"],
+  "Toreador": ["Auspício (Auspex)", "Rapidez (Celerity)", "Presença (Presence)"],
+  "Tremere": ["Auspício (Auspex)", "Dominação (Dominate)", "Feitiçaria de Sangue (Blood Sorcery)"],
+  "Ventrue": ["Dominação (Dominate)", "Fortitude", "Presença (Presence)"]
+};
+
+const CLAN_BANE_MAPPING: Record<string, string> = {
+  "Brujah": "Ira Violenta: Dificuldade aumentada para resistir ao Frenesi de Fúria.",
+  "Gangrel": "Características Bestiais: Adquire traços animais temporários após um frenesi.",
+  "Malkavian": "Delírio: Sofre de perturbações mentais ativas sob tensão.",
+  "Nosferatu": "Aparência Repulsiva: Aparência monstruosa e deformada impossível de ocultar sem poderes.",
+  "Toreador": "Obsessão Estética: Distrai-se e fica paralisado diante de beleza extraordinária.",
+  "Tremere": "Maldição do Sangue: Não podem criar laços de sangue normais com outros mortais/cainitas facilmente.",
+  "Ventrue": "Paladar Seletivo: Só conseguem se alimentar de um tipo específico de presa escolhido.",
+  "Caitiff": "Sem Clã: Não possuem uma maldição de clã específica, mas pagam mais XP por disciplinas.",
+  "Sem Clã": "Sem Clã: Sem maldição específica."
+};
 
 const PREDATOR_OPTIONS = [
   "Bagger (Ladrão de Sangue)",
@@ -162,6 +184,182 @@ function executeSimulationRoll(
   };
 }
 
+function calculateBaseAndXp(charData: CharacterSheetData) {
+  const clan = charData.profile?.clan || "Sem Clã";
+  const clanDisciplines = CLAN_DISCIPLINE_MAPPING[clan] || [];
+  const isCaitiffOrThin = clan === "Caitiff" || clan === "Sem Clã" || clan === "Sangue-Ralo";
+
+  // --- ATRIBUTOS ---
+  const allAttrs: { key: string; val: number }[] = [];
+  if (charData.attributes) {
+    if (charData.attributes.physical) {
+      Object.entries(charData.attributes.physical).forEach(([k, v]) => allAttrs.push({ key: k, val: Number(v) || 1 }));
+    }
+    if (charData.attributes.social) {
+      Object.entries(charData.attributes.social).forEach(([k, v]) => allAttrs.push({ key: k, val: Number(v) || 1 }));
+    }
+    if (charData.attributes.mental) {
+      Object.entries(charData.attributes.mental).forEach(([k, v]) => allAttrs.push({ key: k, val: Number(v) || 1 }));
+    }
+  }
+  // Ordenar de forma decrescente
+  allAttrs.sort((a, b) => b.val - a.val);
+
+  const idealAttrs = [4, 3, 3, 3, 2, 2, 2, 2, 1];
+  const attributesBase: Record<string, number> = {};
+  let attributeXpSpent = 0;
+
+  allAttrs.forEach((attr, idx) => {
+    const idealVal = idealAttrs[idx] || 1;
+    const currentVal = attr.val;
+    if (currentVal >= idealVal) {
+      attributesBase[attr.key] = idealVal;
+      for (let lvl = idealVal + 1; lvl <= currentVal; lvl++) {
+        attributeXpSpent += lvl * 5;
+      }
+    } else {
+      attributesBase[attr.key] = currentVal;
+    }
+  });
+
+  // --- HABILIDADES ---
+  const allSkills: { key: string; val: number }[] = [];
+  if (charData.skills) {
+    Object.entries(charData.skills).forEach(([k, v]) => {
+      allSkills.push({ key: k, val: Number(v) || 0 });
+    });
+  }
+  allSkills.sort((a, b) => b.val - a.val);
+
+  const idealSkills = [4, 3, 3, 3, 2, 2, 2, 1, 1, 1];
+  const skillsBase: Record<string, number> = {};
+  let skillXpSpent = 0;
+
+  allSkills.forEach((skill, idx) => {
+    const idealVal = idealSkills[idx] || 0;
+    const currentVal = skill.val;
+    if (currentVal >= idealVal) {
+      skillsBase[skill.key] = idealVal;
+      for (let lvl = idealVal + 1; lvl <= currentVal; lvl++) {
+        skillXpSpent += lvl * 3;
+      }
+    } else {
+      skillsBase[skill.key] = currentVal;
+    }
+  });
+
+  // --- DISCIPLINAS ---
+  const disciplinesList = charData.disciplines || [];
+  const sortedDiscs = [...disciplinesList].sort((a, b) => b.level - a.level);
+
+  const idealDiscs = [2, 1];
+  const disciplinesBase: Record<string, number> = {};
+  let disciplineXpSpent = 0;
+
+  sortedDiscs.forEach((disc, idx) => {
+    const idealVal = idealDiscs[idx] || 0;
+    const currentVal = disc.level;
+    
+    const isClanDisc = clanDisciplines.some(d => disc.name.toLowerCase().includes(d.split(" ")[0].toLowerCase()));
+    
+    let costMultiplier = 7;
+    if (isCaitiffOrThin) {
+      costMultiplier = 6;
+    } else if (isClanDisc) {
+      costMultiplier = 5;
+    }
+
+    if (currentVal >= idealVal) {
+      disciplinesBase[disc.id] = idealVal;
+      for (let lvl = idealVal + 1; lvl <= currentVal; lvl++) {
+        disciplineXpSpent += lvl * costMultiplier;
+      }
+    } else {
+      disciplinesBase[disc.id] = currentVal;
+    }
+  });
+
+  // --- VANTAGENS ---
+  const positiveAdvantages = (charData.advantages || []).filter(
+    a => a.type === "background" || a.type === "merit" || a.type === "loresheet"
+  );
+  const totalPositivePoints = positiveAdvantages.reduce((acc, a) => acc + a.level, 0);
+  
+  let advantagesXpSpent = 0;
+  if (totalPositivePoints > 7) {
+    advantagesXpSpent = (totalPositivePoints - 7) * 3;
+  }
+
+  // --- ESPECIALIZAÇÕES ---
+  const totalSpecsCount = charData.specialties ? charData.specialties.length : 0;
+  let specialtiesXpSpent = 0;
+  if (totalSpecsCount > 1) {
+    specialtiesXpSpent = (totalSpecsCount - 1) * 3;
+  }
+
+  const specialtiesBase: Record<string, boolean> = {};
+  if (charData.specialties) {
+    charData.specialties.forEach((spec, idx) => {
+      specialtiesBase[spec.id] = idx === 0;
+    });
+  }
+
+  // --- POTÊNCIA DE SANGUE ---
+  const currentBloodPotency = charData.status?.blood_potency || 1;
+  let bloodPotencyXpSpent = 0;
+  if (currentBloodPotency > 1) {
+    for (let lvl = 2; lvl <= currentBloodPotency; lvl++) {
+      bloodPotencyXpSpent += lvl * 10;
+    }
+  }
+
+  // --- HUMANIDADE ---
+  const currentHumanity = charData.status?.humanity || 7;
+  let humanityXpSpent = 0;
+  if (currentHumanity > 7) {
+    for (let lvl = 8; lvl <= currentHumanity; lvl++) {
+      humanityXpSpent += lvl * 10;
+    }
+  }
+
+  const totalSpentXp = 
+    attributeXpSpent + 
+    skillXpSpent + 
+    disciplineXpSpent + 
+    advantagesXpSpent + 
+    specialtiesXpSpent + 
+    bloodPotencyXpSpent + 
+    humanityXpSpent;
+
+  const attrSumDistributed = Object.values(attributesBase).reduce((acc, v) => acc + v, 0);
+  const skillSumDistributed = Object.values(skillsBase).reduce((acc, v) => acc + v, 0);
+  const discSumDistributed = Object.values(disciplinesBase).reduce((acc, v) => acc + v, 0);
+
+  const attributesRemaining = Math.max(0, 22 - attrSumDistributed);
+  const skillsRemaining = Math.max(0, 20 - skillSumDistributed);
+  const disciplinesRemaining = Math.max(0, 3 - discSumDistributed);
+  const advantagesRemaining = Math.max(0, 7 - totalPositivePoints);
+
+  const isDraft = 
+    attributesRemaining > 0 || 
+    skillsRemaining > 0 || 
+    disciplinesRemaining > 0 || 
+    advantagesRemaining > 0;
+
+  return {
+    totalSpentXp,
+    attributesBase,
+    skillsBase,
+    disciplinesBase,
+    specialtiesBase,
+    attributesRemaining,
+    skillsRemaining,
+    disciplinesRemaining,
+    advantagesRemaining,
+    isDraft
+  };
+}
+
 interface CharacterSheetClientProps {
   characterId: string;
   campaignId: string;
@@ -170,6 +368,8 @@ interface CharacterSheetClientProps {
   onDataChange?: (data: CharacterSheetData) => void;
   dicePool?: Array<{ id: string, label: string, value: number }>;
   onTraitClick?: (trait: { id: string, label: string, value: number }) => void;
+  initialStatus?: "DRAFT" | "READY" | "IN_PLAY";
+  initialBuildState?: any;
 }
 
 export default function CharacterSheetClient({
@@ -179,7 +379,9 @@ export default function CharacterSheetClient({
   initialName = "",
   onDataChange,
   dicePool = [],
-  onTraitClick
+  onTraitClick,
+  initialStatus = "DRAFT",
+  initialBuildState = {}
 }: CharacterSheetClientProps) {
   
   // ESTADO LOCAL DA FICHA (Mescla com os dados padrão se for novo personagem no banco)
@@ -193,6 +395,15 @@ export default function CharacterSheetClient({
     }
     return baseData;
   });
+
+  const [status, setStatus] = useState<"DRAFT" | "READY" | "IN_PLAY">(initialStatus);
+  const [buildState, setBuildState] = useState<any>(initialBuildState);
+
+  // Histórico de transações de XP
+  const [xpLedger, setXpLedger] = useState<any[]>([]);
+  const [isLoadingLedger, setIsLoadingLedger] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"nucleo" | "sangue" | "vantagens" | "sistema" | "xp_diary">("nucleo");
 
   const [prevWillpower, setPrevWillpower] = useState(initialData?.status?.willpower);
 
@@ -216,8 +427,101 @@ export default function CharacterSheetClient({
     }
   }
 
-  const [activeTab, setActiveTab] = useState<"nucleo" | "sangue" | "vantagens" | "sistema">("nucleo");
-  
+  // Rodar o cálculo do esqueleto base e XP a cada render/alteração
+  const alloc = calculateBaseAndXp(character);
+
+  // Sincronizar o status calculado reativamente
+  useEffect(() => {
+    if (initialStatus === "IN_PLAY") {
+      if (status !== "IN_PLAY") {
+        setStatus("IN_PLAY");
+      }
+      return;
+    }
+    
+    const calculatedStatus = alloc.isDraft ? "DRAFT" : "READY";
+    if (status !== calculatedStatus) {
+      setStatus(calculatedStatus);
+    }
+  }, [alloc.isDraft, initialStatus, status]);
+
+  // Sincronizar o buildState calculado
+  useEffect(() => {
+    const newBuildState = {
+      attributes: {},
+      skills: {},
+      disciplines: {},
+      advantages: {},
+      specialties: character.specialties ? character.specialties.map(s => ({ id: s.id, name: s.name, skill: s.skill, isXp: !alloc.specialtiesBase[s.id] })) : [],
+      blood_potency: { base: 1, xp: (character.status?.blood_potency || 1) > 1 ? (character.status?.blood_potency || 1) - 1 : 0 },
+      humanity: { base: 7, xp: (character.status?.humanity || 7) > 7 ? (character.status?.humanity || 7) - 7 : 0 }
+    };
+    
+    // Preencher atributos
+    Object.entries(character.attributes?.physical || {}).forEach(([key, val]) => {
+      const base = alloc.attributesBase[key] || 1;
+      (newBuildState.attributes as any)[key] = { base, xp: (val as number) - base };
+    });
+    Object.entries(character.attributes?.social || {}).forEach(([key, val]) => {
+      const base = alloc.attributesBase[key] || 1;
+      (newBuildState.attributes as any)[key] = { base, xp: (val as number) - base };
+    });
+    Object.entries(character.attributes?.mental || {}).forEach(([key, val]) => {
+      const base = alloc.attributesBase[key] || 1;
+      (newBuildState.attributes as any)[key] = { base, xp: (val as number) - base };
+    });
+    
+    // Preencher habilidades
+    Object.entries(character.skills || {}).forEach(([key, val]) => {
+      const base = alloc.skillsBase[key] || 0;
+      (newBuildState.skills as any)[key] = { base, xp: (val as number) - base };
+    });
+    
+    // Preencher disciplinas
+    character.disciplines.forEach(disc => {
+      const base = alloc.disciplinesBase[disc.id] || 0;
+      (newBuildState.disciplines as any)[disc.name] = { base, xp: disc.level - base };
+    });
+    
+    // Preencher vantagens
+    let currentPositiveSum = 0;
+    character.advantages.forEach(adv => {
+      const isPositive = adv.type === "background" || adv.type === "merit" || adv.type === "loresheet";
+      if (isPositive) {
+        currentPositiveSum += adv.level;
+        if (currentPositiveSum > 7) {
+          const excess = currentPositiveSum - 7;
+          const base = adv.level - excess;
+          (newBuildState.advantages as any)[adv.id] = { base: Math.max(0, base), xp: excess };
+        } else {
+          (newBuildState.advantages as any)[adv.id] = { base: adv.level, xp: 0 };
+        }
+      } else {
+        (newBuildState.advantages as any)[adv.id] = { base: adv.level, xp: 0 };
+      }
+    });
+    
+    if (JSON.stringify(buildState) !== JSON.stringify(newBuildState)) {
+      setBuildState(newBuildState);
+    }
+  }, [character, alloc, buildState]);
+
+  // Carregar histórico de XP do banco ao abrir a aba "xp_diary"
+  const fetchXpLedger = useCallback(async () => {
+    setIsLoadingLedger(true);
+    const res = await getCharacterXpLedger(characterId);
+    if (res.success && res.data) {
+      setXpLedger(res.data);
+    }
+    setIsLoadingLedger(false);
+  }, [characterId, getCharacterXpLedger]);
+
+  useEffect(() => {
+    if (activeTab === "xp_diary") {
+      fetchXpLedger();
+    }
+  }, [activeTab, fetchXpLedger]);
+
   // ESTADOS DO MINI-FORMULÁRIO DE ESPECIALIZAÇÕES (ABA NÚCLEO)
   const [selectedSkill, setSelectedSkill] = useState<keyof CharacterSkills | "">("");
   const [newSpecialtyName, setNewSpecialtyName] = useState("");
@@ -225,6 +529,17 @@ export default function CharacterSheetClient({
   // ESTADO DE SINCRONIZAÇÃO (Optimistic UI Autosave)
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const savedTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const buildStateRef = useRef(buildState);
+  const statusRef = useRef(status);
+
+  useEffect(() => {
+    buildStateRef.current = buildState;
+  }, [buildState]);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   // CALLBACK DE SALVAMENTO DEBOUNCED
   const triggerSave = useCallback(async (dataToSave: CharacterSheetData) => {
@@ -235,7 +550,7 @@ export default function CharacterSheetClient({
     
     setSyncStatus("saving");
     
-    const response = await updateCharacterSheet(characterId, dataToSave);
+    const response = await updateCharacterSheet(characterId, dataToSave, buildStateRef.current, statusRef.current);
     
     if (response.success) {
       setSyncStatus("saved");
@@ -301,13 +616,36 @@ export default function CharacterSheetClient({
 
   // Alterações de Perfil (InlineEdit)
   const handleProfileChange = (field: keyof typeof character.profile, value: string | number) => {
-    setCharacter(prev => ({
-      ...prev,
-      profile: {
+    setCharacter(prev => {
+      const updatedProfile = {
         ...prev.profile,
         [field]: value
+      };
+      let updatedDisciplines = prev.disciplines;
+      
+      if (field === "clan") {
+        const newClan = String(value);
+        updatedProfile.bane = CLAN_BANE_MAPPING[newClan] || "";
+        
+        const allowedDiscs = CLAN_DISCIPLINE_MAPPING[newClan] || [];
+        if (allowedDiscs.length > 0) {
+          updatedDisciplines = allowedDiscs.map((discName, index) => ({
+            id: `disc_init_${index}_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+            name: discName,
+            level: 1,
+            powers: ["Poder Inicial"]
+          }));
+        } else {
+          updatedDisciplines = [];
+        }
       }
-    }));
+      
+      return {
+        ...prev,
+        profile: updatedProfile,
+        disciplines: updatedDisciplines
+      };
+    });
   };
 
   // ========================================================
@@ -539,6 +877,57 @@ export default function CharacterSheetClient({
           </div>
         </div>
 
+        {/* PAINEL DE STATUS DA CRIAÇÃO & CARTEIRA DE XP */}
+        <div className="bg-bg-card border border-white/5 p-4 rounded-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center space-x-3">
+            <span className="text-xs uppercase tracking-widest text-text-muted font-data font-bold">Estado da Ficha:</span>
+            {status === "IN_PLAY" ? (
+              <span className="px-2.5 py-1 bg-burgundy/40 border border-blood-red text-hunger-red text-xs font-bold font-data uppercase tracking-wider rounded-xs shadow-[0_0_8px_rgba(200,36,52,0.3)] flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-hunger-red animate-pulse" />
+                Em Jogo (Ficha Trancada) 🩸
+              </span>
+            ) : status === "READY" ? (
+              <span className="px-2.5 py-1 bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 text-xs font-bold font-data uppercase tracking-wider rounded-xs flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                Pronto no Cofre 🔒
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 bg-amber-950/40 border border-amber-500/40 text-amber-400 text-xs font-bold font-data uppercase tracking-wider rounded-xs flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                Criando (Rascunho) 🔧
+              </span>
+            )}
+          </div>
+          
+          {status === "DRAFT" && (
+            <div className="flex flex-wrap items-center gap-4 text-xs font-data uppercase">
+              <span className="text-text-muted">Faltam no Esqueleto:</span>
+              {alloc.attributesRemaining > 0 && (
+                <span className="text-amber-400">Atributos: {alloc.attributesRemaining}</span>
+              )}
+              {alloc.skillsRemaining > 0 && (
+                <span className="text-amber-400">Habilidades: {alloc.skillsRemaining}</span>
+              )}
+              {alloc.disciplinesRemaining > 0 && (
+                <span className="text-amber-400">Disciplinas: {alloc.disciplinesRemaining}</span>
+              )}
+              {alloc.advantagesRemaining > 0 && (
+                <span className="text-amber-400">Vantagens: {alloc.advantagesRemaining}</span>
+              )}
+              {alloc.attributesRemaining === 0 && alloc.skillsRemaining === 0 && alloc.disciplinesRemaining === 0 && alloc.advantagesRemaining === 0 && (
+                <span className="text-emerald-400">Tudo Distribuído!</span>
+              )}
+            </div>
+          )}
+          
+          {status !== "DRAFT" && (
+            <div className="flex items-center space-x-2 text-xs font-data uppercase">
+              <span className="text-text-muted">XP Consumido em Compras:</span>
+              <span className="text-gold-accent font-bold text-sm tracking-wider">{alloc.totalSpentXp} XP</span>
+            </div>
+          )}
+        </div>
+
         {/* ======================================================== */}
         {/* CABEÇALHO FIXO - DADOS DO VAMPIRO & TRACKERS RÁPIDOS */}
         {/* ======================================================== */}
@@ -564,6 +953,7 @@ export default function CharacterSheetClient({
               <InlineEdit
                 value={character.profile.name || "Novo Vampiro"}
                 onChange={(val) => handleProfileChange("name", val)}
+                disabled={status === "IN_PLAY"}
                 className="text-4xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase"
               />
             </h1>
@@ -574,12 +964,14 @@ export default function CharacterSheetClient({
                 onChange={(val) => handleProfileChange("clan", val)}
                 type="select"
                 options={CLAN_OPTIONS}
+                disabled={status === "IN_PLAY"}
                 className="text-gold-accent hover:bg-white/5 font-bold"
               />
               <span className="text-text-dim">•</span>
               <InlineEdit
                 value={character.profile.concept}
                 onChange={(val) => handleProfileChange("concept", val)}
+                disabled={status === "IN_PLAY"}
                 className="text-text-primary hover:bg-white/5 font-bold"
               />
             </div>
@@ -590,6 +982,7 @@ export default function CharacterSheetClient({
                   value={String(character.profile.generation)}
                   onChange={(val) => handleProfileChange("generation", Number(val) || 11)}
                   type="number"
+                  disabled={status === "IN_PLAY"}
                   className="text-text-primary hover:bg-white/5 font-bold"
                 />
                 <span>ª</span>
@@ -601,6 +994,7 @@ export default function CharacterSheetClient({
                   onChange={(val) => handleProfileChange("predator_type", val)}
                   type="select"
                   options={PREDATOR_OPTIONS}
+                  disabled={status === "IN_PLAY"}
                   className="text-text-primary hover:bg-white/5 font-bold"
                 />
               </div>
@@ -609,6 +1003,7 @@ export default function CharacterSheetClient({
                 <InlineEdit
                   value={character.profile.sire}
                   onChange={(val) => handleProfileChange("sire", val)}
+                  disabled={status === "IN_PLAY"}
                   className="text-text-primary hover:bg-white/5 font-bold"
                 />
               </div>
@@ -664,8 +1059,8 @@ export default function CharacterSheetClient({
         {/* ======================================================== */}
         {/* NAVEGAÇÃO DE ABAS (TABS) */}
         {/* ======================================================== */}
-        <div className="flex space-x-2 border-b border-white/10 pb-px">
-          {(["nucleo", "sangue", "vantagens", "sistema"] as const).map(tab => {
+        <div className="flex space-x-2 border-b border-white/10 pb-px flex-wrap gap-y-1">
+          {(["nucleo", "sangue", "vantagens", "sistema", "xp_diary"] as const).map(tab => {
             const isActive = activeTab === tab;
             return (
               <button
@@ -684,6 +1079,7 @@ export default function CharacterSheetClient({
                 {tab === "sangue" && "Sangue (Disciplinas)"}
                 {tab === "vantagens" && "Vantagens"}
                 {tab === "sistema" && "Sistema & Macros"}
+                {tab === "xp_diary" && "Diário de XP 📜"}
               </button>
             );
           })}
@@ -716,6 +1112,9 @@ export default function CharacterSheetClient({
                         onChange={(newVal) => handleAttributeChange("physical", key, newVal)}
                         isSelected={dicePool.some(p => p.id === key)}
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
+                        baseValue={alloc.attributesBase[key]}
+                        showXpDistinction={status !== "IN_PLAY"}
+                        disabled={status === "IN_PLAY"}
                       />
                     ))}
                   </div>
@@ -731,6 +1130,9 @@ export default function CharacterSheetClient({
                         onChange={(newVal) => handleAttributeChange("social", key, newVal)}
                         isSelected={dicePool.some(p => p.id === key)}
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
+                        baseValue={alloc.attributesBase[key]}
+                        showXpDistinction={status !== "IN_PLAY"}
+                        disabled={status === "IN_PLAY"}
                       />
                     ))}
                   </div>
@@ -746,6 +1148,9 @@ export default function CharacterSheetClient({
                         onChange={(newVal) => handleAttributeChange("mental", key, newVal)}
                         isSelected={dicePool.some(p => p.id === key)}
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
+                        baseValue={alloc.attributesBase[key]}
+                        showXpDistinction={status !== "IN_PLAY"}
+                        disabled={status === "IN_PLAY"}
                       />
                     ))}
                   </div>
@@ -773,6 +1178,9 @@ export default function CharacterSheetClient({
                         allowZero
                         isSelected={dicePool.some(p => p.id === skill)}
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
+                        baseValue={alloc.skillsBase[skill]}
+                        showXpDistinction={status !== "IN_PLAY"}
+                        disabled={status === "IN_PLAY"}
                       />
                     ))}
                   </div>
@@ -790,6 +1198,9 @@ export default function CharacterSheetClient({
                         allowZero
                         isSelected={dicePool.some(p => p.id === skill)}
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
+                        baseValue={alloc.skillsBase[skill]}
+                        showXpDistinction={status !== "IN_PLAY"}
+                        disabled={status === "IN_PLAY"}
                       />
                     ))}
                   </div>
@@ -807,6 +1218,9 @@ export default function CharacterSheetClient({
                         allowZero
                         isSelected={dicePool.some(p => p.id === skill)}
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
+                        baseValue={alloc.skillsBase[skill]}
+                        showXpDistinction={status !== "IN_PLAY"}
+                        disabled={status === "IN_PLAY"}
                       />
                     ))}
                   </div>
@@ -836,13 +1250,15 @@ export default function CharacterSheetClient({
                         <strong className="text-text-primary mr-1">{TECHNICAL_NAMES[spec.skill] || spec.skill}:</strong> 
                         {spec.name}
                       </span>
-                      <button
-                        onClick={() => handleDeleteSpecialty(spec.id)}
-                        className="text-hunger-red hover:text-white cursor-pointer select-none text-[10px] font-bold"
-                        title="Excluir Especialização"
-                      >
-                        ✕
-                      </button>
+                      {status !== "IN_PLAY" && (
+                        <button
+                          onClick={() => handleDeleteSpecialty(spec.id)}
+                          className="text-hunger-red hover:text-white cursor-pointer select-none text-[10px] font-bold"
+                          title="Excluir Especialização"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </span>
                   ))}
                   {(!character.specialties || character.specialties.length === 0) && (
@@ -851,49 +1267,51 @@ export default function CharacterSheetClient({
                 </div>
 
                 {/* MINI-FORMULÁRIO DE CADASTRO */}
-                <div className="flex flex-wrap items-center gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-2xl shadow-none">
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Habilidade Base</label>
-                    <select
-                      value={selectedSkill}
-                      onChange={(e) => setSelectedSkill(e.target.value as keyof CharacterSkills)}
-                      className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9"
-                    >
-                      <option value="" className="bg-bg-card">Selecione...</option>
-                      {Object.entries(TECHNICAL_NAMES)
-                        .filter(([key]) => ![
-                          "strength", "dexterity", "stamina",
-                          "charisma", "manipulation", "composure",
-                          "intelligence", "wits", "resolve"
-                        ].includes(key))
-                        .map(([key, label]) => (
-                          <option key={key} value={key} className="bg-bg-card">{label}</option>
-                        ))
-                      }
-                    </select>
-                  </div>
+                {status !== "IN_PLAY" && (
+                  <div className="flex flex-wrap items-center gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-2xl shadow-none">
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Habilidade Base</label>
+                      <select
+                        value={selectedSkill}
+                        onChange={(e) => setSelectedSkill(e.target.value as keyof CharacterSkills)}
+                        className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9"
+                      >
+                        <option value="" className="bg-bg-card">Selecione...</option>
+                        {Object.entries(TECHNICAL_NAMES)
+                          .filter(([key]) => ![
+                            "strength", "dexterity", "stamina",
+                            "charisma", "manipulation", "composure",
+                            "intelligence", "wits", "resolve"
+                          ].includes(key))
+                          .map(([key, label]) => (
+                            <option key={key} value={key} className="bg-bg-card">{label}</option>
+                          ))
+                        }
+                      </select>
+                    </div>
 
-                  <div className="flex flex-col space-y-1 flex-1 min-w-[200px]">
-                    <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nome da Especialização</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Briga de Rua, Machados..."
-                      value={newSpecialtyName}
-                      onChange={(e) => setNewSpecialtyName(e.target.value)}
-                      className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 font-reading"
-                    />
-                  </div>
+                    <div className="flex flex-col space-y-1 flex-1 min-w-[200px]">
+                      <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nome da Especialização</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Briga de Rua, Machados..."
+                        value={newSpecialtyName}
+                        onChange={(e) => setNewSpecialtyName(e.target.value)}
+                        className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 font-reading"
+                      />
+                    </div>
 
-                  <div className="flex flex-col space-y-1 pt-5">
-                    <button
-                      onClick={handleAddSpecialty}
-                      disabled={!selectedSkill || !newSpecialtyName.trim()}
-                      className="bg-burgundy border border-blood-red hover:bg-blood-red text-text-primary disabled:opacity-40 disabled:hover:bg-burgundy text-xs px-4 rounded-sm transition-colors cursor-pointer disabled:cursor-not-allowed font-data uppercase font-bold h-9 flex items-center justify-center select-none"
-                    >
-                      + Adicionar
-                    </button>
+                    <div className="flex flex-col space-y-1 pt-5">
+                      <button
+                        onClick={handleAddSpecialty}
+                        disabled={!selectedSkill || !newSpecialtyName.trim()}
+                        className="bg-burgundy border border-blood-red hover:bg-blood-red text-text-primary disabled:opacity-40 disabled:hover:bg-burgundy text-xs px-4 rounded-sm transition-colors cursor-pointer disabled:cursor-not-allowed font-data uppercase font-bold h-9 flex items-center justify-center select-none"
+                      >
+                        + Adicionar
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
             </div>
@@ -907,12 +1325,14 @@ export default function CharacterSheetClient({
                   <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
                     Disciplinas Vampíricas (Poderes do Sangue)
                   </h3>
-                  <button
-                    onClick={handleAddDiscipline}
-                    className="text-xs uppercase tracking-wider font-bold text-gold-accent bg-burgundy/40 hover:bg-burgundy px-3 py-1 border border-blood-red/30 hover:border-blood-red rounded-sm transition-all duration-150 cursor-pointer shadow-none opacity-80 hover:opacity-100"
-                  >
-                    + Adicionar Disciplina
-                  </button>
+                  {status !== "IN_PLAY" && (
+                    <button
+                      onClick={handleAddDiscipline}
+                      className="text-xs uppercase tracking-wider font-bold text-gold-accent bg-burgundy/40 hover:bg-burgundy px-3 py-1 border border-blood-red/30 hover:border-blood-red rounded-sm transition-all duration-150 cursor-pointer shadow-none opacity-80 hover:opacity-100"
+                    >
+                      + Adicionar Disciplina
+                    </button>
+                  )}
                 </div>
                 <div className="w-56 bg-bg-main/30 px-3 py-0.5 rounded border border-white/5">
                   <DotSlider
@@ -923,6 +1343,9 @@ export default function CharacterSheetClient({
                       status: { ...prev.status, blood_potency: val }
                     }))}
                     allowZero
+                    baseValue={1}
+                    showXpDistinction={status !== "IN_PLAY"}
+                    disabled={status === "IN_PLAY"}
                     variant="gold"
                   />
                 </div>
@@ -932,26 +1355,29 @@ export default function CharacterSheetClient({
                 {character.disciplines.map(disc => (
                   <div key={disc.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-3 relative group">
                     {/* BOTÃO EXCLUIR DISCIPLINA */}
-                    <button
-                      onClick={() => handleDeleteDiscipline(disc.id)}
-                      className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
-                      title="Excluir Disciplina"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    {status !== "IN_PLAY" && (
+                      <button
+                        onClick={() => handleDeleteDiscipline(disc.id)}
+                        className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                        title="Excluir Disciplina"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
 
                     <div className="flex justify-between items-center pr-6">
                       <div className="flex items-center space-x-2">
                         {onTraitClick && (
                           <button
+                            disabled={status === "IN_PLAY"}
                             onClick={() => onTraitClick({ id: disc.id, label: disc.name, value: disc.level })}
                             className={`cursor-pointer select-none text-base transition-all duration-150 hover:scale-125 hover:text-hunger-red ${
                               dicePool.some(p => p.id === disc.id)
                                 ? "text-hunger-red font-bold scale-115 animate-pulse"
                                 : "text-text-muted hover:text-text-primary"
-                            }`}
+                            } ${status === "IN_PLAY" ? "pointer-events-none" : ""}`}
                             title="Selecionar para o Carrinho de Dados"
                           >
                             🎲
@@ -961,6 +1387,7 @@ export default function CharacterSheetClient({
                           value={disc.name}
                           onChange={(val) => handleDisciplineNameChange(disc.id, val)}
                           placeholder="Nova Disciplina"
+                          disabled={status === "IN_PLAY"}
                           className="font-gothic text-xl text-text-primary tracking-wide"
                         />
                       </div>
@@ -968,15 +1395,27 @@ export default function CharacterSheetClient({
                       <div className="flex space-x-1 items-center h-6">
                         {Array.from({ length: 5 }).map((_, idx) => {
                           const isActive = idx < disc.level;
+                          const isBase = idx < (alloc.disciplinesBase[disc.id] || 0);
+                          
+                          let activeClass = "";
+                          if (isActive) {
+                            if (status === "IN_PLAY") {
+                              activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
+                            } else if (isBase) {
+                              activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_6px_rgba(200,36,52,0.6)]";
+                            } else {
+                              activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
+                            }
+                          } else {
+                            activeClass = "bg-bg-input border border-text-dim/80 hover:border-blood-red";
+                          }
+                          
                           return (
                             <button
                               key={idx}
+                              disabled={status === "IN_PLAY"}
                               onClick={() => handleDisciplineLevelChange(disc.id, idx + 1)}
-                              className={`w-3.5 h-3.5 rounded-full transition-all duration-150 cursor-pointer ${
-                                isActive 
-                                  ? "bg-blood-red ring-1 ring-blood-red/30 shadow-[0_0_6px_rgba(200,36,52,0.4)]" 
-                                  : "bg-bg-input border border-text-dim/80 hover:border-blood-red"
-                              }`}
+                              className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${status === "IN_PLAY" ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
                               title={`Nível ${idx + 1}`}
                             />
                           );
@@ -999,26 +1438,31 @@ export default function CharacterSheetClient({
                                 value={pow}
                                 onChange={(val) => handlePowerChange(disc.id, pIdx, val)}
                                 placeholder="Novo Poder"
+                                disabled={status === "IN_PLAY"}
                                 className="text-sm font-reading text-text-primary flex-1"
                               />
                             </div>
-                            <button
-                              onClick={() => handleDeletePower(disc.id, pIdx)}
-                              className="text-text-muted/40 hover:text-hunger-red opacity-0 group-hover/power:opacity-100 transition-opacity duration-150 cursor-pointer pr-1 select-none text-[10px] font-bold"
-                              title="Remover Poder"
-                            >
-                              ✕
-                            </button>
+                            {status !== "IN_PLAY" && (
+                              <button
+                                onClick={() => handleDeletePower(disc.id, pIdx)}
+                                className="text-text-muted/40 hover:text-hunger-red opacity-0 group-hover/power:opacity-100 transition-opacity duration-150 cursor-pointer pr-1 select-none text-[10px] font-bold"
+                                title="Remover Poder"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>
 
-                      <button
-                        onClick={() => handleAddPower(disc.id)}
-                        className="text-[10px] uppercase tracking-wider font-bold text-gold-accent/40 hover:text-gold-accent transition-colors duration-150 cursor-pointer pt-1.5 flex items-center space-x-1 select-none"
-                      >
-                        <span>+ Adicionar Poder</span>
-                      </button>
+                      {status !== "IN_PLAY" && (
+                        <button
+                          onClick={() => handleAddPower(disc.id)}
+                          className="text-[10px] uppercase tracking-wider font-bold text-gold-accent/40 hover:text-gold-accent transition-colors duration-150 cursor-pointer pt-1.5 flex items-center space-x-1 select-none"
+                        >
+                          <span>+ Adicionar Poder</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1027,168 +1471,250 @@ export default function CharacterSheetClient({
           )}
 
           {/* TAB 3: VANTAGENS */}
-          {activeTab === "vantagens" && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase">
-                Vantagens, Qualidades, Defeitos & Fichas de Saber
-              </h3>
+          {activeTab === "vantagens" && (() => {
+            const meritsAndBackgrounds = character.advantages.filter(a => a.type === "background" || a.type === "merit");
+            const flawsAndLoresheets = character.advantages.filter(a => a.type === "flaw" || a.type === "loresheet");
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* COLUNA 1: QUALIDADES & ANTECEDENTES */}
-                <div className="space-y-4">
-                  <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Qualidades & Antecedentes</h4>
-                  <div className="space-y-3">
-                    {character.advantages.filter(a => a.type === "background" || a.type === "merit").map(adv => (
-                      <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5 relative group">
-                        {/* BOTÃO EXCLUIR VANTAGEM */}
-                        <button
-                          onClick={() => handleDeleteAdvantage(adv.id)}
-                          className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
-                          title="Excluir Vantagem"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+            // Pré-calcular somas acumuladas de vantagens positivas da Coluna 1
+            const meritsWithSum = meritsAndBackgrounds.map((adv, idx) => {
+              const sumBefore = meritsAndBackgrounds.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
+              return { ...adv, sumBefore };
+            });
 
-                        <div className="flex justify-between items-center pr-6 flex-wrap gap-2">
-                          <div className="flex items-center space-x-1.5 flex-wrap">
-                            <InlineEdit
-                              value={adv.name}
-                              onChange={(val) => handleAdvantageNameChange(adv.id, val)}
-                              placeholder="Nome da Vantagem"
-                              className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide"
-                            />
-                            <span className="text-[10px] text-gold-accent font-normal italic">
-                              (
-                              <InlineEdit
-                                value={adv.type}
-                                onChange={(val) => handleAdvantageTypeChange(adv.id, val as "background" | "merit" | "flaw" | "loresheet")}
-                                type="select"
-                                options={["background", "merit"]}
-                                className="hover:bg-white/5 text-[10px] text-gold-accent italic border-none py-0 px-0.5"
-                              />
-                              )
-                            </span>
-                          </div>
-                          
-                          <div className="flex space-x-1">
-                            {Array.from({ length: 5 }).map((_, idx) => {
-                              const isActive = idx < adv.level;
-                              return (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
-                                  className={`w-3.5 h-3.5 rounded-full transition-all duration-150 cursor-pointer ${
-                                    isActive ? "bg-gold-accent" : "bg-bg-input border border-text-dim"
-                                  }`}
-                                  title={`Nível ${idx + 1}`}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                        
-                        <InlineEdit
-                          value={adv.description || ""}
-                          onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
-                          placeholder="Adicionar descrição..."
-                          className="text-xs text-text-muted font-reading leading-relaxed w-full block"
-                        />
-                      </div>
-                    ))}
-                  </div>
+            // Soma total da coluna 1
+            const totalMeritsSum = meritsAndBackgrounds.reduce((acc, curr) => acc + curr.level, 0);
 
-                  <button
-                    onClick={() => handleAddAdvantage("background")}
-                    className="text-xs uppercase tracking-wider font-bold text-gold-accent/60 hover:text-gold-accent bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
-                  >
-                    + Adicionar Qualidade / Antecedente
-                  </button>
-                </div>
+            // Pré-calcular a soma das loresheets para a Coluna 2
+            const loresheets = flawsAndLoresheets.filter(a => a.type === "loresheet");
+            
+            // Lista unificada para a Coluna 2 com a soma acumulada de loresheets
+            const flawsAndLoresheetsWithSum = flawsAndLoresheets.map(adv => {
+              if (adv.type === "loresheet") {
+                const idx = loresheets.findIndex(l => l.id === adv.id);
+                const sumBefore = totalMeritsSum + loresheets.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
+                return { ...adv, sumBefore };
+              }
+              return { ...adv, sumBefore: 0 };
+            });
 
-                {/* COLUNA 2: DEFEITOS & FICHAS DE SABER */}
-                <div className="space-y-4">
-                  <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold">Defeitos & Fichas de Saber</h4>
-                  <div className="space-y-3">
-                    {character.advantages.filter(a => a.type === "flaw" || a.type === "loresheet").map(adv => {
-                      const isLoresheet = adv.type === "loresheet";
-                      return (
-                        <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5 relative group">
-                          {/* BOTÃO EXCLUIR VANTAGEM */}
-                          <button
-                            onClick={() => handleDeleteAdvantage(adv.id)}
-                            className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
-                            title="Excluir Vantagem"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+            return (
+              <div className="space-y-6">
+                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase">
+                  Vantagens, Qualidades, Defeitos & Fichas de Saber
+                </h3>
 
-                          <div className="flex justify-between items-center pr-6 flex-wrap gap-2">
-                            <div className="flex items-center space-x-1.5 flex-wrap">
-                              <InlineEdit
-                                value={adv.name}
-                                onChange={(val) => handleAdvantageNameChange(adv.id, val)}
-                                placeholder="Nome da Vantagem"
-                                className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide"
-                              />
-                              <span className={`text-[10px] font-normal italic ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}>
-                                (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* COLUNA 1: QUALIDADES & ANTECEDENTES */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Qualidades & Antecedentes</h4>
+                    <div className="space-y-3">
+                      {meritsWithSum.map(adv => {
+                        return (
+                          <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5 relative group">
+                            {/* BOTÃO EXCLUIR VANTAGEM */}
+                            {status !== "IN_PLAY" && (
+                              <button
+                                onClick={() => handleDeleteAdvantage(adv.id)}
+                                className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                                title="Excluir Vantagem"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
+
+                            <div className="flex justify-between items-center pr-6 flex-wrap gap-2">
+                              <div className="flex items-center space-x-1.5 flex-wrap">
                                 <InlineEdit
-                                  value={adv.type}
-                                  onChange={(val) => handleAdvantageTypeChange(adv.id, val as "background" | "merit" | "flaw" | "loresheet")}
-                                  type="select"
-                                  options={["flaw", "loresheet"]}
-                                  className={`hover:bg-white/5 text-[10px] italic border-none py-0 px-0.5 ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}
+                                  value={adv.name}
+                                  onChange={(val) => handleAdvantageNameChange(adv.id, val)}
+                                  placeholder="Nome da Vantagem"
+                                  disabled={status === "IN_PLAY"}
+                                  className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide"
                                 />
-                                )
-                              </span>
+                                <span className="text-[10px] text-gold-accent font-normal italic">
+                                  (
+                                  <InlineEdit
+                                    value={adv.type}
+                                    onChange={(val) => handleAdvantageTypeChange(adv.id, val as "background" | "merit" | "flaw" | "loresheet")}
+                                    type="select"
+                                    options={["background", "merit"]}
+                                    disabled={status === "IN_PLAY"}
+                                    className="hover:bg-white/5 text-[10px] text-gold-accent italic border-none py-0 px-0.5"
+                                  />
+                                  )
+                                </span>
+                              </div>
+                              
+                              <div className="flex space-x-1">
+                                {Array.from({ length: 5 }).map((_, idx) => {
+                                  const isActive = idx < adv.level;
+                                  
+                                  // Contabilidade acumulada de pontos base vs XP
+                                  let isBasePoint = true;
+                                  if (isActive) {
+                                    const pointGlobalIndex = adv.sumBefore + idx + 1;
+                                    isBasePoint = pointGlobalIndex <= 7;
+                                  }
+
+                                  let activeClass = "";
+                                  if (isActive) {
+                                    if (status === "IN_PLAY") {
+                                      activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
+                                    } else if (isBasePoint) {
+                                      activeClass = "bg-gold-accent ring-1 ring-gold-accent/40 shadow-[0_0_8px_rgba(255,216,77,0.5)]";
+                                    } else {
+                                      activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
+                                    }
+                                  } else {
+                                    activeClass = "bg-bg-input border border-text-dim hover:border-gold-accent";
+                                  }
+
+                                  return (
+                                    <button
+                                      key={idx}
+                                      disabled={status === "IN_PLAY"}
+                                      onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
+                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${status === "IN_PLAY" ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                                      title={`Nível ${idx + 1}`}
+                                    />
+                                  );
+                                })}
+                              </div>
                             </div>
                             
-                            <div className="flex space-x-1">
-                              {Array.from({ length: 5 }).map((_, idx) => {
-                                const isActive = idx < adv.level;
-                                return (
-                                  <button
-                                    key={idx}
-                                    onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
-                                    className={`w-3.5 h-3.5 rounded-full transition-all duration-150 cursor-pointer ${
-                                      isActive 
-                                        ? (isLoresheet ? "bg-gold-accent" : "bg-hunger-red shadow-[0_0_4px_rgba(255,92,92,0.4)]") 
-                                        : "bg-bg-input border border-text-dim"
-                                    }`}
-                                    title={`Nível ${idx + 1}`}
-                                  />
-                                );
-                              })}
-                            </div>
+                            <InlineEdit
+                              value={adv.description || ""}
+                              onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
+                              placeholder="Adicionar descrição..."
+                              disabled={status === "IN_PLAY"}
+                              className="text-xs text-text-muted font-reading leading-relaxed w-full block"
+                            />
                           </div>
-                          
-                          <InlineEdit
-                            value={adv.description || ""}
-                            onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
-                            placeholder="Adicionar descrição..."
-                            className="text-xs text-text-muted font-reading leading-relaxed w-full block"
-                          />
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+
+                    {status !== "IN_PLAY" && (
+                      <button
+                        onClick={() => handleAddAdvantage("background")}
+                        className="text-xs uppercase tracking-wider font-bold text-gold-accent/60 hover:text-gold-accent bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
+                      >
+                        + Adicionar Qualidade / Antecedente
+                      </button>
+                    )}
                   </div>
 
-                  <button
-                    onClick={() => handleAddAdvantage("flaw")}
-                    className="text-xs uppercase tracking-wider font-bold text-blood-red/60 hover:text-blood-red bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
-                  >
-                    + Adicionar Defeito / Ficha de Saber
-                  </button>
-                </div>
+                  {/* COLUNA 2: DEFEITOS & FICHAS DE SABER */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold">Defeitos & Fichas de Saber</h4>
+                    <div className="space-y-3">
+                      {flawsAndLoresheetsWithSum.map(adv => {
+                        const isLoresheet = adv.type === "loresheet";
+                        return (
+                          <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5 relative group">
+                            {/* BOTÃO EXCLUIR VANTAGEM */}
+                            {status !== "IN_PLAY" && (
+                              <button
+                                onClick={() => handleDeleteAdvantage(adv.id)}
+                                className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                                title="Excluir Vantagem"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
 
+                            <div className="flex justify-between items-center pr-6 flex-wrap gap-2">
+                              <div className="flex items-center space-x-1.5 flex-wrap">
+                                <InlineEdit
+                                  value={adv.name}
+                                  onChange={(val) => handleAdvantageNameChange(adv.id, val)}
+                                  placeholder="Nome da Vantagem"
+                                  disabled={status === "IN_PLAY"}
+                                  className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide"
+                                />
+                                <span className={`text-[10px] font-normal italic ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}>
+                                  (
+                                  <InlineEdit
+                                    value={adv.type}
+                                    onChange={(val) => handleAdvantageTypeChange(adv.id, val as "background" | "merit" | "flaw" | "loresheet")}
+                                    type="select"
+                                    options={["flaw", "loresheet"]}
+                                    disabled={status === "IN_PLAY"}
+                                    className={`hover:bg-white/5 text-[10px] italic border-none py-0 px-0.5 ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}
+                                  />
+                                  )
+                                </span>
+                              </div>
+                              
+                              <div className="flex space-x-1">
+                                {Array.from({ length: 5 }).map((_, idx) => {
+                                  const isActive = idx < adv.level;
+                                  
+                                  let activeClass = "";
+                                  if (isActive) {
+                                    if (status === "IN_PLAY") {
+                                      activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
+                                    } else if (isLoresheet) {
+                                      const pointGlobalIndex = adv.sumBefore + idx + 1;
+                                      const isBasePoint = pointGlobalIndex <= 7;
+                                      
+                                      if (isBasePoint) {
+                                        activeClass = "bg-gold-accent ring-1 ring-gold-accent/40 shadow-[0_0_8px_rgba(255,216,77,0.5)]";
+                                      } else {
+                                        activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
+                                      }
+                                    } else {
+                                      // Defeito (Flaw)
+                                      activeClass = "bg-hunger-red shadow-[0_0_4px_rgba(255,92,92,0.4)]";
+                                    }
+                                  } else {
+                                    activeClass = "bg-bg-input border border-text-dim";
+                                  }
+
+                                  return (
+                                    <button
+                                      key={idx}
+                                      disabled={status === "IN_PLAY"}
+                                      onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
+                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${status === "IN_PLAY" ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                                      title={`Nível ${idx + 1}`}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            
+                            <InlineEdit
+                              value={adv.description || ""}
+                              onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
+                              placeholder="Adicionar descrição..."
+                              disabled={status === "IN_PLAY"}
+                              className="text-xs text-text-muted font-reading leading-relaxed w-full block"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {status !== "IN_PLAY" && (
+                      <button
+                        onClick={() => handleAddAdvantage("flaw")}
+                        className="text-xs uppercase tracking-wider font-bold text-blood-red/60 hover:text-blood-red bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
+                      >
+                        + Adicionar Defeito / Ficha de Saber
+                      </button>
+                    )}
+                  </div>
+
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB 4: SISTEMA */}
           {activeTab === "sistema" && (
@@ -1213,6 +1739,7 @@ export default function CharacterSheetClient({
                         }
                       }))}
                       type="number"
+                      disabled={status === "IN_PLAY"}
                       className="font-bold text-blood-red hover:bg-white/5 text-center w-12 border-b border-white/10"
                     />
                     <span className="text-text-muted">/</span>
@@ -1227,6 +1754,7 @@ export default function CharacterSheetClient({
                         }
                       }))}
                       type="number"
+                      disabled={status === "IN_PLAY"}
                       className="font-bold text-gold-accent hover:bg-white/5 text-center w-12 border-b border-white/10"
                     />
                   </div>
@@ -1268,7 +1796,8 @@ export default function CharacterSheetClient({
                   <textarea
                     value={character.notes}
                     onChange={(e) => setCharacter(prev => ({ ...prev, notes: e.target.value }))}
-                    className="w-full h-32 bg-bg-main border border-white/10 rounded p-3 text-sm font-reading text-text-primary focus:border-gold-accent outline-none resize-none transition-colors duration-150"
+                    disabled={status === "IN_PLAY"}
+                    className="w-full h-32 bg-bg-main border border-white/10 rounded p-3 text-sm font-reading text-text-primary focus:border-gold-accent outline-none resize-none transition-colors duration-150 disabled:opacity-60"
                     placeholder="Histórico livre, anotações de NPCs e metas..."
                   />
                 </div>
@@ -1376,6 +1905,63 @@ export default function CharacterSheetClient({
 
               </div>
 
+            </div>
+          )}
+
+          {/* TAB 5: DIÁRIO DE XP */}
+          {activeTab === "xp_diary" && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
+                  Livro-Razão de Auditoria de Experiência (XP)
+                </h3>
+                <p className="text-xs text-text-muted font-reading">
+                  Registro histórico completo de todos os gastos, devoluções e transações financeiras de pontos de XP deste personagem na crônica.
+                </p>
+              </div>
+              
+              {isLoadingLedger ? (
+                <div className="text-center py-12 text-text-muted animate-pulse font-data uppercase tracking-wider text-xs">
+                  Carregando diário de XP...
+                </div>
+              ) : xpLedger.length === 0 ? (
+                <div className="text-center py-12 border border-white/5 bg-bg-main/20 rounded-sm text-text-dim/60 italic text-sm font-reading">
+                  Nenhum lançamento de XP registrado neste personagem até o momento.
+                </div>
+              ) : (
+                <div className="overflow-x-auto border border-white/10 rounded-sm bg-bg-main/30">
+                  <table className="w-full text-left border-collapse font-data text-xs uppercase">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-bg-card-dark text-text-muted">
+                        <th className="p-3 tracking-wider font-bold">Data / Hora</th>
+                        <th className="p-3 tracking-wider font-bold">Descrição da Alteração</th>
+                        <th className="p-3 tracking-wider font-bold text-right">Lançamento (XP)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {xpLedger.map((item) => {
+                        const dateFormatted = new Date(item.createdAt).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        });
+                        const isNegative = item.xpChange < 0;
+                        return (
+                          <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="p-3 text-text-muted whitespace-nowrap">{dateFormatted}</td>
+                            <td className="p-3 text-text-primary font-reading normal-case">{item.description}</td>
+                            <td className={`p-3 font-bold text-right text-sm ${isNegative ? "text-hunger-red" : "text-emerald-400"}`}>
+                              {isNegative ? "" : "+"}{item.xpChange} XP
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 

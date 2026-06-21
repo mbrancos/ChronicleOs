@@ -57,6 +57,10 @@ export async function getUserHubData() {
   }
 }
 
+const DEFAULT_ALLOWED_CLANS = [
+  "Brujah", "Gangrel", "Malkavian", "Nosferatu", "Toreador", "Tremere", "Ventrue", "Caitiff", "Sem Clã"
+];
+
 // Cria uma nova campanha (crônica)
 export async function createCampaignAction(name: string, description?: string) {
   try {
@@ -74,6 +78,10 @@ export async function createCampaignAction(name: string, description?: string) {
       name: trimmedName,
       description: description?.trim() || null,
       narratorId: session.user.id,
+      status: "RECRUITING", // Começa aberta para recrutamento por padrão
+      powerLevel: "NEONATE",
+      extraXp: 0,
+      allowedClans: DEFAULT_ALLOWED_CLANS,
     });
 
     revalidatePath("/hub");
@@ -225,5 +233,61 @@ export async function deleteCampaignAction(campaignId: string) {
   } catch (err: any) {
     console.error("Erro em deleteCampaignAction:", err);
     return { success: false, error: err?.message || "Falha ao excluir a crônica." };
+  }
+}
+
+// Server Action para atualizar configurações refinadas da campanha (Narrador)
+export async function updateCampaignSettingsAction(
+  campaignId: string,
+  settings: {
+    status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
+    powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+    extraXp: number;
+    allowedClans: string[];
+  }
+) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(campaignId)) {
+      return { success: false, error: "ID de crônica inválido." };
+    }
+
+    // 1. Verificar se a campanha existe e se o usuário é o narrador
+    const campResult = await db
+      .select({ narratorId: campaigns.narratorId })
+      .from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1);
+
+    if (campResult.length === 0) {
+      return { success: false, error: "Crônica não encontrada." };
+    }
+
+    if (campResult[0].narratorId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Apenas o Narrador criador pode editar as configurações desta crônica." };
+    }
+
+    // 2. Atualizar no banco
+    await db
+      .update(campaigns)
+      .set({
+        status: settings.status,
+        powerLevel: settings.powerLevel,
+        extraXp: Math.max(0, Number(settings.extraXp) || 0),
+        allowedClans: settings.allowedClans,
+      })
+      .where(eq(campaigns.id, campaignId));
+
+    revalidatePath("/hub");
+    revalidatePath(`/campanhas/${campaignId}/narrador`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em updateCampaignSettingsAction:", err);
+    return { success: false, error: err?.message || "Falha ao atualizar configurações da crônica." };
   }
 }

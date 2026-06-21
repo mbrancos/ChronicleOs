@@ -22,6 +22,8 @@ interface VttRoomClientProps {
     name: string;
     type: "jogador" | "npc" | "coterie";
     sheetData: CharacterSheetData;
+    status: string;
+    buildState: any;
   };
 }
 
@@ -340,6 +342,8 @@ export default function VttRoomClient({ character }: VttRoomClientProps) {
           initialName={character.name}
           dicePool={dicePool}
           onTraitClick={handleTraitClick}
+          initialStatus={localCharacter.status as "DRAFT" | "READY" | "IN_PLAY"}
+          initialBuildState={localCharacter.buildState}
           onDataChange={(newData) => {
             setLocalCharacter(prev => ({
               ...prev,

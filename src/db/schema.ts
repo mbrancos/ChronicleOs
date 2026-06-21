@@ -14,6 +14,10 @@ export const campaigns = pgTable("campaigns", {
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
   description: text("description"),
+  status: text("status").$type<"DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED">().default("DRAFT").notNull(),
+  powerLevel: text("power_level").$type<"FLEDGLING" | "NEONATE" | "ANCILLAE">().default("NEONATE").notNull(),
+  extraXp: integer("extra_xp").default(0).notNull(),
+  allowedClans: jsonb("allowed_clans").$type<string[]>(), // Nulo significa todos permitidos
 });
 
 export const characters = pgTable("characters", {
@@ -24,6 +28,8 @@ export const characters = pgTable("characters", {
   name: text("name").notNull(),
   type: text("type").$type<"jogador" | "npc" | "coterie">().notNull(),
   sheetData: jsonb("sheet_data").notNull(), // Tipo JSONB rígido para a ficha reativa
+  status: text("status").$type<"DRAFT" | "READY" | "IN_PLAY">().default("DRAFT").notNull(),
+  buildState: jsonb("build_state").$type<any>(), // Memória de compra por XP contra esqueleto base
 });
 
 export const rolls = pgTable("rolls", {
@@ -66,3 +72,14 @@ export const sceneTokens = pgTable("scene_tokens", {
     };
   }>() // Nulo se type !== "quick_npc"
 });
+
+export const xpLedgers = pgTable("xp_ledgers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  characterId: uuid("character_id")
+    .references(() => characters.id, { onDelete: "cascade" })
+    .notNull(),
+  description: text("description").notNull(),
+  xpChange: integer("xp_change").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+

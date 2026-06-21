@@ -9,6 +9,7 @@ interface InlineEditProps {
   options?: string[];
   className?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export default function InlineEdit({
@@ -17,7 +18,8 @@ export default function InlineEdit({
   type = "text",
   options = [],
   className = "",
-  placeholder = "Editar..."
+  placeholder = "Editar...",
+  disabled = false
 }: InlineEditProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(value);
@@ -82,6 +84,14 @@ export default function InlineEdit({
         placeholder={placeholder}
         className={`bg-bg-input border border-gold-accent/40 rounded-sm px-2 py-0.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-gold-accent focus:border-gold-accent w-full text-sm ${className}`}
       />
+    );
+  }
+
+  if (disabled) {
+    return (
+      <span className={`${className} inline-block max-w-full truncate`}>
+        {value.trim() || placeholder}
+      </span>
     );
   }
 

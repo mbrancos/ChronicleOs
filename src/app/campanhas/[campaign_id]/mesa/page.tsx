@@ -82,7 +82,9 @@ export default async function MesaPage({ params }: PageProps) {
         userId: character.userId,
         name: character.name,
         type: character.type,
-        sheetData: character.sheetData as CharacterSheetData
+        sheetData: character.sheetData as CharacterSheetData,
+        status: character.status,
+        buildState: character.buildState
       }} 
     />
   );

@@ -782,6 +782,8 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             initialName={selectedChar.name}
             dicePool={[]} // Narrador não usa pool de dados persistida na ficha
             onTraitClick={() => {}} // Narrador não acumula pool de traits
+            initialStatus={selectedChar.status as "DRAFT" | "READY" | "IN_PLAY" || "DRAFT"}
+            initialBuildState={selectedChar.buildState}
             onDataChange={async (newData) => {
               // Atualizar estado de personagens localmente de imediato
               const updateLocalList = (list: CampaignCharacter[]) =>

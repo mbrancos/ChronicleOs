@@ -3,21 +3,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import CharacterMiniCard from "./CharacterMiniCard";
-import { createCharacterAction } from "@/app/actions/hubActions";
+import { createCharacterAction, updateCampaignSettingsAction } from "@/app/actions/hubActions";
 
 interface Campaign {
   id: string;
   name: string;
   description: string | null;
   narratorId: string;
+  status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
+  powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+  extraXp: number;
+  allowedClans: string[] | null;
 }
 
 interface Character {
   id: string;
   name: string;
-  campaignId: string;
+  campaignId: string | null;
   type: string;
   sheetData: any;
+  status?: "DRAFT" | "READY" | "IN_PLAY";
 }
 
 interface NarratorDashboardClientProps {
@@ -41,6 +46,42 @@ export default function NarratorDashboardClient({
   const [npcName, setNpcName] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Estados para modal de configurações da campanha
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [campaignStatus, setCampaignStatus] = useState(campaign.status || "RECRUITING");
+  const [campaignPowerLevel, setCampaignPowerLevel] = useState(campaign.powerLevel || "NEONATE");
+  const [campaignExtraXp, setCampaignExtraXp] = useState(campaign.extraXp || 0);
+  const [campaignAllowedClans, setCampaignAllowedClans] = useState<string[]>(
+    campaign.allowedClans || ["Brujah", "Gangrel", "Malkavian", "Nosferatu", "Toreador", "Tremere", "Ventrue", "Caitiff", "Sem Clã"]
+  );
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg(null);
+
+    const response = await updateCampaignSettingsAction(campaign.id, {
+      status: campaignStatus,
+      powerLevel: campaignPowerLevel,
+      extraXp: Number(campaignExtraXp) || 0,
+      allowedClans: campaignAllowedClans,
+    });
+
+    if (response.success) {
+      setIsSettingsModalOpen(false);
+      window.location.reload();
+    } else {
+      setErrorMsg(response.error || "Erro ao salvar configurações.");
+    }
+    setLoading(false);
+  };
+
+  const handleToggleClan = (clan: string) => {
+    setCampaignAllowedClans(prev =>
+      prev.includes(clan) ? prev.filter(c => c !== clan) : [...prev, clan]
+    );
+  };
 
   const handleCopyInvite = () => {
     if (typeof window !== "undefined") {
@@ -94,6 +135,12 @@ export default function NarratorDashboardClient({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="px-3.5 py-1.5 border border-white/10 hover:border-gold-accent text-xs uppercase tracking-widest font-data text-text-muted hover:text-white transition-all duration-200 rounded-sm bg-bg-card/45 cursor-pointer"
+            >
+              Configurações ⚙️
+            </button>
             <button
               onClick={handleCopyInvite}
               className="px-3.5 py-1.5 border border-white/10 hover:border-gold-accent text-xs uppercase tracking-widest font-data text-text-muted hover:text-white transition-all duration-200 rounded-sm bg-bg-card/45 cursor-pointer"
@@ -259,6 +306,115 @@ export default function NarratorDashboardClient({
                   className="px-5 py-2 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(255,216,77,0.3)]"
                 >
                   {loading ? "Criando..." : "Criar NPC"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ========================================== */}
+      {/* MODAL GÓTICO: CONFIGURAÇÕES DA CRÔNICA */}
+      {/* ========================================== */}
+      {isSettingsModalOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div 
+            className="w-full max-w-lg bg-bg-card border border-blood-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(200,36,52,0.15)] max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setIsSettingsModalOpen(false)}
+              className="absolute top-4 right-4 text-text-muted hover:text-white text-lg font-data focus:outline-none cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-2xl font-gothic tracking-widest text-blood-red uppercase pb-2 border-b border-white/5 mb-4">
+              Configurações da Crônica
+            </h3>
+
+            {errorMsg && (
+              <div className="bg-hunger-red/10 border border-hunger-red text-hunger-red text-xs p-3 rounded-sm mb-4 font-data uppercase tracking-wider text-center">
+                {errorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSettings} className="space-y-4 font-data text-xs">
+              
+              {/* Status da Campanha */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-text-muted block">Status da Crônica</label>
+                <select
+                  value={campaignStatus}
+                  onChange={(e) => setCampaignStatus(e.target.value as any)}
+                  className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-blood-red outline-none transition-colors cursor-pointer"
+                >
+                  <option value="DRAFT" className="bg-bg-card text-text-primary">RASCUNHO (FECHADA)</option>
+                  <option value="RECRUITING" className="bg-bg-card text-text-primary">RECRUTAMENTO (ABERTA)</option>
+                  <option value="IN_PROGRESS" className="bg-bg-card text-text-primary">EM ANDAMENTO (BLOQUEADA)</option>
+                  <option value="PAUSED" className="bg-bg-card text-text-primary">HIATO (PAUSADA)</option>
+                  <option value="ARCHIVED" className="bg-bg-card text-text-primary">CONCLUÍDA (ARQUIVADA)</option>
+                </select>
+              </div>
+
+              {/* Nível de Poder V5 */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-text-muted block">Nível de Poder (Criação)</label>
+                <select
+                  value={campaignPowerLevel}
+                  onChange={(e) => setCampaignPowerLevel(e.target.value as any)}
+                  className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-blood-red outline-none transition-colors cursor-pointer"
+                >
+                  <option value="FLEDGLING" className="bg-bg-card text-text-primary">FLEDGLING (0 XP INICIAL)</option>
+                  <option value="NEONATE" className="bg-bg-card text-text-primary">NEONATE (15 XP INICIAL)</option>
+                  <option value="ANCILLAE" className="bg-bg-card text-text-primary">ANCILLAE (35 XP INICIAL)</option>
+                </select>
+              </div>
+
+              {/* XP Adicional */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-text-muted block">XP Extra Concedido (Criação)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={campaignExtraXp}
+                  onChange={(e) => setCampaignExtraXp(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-blood-red outline-none transition-colors"
+                />
+              </div>
+
+              {/* Clãs Permitidos */}
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-widest text-text-muted block">Clãs Permitidos</label>
+                <div className="grid grid-cols-2 gap-2 bg-bg-main/50 p-3 border border-white/5 rounded-sm">
+                  {["Brujah", "Gangrel", "Malkavian", "Nosferatu", "Toreador", "Tremere", "Ventrue", "Caitiff", "Sem Clã"].map(clan => (
+                    <label key={clan} className="flex items-center space-x-2 cursor-pointer py-1 font-sans text-xs">
+                      <input
+                        type="checkbox"
+                        checked={campaignAllowedClans.includes(clan)}
+                        onChange={() => handleToggleClan(clan)}
+                        className="accent-blood-red rounded-xs border-white/10"
+                      />
+                      <span className="text-text-primary font-medium">{clan}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Botões do Modal */}
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsModalOpen(false)}
+                  className="px-4 py-2 border border-white/10 hover:border-white text-text-muted hover:text-white text-xs uppercase tracking-widest transition-colors rounded-sm cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 bg-blood-red hover:bg-burgundy text-white text-xs uppercase tracking-widest font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(200,36,52,0.4)]"
+                >
+                  {loading ? "Salvando..." : "Salvar Configurações"}
                 </button>
               </div>
             </form>
