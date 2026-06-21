@@ -14,6 +14,11 @@ import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
 import { characters } from "@/db/schema";
 import { CharacterSheetData } from "@/types/character";
 import Pusher from "pusher-js";
+import { 
+  grantSessionXpAction, 
+  vetoXpSpendAction, 
+  getRecentCampaignXpSpends 
+} from "@/app/actions/xpActions";
 
 type CampaignCharacter = typeof characters.$inferSelect;
 
@@ -63,6 +68,13 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   const [narratorPool, setNarratorPool] = useState(6);
   const [narratorDifficulty, setNarratorDifficulty] = useState(3);
   const [customActionName, setCustomActionName] = useState("");
+
+  // Estados de XP (Fase 25)
+  const [isXpModalOpen, setIsXpModalOpen] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState("");
+  const [baseXp, setBaseXp] = useState(2);
+  const [individualXpData, setIndividualXpData] = useState<Record<string, { presence: boolean; desire: boolean; ambition: boolean; extra: number }>>({});
+  const [recentXpSpends, setRecentXpSpends] = useState<any[]>([]);
 
   const isFetchingRolls = useRef(false);
   const isFetchingTokens = useRef(false);
@@ -116,6 +128,18 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     }
   }, [campaign.id]);
 
+  // 4. Buscar Gastos Recentes de XP
+  const fetchRecentXpSpends = useCallback(async () => {
+    try {
+      const res = await getRecentCampaignXpSpends(campaign.id);
+      if (res.success && res.data) {
+        setRecentXpSpends(res.data);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar gastos recentes de XP:", err);
+    }
+  }, [campaign.id]);
+
   // Configuração Geral das Escutas do Pusher (WebSocket) e Sincronizações Resilientes
   useEffect(() => {
     // 1. Carga Inicial de Dados (envolvido em microtask para evitar cascading renders no linter)
@@ -123,6 +147,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       fetchRecentRolls();
       fetchSceneTokens();
       fetchCampaignCharacters();
+      fetchRecentXpSpends();
     });
 
     // 2. Conectar Cliente Pusher
@@ -704,6 +729,71 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                 );
               })
             )}
+        </div>
+      </div>
+
+      {/* Distribuição e Auditoria de XP (Fase 25) */}
+        <div className="flex flex-col space-y-2 pt-2 border-t border-white/10">
+          <button
+            onClick={() => {
+              // Inicializar dados de XP para cada jogador
+              const initialData: Record<string, any> = {};
+              playersList.forEach(p => {
+                initialData[p.id] = { presence: true, desire: false, ambition: false, extra: 0 };
+              });
+              setIndividualXpData(initialData);
+              setSessionTitle("");
+              setBaseXp(2);
+              setIsXpModalOpen(true);
+            }}
+            className="w-full py-1.5 bg-blood-red hover:bg-burgundy text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-colors shadow-md cursor-pointer border border-blood-red/20"
+          >
+            Distribuir XP da Sessão
+          </button>
+        </div>
+
+        <div className="flex flex-col space-y-2 pt-2 border-t border-white/10">
+          <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold">
+            Auditoria Recente de XP
+          </span>
+          <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-none pr-1">
+            {recentXpSpends.length === 0 ? (
+              <div className="text-[9px] text-text-dim/60 italic">Nenhuma compra recente.</div>
+            ) : (
+              recentXpSpends.map((spend) => (
+                <div key={spend.id} className="bg-black/35 border border-white/5 p-2 rounded-xs flex flex-col space-y-1 text-[10px]">
+                  <div className="flex justify-between items-center font-bold text-text-primary">
+                    <span className="truncate max-w-[120px]">{spend.characterName}</span>
+                    <span className="text-hunger-red font-mono font-bold">{spend.xpChange} XP</span>
+                  </div>
+                  <div className="text-[9px] text-text-muted">
+                    {spend.description}
+                  </div>
+                  {spend.metadata && (
+                    <div className="text-[8px] text-amber-500/80 font-semibold uppercase tracking-wider">
+                      Item: {spend.metadata.trait} ({spend.metadata.previousLevel} → {spend.metadata.newLevel})
+                    </div>
+                  )}
+                  <button
+                    onClick={async () => {
+                      if (confirm(`Tem certeza que deseja VETAR a compra de "${spend.metadata?.trait}" do personagem ${spend.characterName}? Isso irá reverter a pontuação na ficha e reembolsar o XP ao jogador.`)) {
+                        const res = await vetoXpSpendAction(spend.id);
+                        if (res.success) {
+                          alert("Compra vetada e XP reembolsado com sucesso!");
+                          fetchRecentXpSpends();
+                          fetchCampaignCharacters(); // Recarregar fichas no drawer/lista
+                        } else {
+                          alert(`Erro ao vetar: ${res.error}`);
+                        }
+                      }
+                    }}
+                    className="w-full mt-1 py-0.5 border border-hunger-red/35 hover:bg-hunger-red/10 text-hunger-red font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
+                  >
+                    Vetar Compra
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -807,6 +897,171 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             }}
           />
         </SheetDrawer>
+      )}
+
+      {/* MODAL DE DISTRIBUIÇÃO DE XP (FASE 25) */}
+      {isXpModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="w-[500px] bg-bg-card-dark border border-white/10 rounded-sm p-5 shadow-2xl flex flex-col space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-white/10 pb-2">
+              <h2 className="text-base font-gothic text-blood-red tracking-widest uppercase">
+                Distribuir XP da Sessão
+              </h2>
+              <button
+                onClick={() => setIsXpModalOpen(false)}
+                className="text-text-muted hover:text-white text-xs cursor-pointer uppercase font-bold"
+              >
+                Fechar [X]
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="flex flex-col space-y-1">
+                <label className="text-[9px] uppercase tracking-widest text-text-muted font-bold">Título da Sessão</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Sessão 12 - A Emboscada no Porto"
+                  value={sessionTitle}
+                  onChange={(e) => setSessionTitle(e.target.value)}
+                  className="px-2.5 py-2 border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-blood-red text-text-primary"
+                />
+              </div>
+
+              <div className="flex flex-col space-y-1">
+                <label className="text-[9px] uppercase tracking-widest text-text-muted font-bold">XP Base da Mesa</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={baseXp}
+                  onChange={(e) => setBaseXp(Math.max(0, Number(e.target.value) || 0))}
+                  className="px-2.5 py-2 border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-blood-red text-text-primary font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-2 border-t border-white/10 pt-3">
+                <label className="text-[9px] uppercase tracking-widest text-text-muted font-bold block mb-1">
+                  Créditos Individuais (Jogadores)
+                </label>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {playersList.length === 0 ? (
+                    <div className="text-[10px] text-text-dim italic">Nenhum jogador ativo para receber XP.</div>
+                  ) : (
+                    playersList.map((p) => {
+                      const data = individualXpData[p.id] || { presence: true, desire: false, ambition: false, extra: 0 };
+                      const totalXp = baseXp + (data.presence ? 1 : 0) + (data.desire ? 1 : 0) + (data.ambition ? 1 : 0) + (Number(data.extra) || 0);
+                      
+                      return (
+                        <div key={p.id} className="bg-black/35 border border-white/5 p-2 rounded-xs flex flex-col space-y-1.5">
+                          <div className="flex justify-between items-center font-bold text-text-primary">
+                            <span>{p.name}</span>
+                            <span className="text-amber-400 font-mono text-[11px]">Total: +{totalXp} XP</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-2 text-[9px] text-text-muted font-sans">
+                            <label className="flex items-center space-x-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={data.presence}
+                                onChange={(e) => setIndividualXpData(prev => ({
+                                  ...prev,
+                                  [p.id]: { ...prev[p.id], presence: e.target.checked }
+                                }))}
+                                className="accent-blood-red"
+                              />
+                              <span>Presença (+1)</span>
+                            </label>
+                            
+                            <label className="flex items-center space-x-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={data.desire}
+                                onChange={(e) => setIndividualXpData(prev => ({
+                                  ...prev,
+                                  [p.id]: { ...prev[p.id], desire: e.target.checked }
+                                }))}
+                                className="accent-blood-red"
+                              />
+                              <span>Desejo (+1)</span>
+                            </label>
+                            
+                            <label className="flex items-center space-x-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={data.ambition}
+                                onChange={(e) => setIndividualXpData(prev => ({
+                                  ...prev,
+                                  [p.id]: { ...prev[p.id], ambition: e.target.checked }
+                                }))}
+                                className="accent-blood-red"
+                              />
+                              <span>Ambição (+1)</span>
+                            </label>
+                          </div>
+
+                          <div className="flex items-center space-x-2 pt-1">
+                            <span className="text-[8px] text-text-muted uppercase">Extra Individual:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={data.extra}
+                              onChange={(e) => setIndividualXpData(prev => ({
+                                ...prev,
+                                [p.id]: { ...prev[p.id], extra: Math.max(0, Number(e.target.value) || 0) }
+                              }))}
+                              className="w-16 px-1.5 py-0.5 border border-white/10 rounded-xs bg-black/45 focus:outline-none text-[10px] text-text-primary text-center font-mono"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsXpModalOpen(false)}
+                  className="px-4 py-2 border border-white/10 hover:border-white text-text-muted hover:text-white text-[10px] uppercase tracking-wider transition-colors rounded-sm cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!sessionTitle.trim()) {
+                      alert("Por favor, preencha o título da sessão.");
+                      return;
+                    }
+                    
+                    const grants = playersList.map(p => {
+                      const data = individualXpData[p.id] || { presence: false, desire: false, ambition: false, extra: 0 };
+                      const totalXp = baseXp + (data.presence ? 1 : 0) + (data.desire ? 1 : 0) + (data.ambition ? 1 : 0) + (Number(data.extra) || 0);
+                      return {
+                        characterId: p.id,
+                        characterName: p.name,
+                        totalXp,
+                      };
+                    });
+
+                    const res = await grantSessionXpAction(campaign.id, baseXp, grants, sessionTitle);
+                    if (res.success) {
+                      alert("XP da sessão distribuído com sucesso para todos os jogadores!");
+                      setIsXpModalOpen(false);
+                      fetchRecentXpSpends();
+                    } else {
+                      alert(`Erro ao distribuir XP: ${res.error}`);
+                    }
+                  }}
+                  disabled={playersList.length === 0}
+                  className="px-5 py-2 bg-blood-red hover:bg-burgundy text-white text-[10px] uppercase tracking-wider font-bold rounded-sm cursor-pointer transition-colors shadow-md disabled:bg-gray-700 disabled:cursor-not-allowed"
+                >
+                  Conceder XP
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

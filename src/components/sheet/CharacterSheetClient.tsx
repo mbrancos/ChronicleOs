@@ -16,6 +16,7 @@ import DamageTracker from "@/components/sheet/DamageTracker";
 import HumanityTracker from "@/components/sheet/HumanityTracker";
 import { useAutosave } from "@/hooks/useAutosave";
 import { updateCharacterSheet, getCharacterXpLedger } from "@/app/actions/characterActions";
+import { spendCharacterXpAction } from "@/app/actions/xpActions";
 import InlineEdit from "@/components/sheet/InlineEdit";
 
 const CLAN_OPTIONS = [
@@ -426,6 +427,22 @@ export default function CharacterSheetClient({
   const [xpLedger, setXpLedger] = useState<any[]>([]);
   const [isLoadingLedger, setIsLoadingLedger] = useState(false);
 
+  const xpBalance = xpLedger.reduce((sum, item) => sum + (item.xpChange || 0), 0);
+
+  // Estados de Evolução de XP (Fase 25)
+  const [isEvolvingMode, setIsEvolvingMode] = useState(false);
+  const [isEvolutionModalOpen, setIsEvolutionModalOpen] = useState(false);
+  const [evolutionTarget, setEvolutionTarget] = useState<{
+    traitName: string;
+    traitType: "attribute" | "skill" | "discipline" | "advantage" | "humanity" | "blood_potency";
+    newLevel: number;
+    currentValue: number;
+    costXp: number;
+  } | null>(null);
+  const [evolutionJustification, setEvolutionJustification] = useState("");
+  const [evolutionError, setEvolutionError] = useState<string | null>(null);
+  const [evolutionLoading, setEvolutionLoading] = useState(false);
+
   const [activeTab, setActiveTab] = useState<"nucleo" | "sangue" | "vantagens" | "sistema" | "xp_diary">("nucleo");
 
   const [prevWillpower, setPrevWillpower] = useState(initialData?.status?.willpower);
@@ -540,10 +557,8 @@ export default function CharacterSheetClient({
   }, [characterId, getCharacterXpLedger]);
 
   useEffect(() => {
-    if (activeTab === "xp_diary") {
-      fetchXpLedger();
-    }
-  }, [activeTab, fetchXpLedger]);
+    fetchXpLedger();
+  }, [fetchXpLedger]);
 
   // ESTADOS DO MINI-FORMULÁRIO DE ESPECIALIZAÇÕES (ABA NÚCLEO)
   const [selectedSkill, setSelectedSkill] = useState<keyof CharacterSkills | "">("");
@@ -612,8 +627,18 @@ export default function CharacterSheetClient({
     diceList: { type: "normal" | "hunger"; value: number }[];
   } | null>(null);
 
-  // Alterações de Atributos
+  // Alterações de Atributos com interceptação de XP
   const handleAttributeChange = (category: "physical" | "social" | "mental", attrName: string, value: number) => {
+    if (status === "IN_PLAY" && isEvolvingMode) {
+      const currentVal = Number((character.attributes[category] as any)[attrName]) || 1;
+      if (value <= currentVal) {
+        alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+        return;
+      }
+      openEvolutionConfirmModal(attrName, "attribute", value, currentVal);
+      return;
+    }
+
     setCharacter(prev => ({
       ...prev,
       attributes: {
@@ -626,8 +651,18 @@ export default function CharacterSheetClient({
     }));
   };
 
-  // Alterações de Habilidades
+  // Alterações de Habilidades com interceptação de XP
   const handleSkillChange = (skillName: keyof CharacterSkills, value: number) => {
+    if (status === "IN_PLAY" && isEvolvingMode) {
+      const currentVal = Number(character.skills[skillName]) || 0;
+      if (value <= currentVal) {
+        alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+        return;
+      }
+      openEvolutionConfirmModal(skillName, "skill", value, currentVal);
+      return;
+    }
+
     setCharacter(prev => ({
       ...prev,
       skills: {
@@ -635,6 +670,156 @@ export default function CharacterSheetClient({
         [skillName]: value
       }
     }));
+  };
+
+  // Alterações específicas para Evolução por XP (Fase 25)
+  const handleBloodPotencyChange = (val: number) => {
+    if (status === "IN_PLAY") {
+      if (isEvolvingMode) {
+        const currentVal = character.status.blood_potency || 1;
+        if (val <= currentVal) {
+          alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+          return;
+        }
+        openEvolutionConfirmModal("Potência de Sangue", "blood_potency", val, currentVal);
+      }
+      return;
+    }
+
+    setCharacter(prev => ({
+      ...prev,
+      status: { ...prev.status, blood_potency: val }
+    }));
+  };
+
+  const handleHumanityChange = (val: number) => {
+    if (status === "IN_PLAY") {
+      if (isEvolvingMode) {
+        const currentVal = character.status.humanity || 7;
+        if (val <= currentVal) {
+          alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+          return;
+        }
+        openEvolutionConfirmModal("Humanidade", "humanity", val, currentVal);
+      }
+      return;
+    }
+
+    setCharacter(prev => ({
+      ...prev,
+      status: { ...prev.status, humanity: val }
+    }));
+  };
+
+  const openEvolutionConfirmModal = (
+    traitName: string,
+    traitType: "attribute" | "skill" | "discipline" | "advantage" | "humanity" | "blood_potency",
+    newLevel: number,
+    currentValue: number
+  ) => {
+    let cost = 0;
+    const clan = character.profile?.clan || "Sem Clã";
+    const clanDisciplines = CLAN_DISCIPLINE_MAPPING[clan] || [];
+    const isCaitiffOrThin = clan === "Caitiff" || clan === "Sem Clã" || clan === "Sangue-Ralo";
+
+    if (traitType === "attribute") {
+      for (let lvl = currentValue + 1; lvl <= newLevel; lvl++) {
+        cost += lvl * 5;
+      }
+    } else if (traitType === "skill") {
+      for (let lvl = currentValue + 1; lvl <= newLevel; lvl++) {
+        cost += lvl * 3;
+      }
+    } else if (traitType === "discipline") {
+      const isClanDisc = clanDisciplines.some(d => traitName.toLowerCase().includes(d.split(" ")[0].toLowerCase()));
+      let costMultiplier = 7;
+      if (isCaitiffOrThin) costMultiplier = 6;
+      else if (isClanDisc) costMultiplier = 5;
+
+      for (let lvl = currentValue + 1; lvl <= newLevel; lvl++) {
+        cost += lvl * costMultiplier;
+      }
+    } else if (traitType === "advantage") {
+      cost = (newLevel - currentValue) * 3;
+    } else if (traitType === "humanity" || traitType === "blood_potency") {
+      for (let lvl = currentValue + 1; lvl <= newLevel; lvl++) {
+        cost += lvl * 10;
+      }
+    }
+
+    setEvolutionTarget({
+      traitName,
+      traitType,
+      newLevel,
+      currentValue,
+      costXp: cost,
+    });
+    setEvolutionJustification("");
+    setEvolutionError(null);
+    setIsEvolutionModalOpen(true);
+  };
+
+  const handleConfirmEvolution = async () => {
+    if (!evolutionTarget) return;
+    if (!evolutionJustification || evolutionJustification.trim().length < 15) {
+      setEvolutionError("A justificativa deve ter pelo menos 15 caracteres.");
+      return;
+    }
+
+    setEvolutionLoading(true);
+    setEvolutionError(null);
+
+    try {
+      const res = await spendCharacterXpAction(
+        characterId,
+        evolutionTarget.traitName,
+        evolutionTarget.traitType,
+        evolutionTarget.newLevel,
+        evolutionTarget.costXp,
+        `Justificativa: ${evolutionJustification.trim()}`
+      );
+
+      if (res.success) {
+        setIsEvolutionModalOpen(false);
+        setIsEvolvingMode(false);
+        
+        // Atualizar estado local
+        setCharacter(prev => {
+          const newData = { ...prev };
+          if (evolutionTarget.traitType === "attribute") {
+            if (newData.attributes.physical[evolutionTarget.traitName as keyof typeof newData.attributes.physical] !== undefined) {
+              (newData.attributes.physical as any)[evolutionTarget.traitName] = evolutionTarget.newLevel;
+            } else if (newData.attributes.social[evolutionTarget.traitName as keyof typeof newData.attributes.social] !== undefined) {
+              (newData.attributes.social as any)[evolutionTarget.traitName] = evolutionTarget.newLevel;
+            } else if (newData.attributes.mental[evolutionTarget.traitName as keyof typeof newData.attributes.mental] !== undefined) {
+              (newData.attributes.mental as any)[evolutionTarget.traitName] = evolutionTarget.newLevel;
+            }
+          } else if (evolutionTarget.traitType === "skill") {
+            (newData.skills as any)[evolutionTarget.traitName] = evolutionTarget.newLevel;
+          } else if (evolutionTarget.traitType === "discipline") {
+            const d = newData.disciplines.find(x => x.name.toLowerCase() === evolutionTarget.traitName.toLowerCase());
+            if (d) d.level = evolutionTarget.newLevel;
+          } else if (evolutionTarget.traitType === "advantage") {
+            const a = newData.advantages.find(x => x.id === evolutionTarget.traitName);
+            if (a) a.level = evolutionTarget.newLevel;
+          } else if (evolutionTarget.traitType === "humanity") {
+            newData.status.humanity = evolutionTarget.newLevel;
+          } else if (evolutionTarget.traitType === "blood_potency") {
+            newData.status.blood_potency = evolutionTarget.newLevel;
+          }
+          return newData;
+        });
+
+        fetchXpLedger(); // Recarregar histórico
+        alert("Evolução aplicada com sucesso!");
+      } else {
+        setEvolutionError(res.error || "Ocorreu um erro ao evoluir.");
+      }
+    } catch (err: any) {
+      setEvolutionError(err.message || "Erro ao conectar com o servidor.");
+    } finally {
+      setEvolutionLoading(false);
+    }
   };
 
   // Alterações de Perfil (InlineEdit)
@@ -695,6 +880,18 @@ export default function CharacterSheetClient({
   };
 
   const handleDisciplineLevelChange = (id: string, level: number) => {
+    if (status === "IN_PLAY" && isEvolvingMode) {
+      const disc = character.disciplines.find(d => d.id === id);
+      if (disc) {
+        if (level <= disc.level) {
+          alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+          return;
+        }
+        openEvolutionConfirmModal(disc.name, "discipline", level, disc.level);
+      }
+      return;
+    }
+
     setCharacter(prev => ({
       ...prev,
       disciplines: prev.disciplines.map(d => d.id === id ? { ...d, level } : d)
@@ -785,6 +982,18 @@ export default function CharacterSheetClient({
   };
 
   const handleAdvantageLevelChange = (id: string, level: number) => {
+    if (status === "IN_PLAY" && isEvolvingMode) {
+      const adv = character.advantages.find(a => a.id === id);
+      if (adv) {
+        if (level <= adv.level) {
+          alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+          return;
+        }
+        openEvolutionConfirmModal(adv.id, "advantage", level, adv.level);
+      }
+      return;
+    }
+
     setCharacter(prev => ({
       ...prev,
       advantages: prev.advantages.map(a => a.id === id ? { ...a, level } : a)
@@ -861,6 +1070,21 @@ export default function CharacterSheetClient({
   return (
     <main className="min-h-screen bg-bg-main text-text-primary p-4 md:p-8 font-reading flex flex-col justify-start items-center">
       <div className="w-full max-w-6xl space-y-6">
+        
+        {isEvolvingMode && (
+          <div className="bg-hunger-red/10 border border-hunger-red/40 p-4 rounded-xs text-xs font-data uppercase text-hunger-red tracking-wider flex items-center justify-between shadow-[0_0_10px_rgba(200,36,52,0.15)] animate-pulse-subtle">
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-hunger-red animate-ping" />
+              <span><strong>Modo de Evolução Ativo:</strong> Clique em uma bolinha (Atributo, Habilidade, Disciplina, Potência de Sangue ou Humanidade) para aumentá-la usando seu XP.</span>
+            </div>
+            <button
+              onClick={() => setIsEvolvingMode(false)}
+              className="text-[10px] text-text-muted hover:text-hunger-red font-bold tracking-widest transition-colors cursor-pointer"
+            >
+              Sair
+            </button>
+          </div>
+        )}
         
         {/* NAV VOLTAR AO HUB E FEEDBACK DE AUTOSAVE */}
         <div className="flex justify-between items-center pb-2 border-b border-white/10">
@@ -943,7 +1167,27 @@ export default function CharacterSheetClient({
             </div>
           )}
           
-          {status !== "DRAFT" && (
+          {status === "IN_PLAY" && (
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-xs font-data uppercase">
+                <span className="text-text-muted">Saldo de XP Disponível:</span>
+                <span className="text-emerald-400 font-bold text-sm tracking-wider">{xpBalance} XP</span>
+              </div>
+              {xpBalance > 0 && (
+                <button
+                  onClick={() => setIsEvolvingMode(!isEvolvingMode)}
+                  className={`px-3 py-1 text-xs font-bold font-data uppercase tracking-wider rounded-xs border transition-all duration-150 cursor-pointer ${
+                    isEvolvingMode
+                      ? "bg-hunger-red/20 border-hunger-red text-hunger-red shadow-[0_0_8px_rgba(200,36,52,0.3)] animate-pulse"
+                      : "bg-emerald-950/40 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/40 hover:border-emerald-400"
+                  }`}
+                >
+                  {isEvolvingMode ? "Cancelar Evolução" : "Evoluir Personagem (XP)"}
+                </button>
+              )}
+            </div>
+          )}
+          {status === "READY" && (
             <div className="flex items-center space-x-2 text-xs font-data uppercase">
               <span className="text-text-muted">XP Consumido em Compras:</span>
               <span className="text-gold-accent font-bold text-sm tracking-wider">{alloc.totalSpentXp} XP</span>
@@ -1065,8 +1309,9 @@ export default function CharacterSheetClient({
             <HumanityTracker
               humanity={character.status.humanity}
               stains={character.status.stains}
-              onHumanityChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, humanity: val } }))}
+              onHumanityChange={handleHumanityChange}
               onStainsChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, stains: val } }))}
+              disabled={status === "IN_PLAY" && !isEvolvingMode}
             />
 
           </div>
@@ -1137,7 +1382,7 @@ export default function CharacterSheetClient({
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                         baseValue={alloc.attributesBase[key]}
                         showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY"}
+                        disabled={status === "IN_PLAY" && !isEvolvingMode}
                       />
                     ))}
                   </div>
@@ -1155,7 +1400,7 @@ export default function CharacterSheetClient({
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                         baseValue={alloc.attributesBase[key]}
                         showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY"}
+                        disabled={status === "IN_PLAY" && !isEvolvingMode}
                       />
                     ))}
                   </div>
@@ -1173,7 +1418,7 @@ export default function CharacterSheetClient({
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                         baseValue={alloc.attributesBase[key]}
                         showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY"}
+                        disabled={status === "IN_PLAY" && !isEvolvingMode}
                       />
                     ))}
                   </div>
@@ -1203,7 +1448,7 @@ export default function CharacterSheetClient({
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                         baseValue={alloc.skillsBase[skill]}
                         showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY"}
+                        disabled={status === "IN_PLAY" && !isEvolvingMode}
                       />
                     ))}
                   </div>
@@ -1223,7 +1468,7 @@ export default function CharacterSheetClient({
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                         baseValue={alloc.skillsBase[skill]}
                         showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY"}
+                        disabled={status === "IN_PLAY" && !isEvolvingMode}
                       />
                     ))}
                   </div>
@@ -1243,7 +1488,7 @@ export default function CharacterSheetClient({
                         onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                         baseValue={alloc.skillsBase[skill]}
                         showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY"}
+                        disabled={status === "IN_PLAY" && !isEvolvingMode}
                       />
                     ))}
                   </div>
@@ -1361,14 +1606,11 @@ export default function CharacterSheetClient({
                   <DotSlider
                     label="Potência do Sangue"
                     value={character.status.blood_potency}
-                    onChange={(val) => setCharacter(prev => ({
-                      ...prev,
-                      status: { ...prev.status, blood_potency: val }
-                    }))}
+                    onChange={handleBloodPotencyChange}
                     allowZero
                     baseValue={1}
                     showXpDistinction={status !== "IN_PLAY"}
-                    disabled={status === "IN_PLAY"}
+                    disabled={status === "IN_PLAY" && !isEvolvingMode}
                     variant="gold"
                   />
                 </div>
@@ -1436,9 +1678,9 @@ export default function CharacterSheetClient({
                           return (
                             <button
                               key={idx}
-                              disabled={status === "IN_PLAY"}
+                              disabled={status === "IN_PLAY" && !isEvolvingMode}
                               onClick={() => handleDisciplineLevelChange(disc.id, idx + 1)}
-                              className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${status === "IN_PLAY" ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                              className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
                               title={`Nível ${idx + 1}`}
                             />
                           );
@@ -1598,9 +1840,9 @@ export default function CharacterSheetClient({
                                   return (
                                     <button
                                       key={idx}
-                                      disabled={status === "IN_PLAY"}
+                                      disabled={status === "IN_PLAY" && !isEvolvingMode}
                                       onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
-                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${status === "IN_PLAY" ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
                                       title={`Nível ${idx + 1}`}
                                     />
                                   );
@@ -1702,9 +1944,9 @@ export default function CharacterSheetClient({
                                   return (
                                     <button
                                       key={idx}
-                                      disabled={status === "IN_PLAY"}
+                                      disabled={status === "IN_PLAY" && !isEvolvingMode}
                                       onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
-                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${status === "IN_PLAY" ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
                                       title={`Nível ${idx + 1}`}
                                     />
                                   );
@@ -1991,6 +2233,95 @@ export default function CharacterSheetClient({
         </section>
 
       </div>
+
+      {/* MODAL GÓTICO DE CONFIRMAÇÃO DE EVOLUÇÃO POR XP */}
+      {isEvolutionModalOpen && evolutionTarget && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-bg-card border border-blood-red/45 max-w-md w-full p-6 rounded-sm shadow-[0_0_20px_rgba(139,0,0,0.25)] space-y-4">
+            <div className="border-b border-white/10 pb-2">
+              <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
+                Confirmar Evolução por XP
+              </h3>
+              <p className="text-[10px] text-text-muted font-data uppercase">
+                Gasto Auditável de Pontos
+              </p>
+            </div>
+
+            <div className="bg-bg-main/50 p-3 rounded border border-white/5 space-y-2 text-xs font-reading">
+              <div className="flex justify-between">
+                <span className="text-text-muted">Característica:</span>
+                <span className="text-text-primary font-bold uppercase tracking-wider">
+                  {TECHNICAL_NAMES[evolutionTarget.traitName] || evolutionTarget.traitName}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Transição de Nível:</span>
+                <span className="text-text-primary">
+                  {evolutionTarget.currentValue} ➔ <strong className="text-gold-accent">{evolutionTarget.newLevel}</strong>
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-white/5 pt-2 font-data">
+                <span className="text-text-muted">Custo de XP:</span>
+                <span className="text-hunger-red font-bold">{evolutionTarget.costXp} XP</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Saldo Atual:</span>
+                <span className="text-emerald-400 font-bold">{xpBalance} XP</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">Saldo Pós-Compra:</span>
+                <span className="text-text-primary font-bold">{xpBalance - evolutionTarget.costXp} XP</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-text-muted font-data uppercase tracking-wider block font-bold">
+                Justificativa Narrativa (Mínimo de 15 caracteres)
+              </label>
+              <textarea
+                value={evolutionJustification}
+                onChange={(e) => {
+                  setEvolutionJustification(e.target.value);
+                  if (evolutionError && e.target.value.trim().length >= 15) {
+                    setEvolutionError(null);
+                  }
+                }}
+                disabled={evolutionLoading}
+                placeholder="Ex: Treinei combate nas docas com Thomas durante o hiato da coterie (mínimo de 15 caracteres)..."
+                className="w-full h-24 bg-bg-main border border-white/10 rounded p-2.5 text-xs font-reading text-text-primary focus:border-blood-red outline-none resize-none transition-colors duration-150 disabled:opacity-50"
+              />
+              <span className="text-[10px] text-text-dim text-right block">
+                Caracteres: {evolutionJustification.length} / 15
+              </span>
+            </div>
+
+            {evolutionError && (
+              <div className="p-2.5 bg-hunger-red/10 border border-hunger-red/30 rounded-xs text-xs text-hunger-red font-reading">
+                ⚠️ {evolutionError}
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsEvolutionModalOpen(false)}
+                disabled={evolutionLoading}
+                className="px-4 py-2 border border-white/10 rounded-sm text-xs font-data uppercase tracking-wider text-text-muted hover:text-white transition-colors cursor-pointer disabled:cursor-not-allowed select-none"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmEvolution}
+                disabled={evolutionLoading || evolutionJustification.trim().length < 15}
+                className="px-4 py-2 bg-burgundy border border-blood-red text-text-primary disabled:opacity-40 disabled:hover:bg-burgundy text-xs font-bold font-data uppercase tracking-wider rounded-sm hover:bg-blood-red transition-all duration-150 shadow-[0_0_8px_rgba(200,36,52,0.2)] cursor-pointer disabled:cursor-not-allowed select-none"
+              >
+                {evolutionLoading ? "Evoluindo..." : "Confirmar Evolução"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

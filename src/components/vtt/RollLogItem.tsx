@@ -41,6 +41,53 @@ export default function RollLogItem({
 
   const timeStr = formatTime(roll.createdAt);
 
+  if ((roll.resultData as any).type === "xp_grant") {
+    const xpData = roll.resultData as any;
+    return (
+      <div className="backdrop-blur-md bg-gold-accent/5 border border-gold-accent/25 rounded-sm p-3 flex flex-col space-y-2 select-text shadow-[0_0_12px_rgba(212,175,55,0.08)]">
+        {/* Cabeçalho */}
+        <div className="flex justify-between items-center text-[9px] font-data tracking-wider text-gold-accent font-bold">
+          <div className="flex items-center space-x-1.5 truncate">
+            <span>📜 FIM DE SESSÃO</span>
+          </div>
+          <span className="text-[8px] text-gold-accent/70 font-mono">
+            {timeStr}
+          </span>
+        </div>
+
+        {/* Título da Sessão */}
+        <div className="space-y-0.5">
+          <h4 className="font-gothic text-xs text-gold-accent tracking-wide uppercase leading-tight truncate">
+            {xpData.sessionTitle}
+          </h4>
+          <p className="text-[9px] text-text-muted font-reading leading-tight">
+            O Narrador encerrou a sessão e distribuiu pontos de experiência (XP) para a coterie.
+          </p>
+        </div>
+
+        {/* Lista de Personagens e XP recebido */}
+        <div className="bg-black/40 border border-white/5 rounded-xs p-2 space-y-1 text-[9px] font-data text-text-primary">
+          <div className="flex justify-between border-b border-white/5 pb-1 text-[8px] text-text-muted">
+            <span>Membro da Coterie</span>
+            <span>XP</span>
+          </div>
+          {xpData.individualGrants?.map((grant: any, idx: number) => (
+            <div key={idx} className="flex justify-between items-center py-0.5">
+              <span className="font-medium text-text-muted truncate max-w-[70%]">{grant.characterName}</span>
+              <span className="text-gold-accent font-bold">+{grant.totalXp} XP</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Rodapé do Grant */}
+        <div className="flex justify-between items-center text-[8px] font-data text-gold-accent/60 pt-1 border-t border-gold-accent/15">
+          <span>Base da Sessão: {xpData.baseXp} XP</span>
+          <span>Sincronizado ✓</span>
+        </div>
+      </div>
+    );
+  }
+
   // Ordenação inteligente de dados (preservando o índice original para dados normais)
   let sortedNormalDice: Array<{ value: number; originalIdx: number }> = [];
   let sortedHungerDice: number[] = [];

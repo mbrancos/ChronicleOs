@@ -81,5 +81,12 @@ export const xpLedgers = pgTable("xp_ledgers", {
   description: text("description").notNull(),
   xpChange: integer("xp_change").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  metadata: jsonb("metadata").$type<{
+    trait?: string;
+    type?: string;
+    previousLevel?: number;
+    newLevel?: number;
+    xpCost?: number;
+  }>(),
 });
 

@@ -83,11 +83,37 @@ export default function ActionFeed({
       );
     };
 
+    const handleXpGranted = (data: {
+      sessionTitle: string;
+      baseXp: number;
+      individualGrants: { characterId: string; totalXp: number; characterName: string }[];
+    }) => {
+      const virtualRoll: RollItem = {
+        id: `xp-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+        campaignId: campaignId,
+        characterId: null,
+        characterName: "Narrador",
+        poolName: "Distribuição de XP",
+        resultData: {
+          type: "xp_grant",
+          sessionTitle: data.sessionTitle,
+          baseXp: data.baseXp,
+          individualGrants: data.individualGrants,
+        } as any,
+        hungerDice: 0,
+        isRerolled: false,
+        isSecret: false,
+        createdAt: new Date(),
+      };
+      setLocalRolls((prev) => [...prev, virtualRoll]);
+    };
+
     // 1. Assinar canal público
     const publicChannelName = `public-campaign-${campaignId}`;
     const publicChannel = pusher.subscribe(publicChannelName);
     publicChannel.bind("new-roll", handleNewRoll);
     publicChannel.bind("update-roll", handleUpdateRoll);
+    publicChannel.bind("xp-granted", handleXpGranted);
 
     // 2. Se for Narrador, assinar canal privado
     let privateChannel: Channel | null = null;

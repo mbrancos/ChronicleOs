@@ -7,18 +7,21 @@ interface HumanityTrackerProps {
   stains: number;
   onHumanityChange: (val: number) => void;
   onStainsChange: (val: number) => void;
+  disabled?: boolean;
 }
 
 export default function HumanityTracker({
   humanity,
   stains,
   onHumanityChange,
-  onStainsChange
+  onStainsChange,
+  disabled = false
 }: HumanityTrackerProps) {
   
   const isDegenerating = humanity + stains > 10;
 
   const handleBoxClick = (boxNum: number) => {
+    if (disabled) return;
     // Cliques na metade esquerda (1-5) definem a Humanidade.
     // Cliques na metade direita (6-10) definem as Máculas.
     if (boxNum <= 5) {
@@ -69,8 +72,11 @@ export default function HumanityTracker({
           return (
             <button
               key={idx}
+              disabled={disabled}
               onClick={() => handleBoxClick(boxNum)}
-              className={`w-6 h-6 border rounded-sm flex items-center justify-center cursor-pointer focus:outline-none transition-all duration-150 ${bgClass}`}
+              className={`w-6 h-6 border rounded-sm flex items-center justify-center focus:outline-none transition-all duration-150 ${
+                disabled ? "cursor-default opacity-85" : "cursor-pointer"
+              } ${bgClass}`}
               aria-label={`Trilha Posição ${boxNum}: ${
                 isHum ? "Humanidade" : isStn ? "Mácula" : "Vazio"
               }`}
