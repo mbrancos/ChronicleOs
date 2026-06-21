@@ -210,6 +210,21 @@ function executeSimulationRoll(
 
 const POWER_LEVEL_OPTIONS = ["Cria", "Neófito", "Ancila"];
 
+const DISCIPLINE_OPTIONS = [
+  "Animalismo",
+  "Auspício",
+  "Dominação",
+  "Feitiçaria de Sangue",
+  "Fortitude",
+  "Metamorfose",
+  "Oblivion",
+  "Ofuscação",
+  "Potência",
+  "Presença",
+  "Rapidez",
+  "Alquimia de Sangue-Ralo"
+];
+
 function getPowerLevelRules(concept: string) {
   const normalized = String(concept).toLowerCase().trim();
   if (normalized === "cria" || normalized === "fledgling") {
@@ -1695,8 +1710,10 @@ export default function CharacterSheetClient({
                           value={disc.name}
                           onChange={(val) => handleDisciplineNameChange(disc.id, val)}
                           placeholder="Nova Disciplina"
+                          type="select"
+                          options={DISCIPLINE_OPTIONS}
                           disabled={status === "IN_PLAY"}
-                          className="font-gothic text-xl text-text-primary tracking-wide"
+                          className="font-gothic text-xl text-text-primary tracking-wide hover:bg-white/5 cursor-pointer"
                         />
                       </div>
                       
