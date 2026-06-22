@@ -38,6 +38,15 @@ export default function RollEffects({
   const horrorDurationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const comedyDurationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs para ler sempre o valor mais atualizado das configurações sem re-assinar o Websocket
+  const rollEffectModeRef = useRef(rollEffectMode);
+  const comedyImageUrlRef = useRef(comedyImageUrl);
+
+  useEffect(() => {
+    rollEffectModeRef.current = rollEffectMode;
+    comedyImageUrlRef.current = comedyImageUrl;
+  }, [rollEffectMode, comedyImageUrl]);
+
   // Limpar recursos ao desmontar
   useEffect(() => {
     return () => {
@@ -98,26 +107,24 @@ export default function RollEffects({
     }
   };
 
-  // Disparar o efeito de acordo com a configuração atual
+  // Disparar o efeito de acordo com a configuração atual do Ref
   const triggerEffect = () => {
-    if (rollEffectMode === "NONE") return;
+    const currentMode = rollEffectModeRef.current;
 
-    if (rollEffectMode === "HORROR") {
+    if (currentMode === "NONE") return;
+
+    if (currentMode === "HORROR") {
       setShowHorror(true);
-      // Áudio heartbeat.mp3
       playAudio("/audio/heartbeat.mp3");
 
-      // Resetar efeito de Horror após 6 segundos (2s pico + 4s fade)
       if (horrorDurationTimeoutRef.current) clearTimeout(horrorDurationTimeoutRef.current);
       horrorDurationTimeoutRef.current = setTimeout(() => {
         setShowHorror(false);
       }, 6000);
-    } else if (rollEffectMode === "COMEDY") {
+    } else if (currentMode === "COMEDY") {
       setShowComedy(true);
-      // Áudio toasty.mp3
       playAudio("/audio/toasty.mp3");
 
-      // Resetar efeito cômico após 1.5 segundos (tempo de duração da animação)
       if (comedyDurationTimeoutRef.current) clearTimeout(comedyDurationTimeoutRef.current);
       comedyDurationTimeoutRef.current = setTimeout(() => {
         setShowComedy(false);
@@ -125,7 +132,7 @@ export default function RollEffects({
     }
   };
 
-  // WebSocket com Pusher para ouvir novas rolagens em tempo real
+  // WebSocket com Pusher para ouvir novas rolagens em tempo real (assina apenas uma vez por canal)
   useEffect(() => {
     if (!campaignId) return;
 
@@ -170,7 +177,7 @@ export default function RollEffects({
       }
       pusher.disconnect();
     };
-  }, [campaignId, rollEffectMode, comedyImageUrl, isStoryteller]);
+  }, [campaignId, isStoryteller]);
 
   return (
     <>
@@ -178,16 +185,13 @@ export default function RollEffects({
       <style jsx global>{`
         @keyframes horrorOverlayPulse {
           0% {
-            box-shadow: inset 0 0 50px rgba(180, 0, 0, 0.4);
-            background-color: rgba(180, 0, 0, 0.02);
+            opacity: 0.3;
           }
           50% {
-            box-shadow: inset 0 0 130px rgba(220, 0, 0, 0.95);
-            background-color: rgba(180, 0, 0, 0.08);
+            opacity: 0.85;
           }
           100% {
-            box-shadow: inset 0 0 50px rgba(180, 0, 0, 0.4);
-            background-color: rgba(180, 0, 0, 0.02);
+            opacity: 0.3;
           }
         }
 
@@ -211,9 +215,9 @@ export default function RollEffects({
           inset: 0;
           z-index: 9999;
           pointer-events: none;
-          mix-blend-mode: multiply;
+          background: radial-gradient(circle, transparent 25%, rgba(0, 0, 0, 0.5) 60%, rgba(130, 0, 0, 0.8) 85%, rgba(180, 0, 0, 0.95) 100%);
+          box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.95), inset 0 0 180px rgba(180, 0, 0, 0.85);
           animation: horrorOverlayPulse 1.2s infinite ease-in-out;
-          border: 4px solid rgba(220, 0, 0, 0.3);
         }
 
         .comedy-mascot-active {
@@ -238,14 +242,14 @@ export default function RollEffects({
         }
       `}</style>
 
-      {/* Overlay de Horror (Sangue e Batimento) */}
+      {/* Overlay de Horror (Visão de Túnel Sangrenta Pulsante) */}
       {showHorror && <div className="horror-active-overlay" />}
 
       {/* Overlay de Alívio Cômico (Toasty do Mascote) */}
-      {showComedy && comedyImageUrl && (
+      {showComedy && comedyImageUrlRef.current && (
         <div className="comedy-mascot-active">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={comedyImageUrl} alt="Mascote Crônico" />
+          <img src={comedyImageUrlRef.current} alt="Mascote Crônico" />
         </div>
       )}
     </>
