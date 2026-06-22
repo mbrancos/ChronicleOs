@@ -35,14 +35,14 @@ export default function ActionFeed({
   isRerolling = false,
   isStoryteller = false,
 }: ActionFeedProps) {
-  const [localRolls, setLocalRolls] = useState<RollItem[]>(rolls);
+  const [localRolls, setLocalRolls] = useState<RollItem[]>(() => [...rolls].reverse());
   const [selectedDice, setSelectedDice] = useState<{ rollId: string; indices: number[] } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Sincronizar rolagens iniciais do servidor
+  // Sincronizar rolagens iniciais do servidor invertendo a ordem para cronológica
   useEffect(() => {
     Promise.resolve().then(() => {
-      setLocalRolls(rolls);
+      setLocalRolls([...rolls].reverse());
     });
   }, [rolls]);
 
