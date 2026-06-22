@@ -153,11 +153,11 @@ export default function ActionFeed({
   };
 
   return (
-    <div className="absolute left-4 top-16 bottom-24 w-80 z-30 pointer-events-none flex flex-col justify-end overflow-hidden">
+    <div className="w-80 h-full bg-bg-card-dark/95 backdrop-blur-md border-r border-white/10 flex flex-col justify-end overflow-hidden z-30 shrink-0 p-4 select-none">
       {/* Container de scroll do histórico estilo chat */}
       <div
         ref={scrollRef}
-        className="pointer-events-auto overflow-y-auto flex flex-col scrollbar-none pr-1.5 pb-2 h-full max-h-full space-y-2.5"
+        className="overflow-y-auto flex flex-col scrollbar-none pr-1.5 pb-2 h-full max-h-full space-y-2.5"
       >
         {localRolls.length === 0 ? (
           <div className="text-center py-4 bg-bg-card-dark/40 backdrop-blur-xs border border-white/5 rounded-sm p-4 text-[9px] uppercase tracking-widest text-text-dim/80 font-data select-none">

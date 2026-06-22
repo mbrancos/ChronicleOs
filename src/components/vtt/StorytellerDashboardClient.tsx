@@ -38,6 +38,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   // Estados para rolagens e tokens
   const [rollsList, setRollsList] = useState<RollItem[]>([]);
   const [tokensList, setTokensList] = useState<TokenData[]>([]);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   
   // Referências para gerenciar debounces de chamadas assíncronas ao banco de dados por token/ficha
   const quickHealthDebounceRefs = useRef<{ [tokenId: string]: NodeJS.Timeout }>({});
@@ -545,7 +546,10 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
         comedyImageUrl={campaign.comedyImageUrl}
         isStoryteller={true}
       />
-      {/* 1. MESA CENTRAL COM TABULEIRO 2D (DirectorBoard) */}
+      {/* 1. FEED DE ROLAGENS (Sidebar Esquerdo) */}
+      <ActionFeed rolls={rollsList} campaignId={campaign.id} isStoryteller={true} />
+
+      {/* 2. MESA CENTRAL COM TABULEIRO 2D (DirectorBoard) */}
       <div className="flex-1 h-full relative flex items-center justify-center p-4">
         {/* Título de Contexto no topo central */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-center select-none">
@@ -556,6 +560,25 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             {campaign.name}
           </p>
         </div>
+
+        {/* Botão de Toggle da Barra Lateral Direita */}
+        <button
+          onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+          className="absolute top-4 right-4 z-20 px-2.5 py-1.5 bg-bg-card-dark/95 backdrop-blur-md border border-white/10 hover:border-gold-accent text-gold-accent hover:text-white font-data font-bold text-[9px] uppercase tracking-widest rounded-xs transition-all duration-300 shadow-md cursor-pointer flex items-center space-x-1"
+          title={isRightSidebarOpen ? "Ocultar Painel Lateral" : "Exibir Painel Lateral"}
+        >
+          {isRightSidebarOpen ? (
+            <>
+              <span>Ocultar Painel</span>
+              <span className="font-mono">❯</span>
+            </>
+          ) : (
+            <>
+              <span className="font-mono">❮</span>
+              <span>Exibir Painel</span>
+            </>
+          )}
+        </button>
 
         <DirectorBoard
           tokens={tokensList}
@@ -569,103 +592,101 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           onUpdateCharacterStatus={handleUpdateCharacterStatus}
           onResetRound={handleResetRound}
         />
-      </div>
 
-      {/* 2. FEED DE ROlagens MULTIPLAYER (flutua na esquerda) */}
-      <ActionFeed rolls={rollsList} campaignId={campaign.id} isStoryteller={true} />
-
-      {/* 3. DOCK DO NARRADOR (inferior central) */}
-      <div className="absolute bottom-4 left-80 right-88 flex justify-center z-40 pointer-events-none">
-        <div className="pointer-events-auto w-[620px] bg-bg-card-dark/95 backdrop-blur-md border border-white/10 rounded-sm p-3 shadow-2xl flex items-center justify-between space-x-4 select-none">
-          {/* Seletor de Pool de Dados */}
-          <div className="flex flex-col space-y-1">
-            <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Pool de Dados</span>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setNarratorPool(Math.max(1, narratorPool - 1))}
-                className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-              >
-                -
-              </button>
-              <span className="w-6 text-center text-sm font-bold font-mono text-gold-accent">{narratorPool}</span>
-              <button
-                onClick={() => setNarratorPool(Math.min(20, narratorPool + 1))}
-                className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Seletor de Dificuldade */}
-          <div className="flex flex-col space-y-1">
-            <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Dificuldade</span>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setNarratorDifficulty(Math.max(0, narratorDifficulty - 1))}
-                className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-              >
-                -
-              </button>
-              <span className="w-6 text-center text-sm font-bold font-mono text-gold-accent">{narratorDifficulty}</span>
-              <button
-                onClick={() => setNarratorDifficulty(Math.min(10, narratorDifficulty + 1))}
-                className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Nome da Ação Customizada */}
-          <div className="flex-1 flex flex-col space-y-1">
-            <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Ação</span>
-            <input
-              type="text"
-              value={customActionName}
-              onChange={(e) => setCustomActionName(e.target.value)}
-              placeholder="Ex: Ataque de Garra"
-              className="px-2 py-1 text-xs border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary"
-            />
-          </div>
-
-          {/* Botões de Ação */}
-          <div className="flex items-center space-x-2 pt-4">
+        {/* 3. DOCK DO NARRADOR (relativo à mesa central, reativo ao tamanho) */}
+        <div className="absolute bottom-4 left-4 right-4 flex justify-center z-40 pointer-events-none">
+          <div className="pointer-events-auto w-[620px] bg-bg-card-dark/95 backdrop-blur-md border border-white/10 rounded-sm p-3 shadow-2xl flex items-center justify-between space-x-4 select-none">
+            {/* Seletor de Pool de Dados */}
             <div className="flex flex-col space-y-1">
-              <button
-                onClick={() => handleNarratorRoll(false)}
-                className="py-1 px-2.5 bg-linear-to-r from-red-700 to-burgundy hover:from-red-600 hover:to-red-700 text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer"
-              >
-                Público
-              </button>
-              <button
-                onClick={() => handleNarratorRoll(true)}
-                className="py-1 px-2.5 bg-willpower-blue hover:bg-blue-600 text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer"
-              >
-                Secreto
-              </button>
+              <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Pool de Dados</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setNarratorPool(Math.max(1, narratorPool - 1))}
+                  className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                >
+                  -
+                </button>
+                <span className="w-6 text-center text-sm font-bold font-mono text-gold-accent">{narratorPool}</span>
+                <button
+                  onClick={() => setNarratorPool(Math.min(20, narratorPool + 1))}
+                  className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-col space-y-1 border-l border-white/10 pl-2">
-              <button
-                onClick={() => handleNarratorRouseCheck(false)}
-                className="py-1 px-2 bg-white/5 hover:bg-white/15 text-text-primary font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-white/10"
-              >
-                Despertar Púb.
-              </button>
-              <button
-                onClick={() => handleNarratorRouseCheck(true)}
-                className="py-1 px-2 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-willpower-blue font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-willpower-blue/20"
-              >
-                Despertar Sec.
-              </button>
+            {/* Seletor de Dificuldade */}
+            <div className="flex flex-col space-y-1">
+              <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Dificuldade</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setNarratorDifficulty(Math.max(0, narratorDifficulty - 1))}
+                  className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                >
+                  -
+                </button>
+                <span className="w-6 text-center text-sm font-bold font-mono text-gold-accent">{narratorDifficulty}</span>
+                <button
+                  onClick={() => setNarratorDifficulty(Math.min(10, narratorDifficulty + 1))}
+                  className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Nome da Ação Customizada */}
+            <div className="flex-1 flex flex-col space-y-1">
+              <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Ação</span>
+              <input
+                type="text"
+                value={customActionName}
+                onChange={(e) => setCustomActionName(e.target.value)}
+                placeholder="Ex: Ataque de Garra"
+                className="px-2 py-1 text-xs border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary"
+              />
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="flex items-center space-x-2 pt-4">
+              <div className="flex flex-col space-y-1">
+                <button
+                  onClick={() => handleNarratorRoll(false)}
+                  className="py-1 px-2.5 bg-linear-to-r from-red-700 to-burgundy hover:from-red-600 hover:to-red-700 text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer"
+                >
+                  Público
+                </button>
+                <button
+                  onClick={() => handleNarratorRoll(true)}
+                  className="py-1 px-2.5 bg-willpower-blue hover:bg-blue-600 text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer"
+                >
+                  Secreto
+                </button>
+              </div>
+
+              <div className="flex flex-col space-y-1 border-l border-white/10 pl-2">
+                <button
+                  onClick={() => handleNarratorRouseCheck(false)}
+                  className="py-1 px-2 bg-white/5 hover:bg-white/15 text-text-primary font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-white/10"
+                >
+                  Despertar Púb.
+                </button>
+                <button
+                  onClick={() => handleNarratorRouseCheck(true)}
+                  className="py-1 px-2 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-willpower-blue font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-willpower-blue/20"
+                >
+                  Despertar Sec.
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* 4. BARRA LATERAL DIREITA DE GERENCIAMENTO (Fichas e Figurantes) */}
-      <div className="w-80 h-full bg-bg-card-dark/95 backdrop-blur-md border-l border-white/10 flex flex-col z-35 select-none shrink-0 p-4 space-y-4 overflow-y-auto scrollbar-none">
+      {isRightSidebarOpen && (
+        <div className="w-80 h-full bg-bg-card-dark/95 backdrop-blur-md border-l border-white/10 flex flex-col z-35 select-none shrink-0 p-4 space-y-4 overflow-y-auto scrollbar-none">
         {/* Seção: Personagens da Crônica */}
         <div className="flex flex-col space-y-2">
           <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold border-b border-white/10 pb-1">
@@ -870,6 +891,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           </form>
         </div>
       </div>
+      )}
 
       {/* 5. GAVETA DE FICHA DO PERSONAGEM (Drawer) */}
       {selectedChar && (

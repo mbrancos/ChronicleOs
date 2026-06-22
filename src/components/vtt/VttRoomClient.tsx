@@ -301,7 +301,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
   };
 
   return (
-    <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary">
+    <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary flex flex-col">
       {campaignSettings && (
         <RollEffects
           campaignId={character.campaignId}
@@ -311,30 +311,30 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
         />
       )}
       
-      {/* O TABULEIRO 2D (DirectorBoard em modo Jogador) */}
-      <div 
-        className="absolute inset-0 z-0 flex items-center justify-center select-none p-4"
-        style={{ height: "calc(100vh - 5rem)" }} // Descontar a altura do dock (20 / h-20 = 5rem)
-      >
-        <DirectorBoard
-          tokens={tokensList}
-          isStoryteller={false}
-          onDoubleClickToken={(charId) => {
-            if (charId === character.id) {
-              setIsSheetOpen(true);
-            }
-          }}
+      {/* AREA DE JOGO SUPERIOR (Sidebar + Mesa) */}
+      <div className="flex flex-row flex-1 h-[calc(100vh-5rem)] w-full overflow-hidden">
+        {/* FEED DE ROLAGENS MULTIPLAYER (Sidebar Esquerdo) */}
+        <ActionFeed 
+          rolls={rollsList} 
+          campaignId={character.campaignId}
+          localCharacterId={character.id}
+          onReroll={handleWillpowerReroll}
+          isRerolling={isRerolling}
         />
-      </div>
 
-      {/* FEED DE ROlagens MULTIPLAYER (z-30) */}
-      <ActionFeed 
-        rolls={rollsList} 
-        campaignId={character.campaignId}
-        localCharacterId={character.id}
-        onReroll={handleWillpowerReroll}
-        isRerolling={isRerolling}
-      />
+        {/* O TABULEIRO 2D (DirectorBoard em modo Jogador) */}
+        <div className="flex-1 h-full relative flex items-center justify-center p-4">
+          <DirectorBoard
+            tokens={tokensList}
+            isStoryteller={false}
+            onDoubleClickToken={(charId) => {
+              if (charId === character.id) {
+                setIsSheetOpen(true);
+              }
+            }}
+          />
+        </div>
+      </div>
 
       {/* DOCK DE CONTROLE (z-40) */}
       <PlayerDock 
