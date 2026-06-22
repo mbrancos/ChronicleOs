@@ -48,7 +48,11 @@ export default function RollLogItem({
         {/* Cabeçalho */}
         <div className="flex justify-between items-center text-[9px] font-data tracking-wider text-gold-accent font-bold">
           <div className="flex items-center space-x-1.5 truncate">
-            <span>📜 FIM DE SESSÃO</span>
+            <svg className="w-3.5 h-3.5 text-gold-accent mr-1 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+              <path d="M6 6h10M6 10h10" />
+            </svg>
+            <span>FIM DE SESSÃO</span>
           </div>
           <span className="text-[8px] text-gold-accent/70 font-mono">
             {timeStr}
@@ -92,7 +96,6 @@ export default function RollLogItem({
     const damageData = roll.resultData as any;
     const isHealth = damageData.trackType === "health";
     const trackLabel = isHealth ? "Vitalidade" : "Força de Vontade";
-    const icon = isHealth ? "🩸" : "🧠";
 
     let actionDesc = "";
     const characterName = roll.characterName || "Personagem";
@@ -125,8 +128,18 @@ export default function RollLogItem({
         {/* Cabeçalho */}
         <div className="flex justify-between items-center text-[9px] font-data tracking-wider font-bold">
           <div className="flex items-center space-x-1.5 truncate">
-            <span className={isCritical ? "text-hunger-red animate-pulse" : isHealth ? "text-blood-red" : "text-willpower-blue"}>
-              {icon} {isCritical ? "ESTADO CRÍTICO" : "REGISTRO DE DANO"}
+            <span className={`flex items-center gap-1.5 ${isCritical ? "text-hunger-red animate-pulse" : isHealth ? "text-blood-red" : "text-willpower-blue"}`}>
+              {isHealth ? (
+                <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5 fill-none stroke-current shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeWidth="2">
+                  <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1 0-3.88 2.5 2.5 0 0 1 0-3.88A2.5 2.5 0 0 1 9.5 2Z" />
+                  <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 0-3.88 2.5 2.5 0 0 0 0-3.88A2.5 2.5 0 0 0 14.5 2Z" />
+                </svg>
+              )}
+              <span>{isCritical ? "ESTADO CRÍTICO" : "REGISTRO DE DANO"}</span>
             </span>
           </div>
           <span className="text-[8px] text-text-dim/75 font-mono">

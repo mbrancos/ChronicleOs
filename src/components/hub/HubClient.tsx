@@ -385,7 +385,7 @@ export default function HubClient({
                   {narratorCampaigns.map(camp => (
                     <div 
                       key={camp.id} 
-                      className="bg-bg-card border border-white/10 hover:border-blood-red/40 p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative pr-8"
+                      className="bg-bg-card border border-white/10 hover:border-blood-red/50 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(139,0,0,0.12)] p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative pr-8"
                     >
                       <div>
                         <h3 className="text-2xl font-gothic tracking-wide text-blood-red group-hover:text-hunger-red transition-colors pr-6">
@@ -426,27 +426,38 @@ export default function HubClient({
                           >
                             <Link
                               href={`/campanhas/${camp.id}/narrador`}
-                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
+                              className="w-full text-left flex items-center px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
                             >
-                              🖥️ Narrador
+                              <svg className="w-3.5 h-3.5 mr-2 text-text-dim" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <rect width="20" height="14" x="2" y="3" rx="2" />
+                                <path d="M12 17v4M8 21h8" />
+                              </svg>
+                              Narrador
                             </Link>
                             <button
                               onClick={() => {
                                 handleCopyInvite(camp.id);
                                 setActiveMenuId(null);
                               }}
-                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
+                              className="w-full text-left flex items-center px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
                             >
-                              🔗 Convite
+                              <svg className="w-3.5 h-3.5 mr-2 text-text-dim" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                              </svg>
+                              Convite
                             </button>
                             <button
                               onClick={() => {
                                 openEditCampaignModal(camp);
                                 setActiveMenuId(null);
                               }}
-                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
+                              className="w-full text-left flex items-center px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
                             >
-                              ✏️ Editar
+                              <svg className="w-3.5 h-3.5 mr-2 text-text-dim" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                              </svg>
+                              Editar
                             </button>
                             <div className="h-px bg-white/5 my-1" />
                             <button
@@ -454,9 +465,12 @@ export default function HubClient({
                                 openDeleteCampaignConfirmModal(camp);
                                 setActiveMenuId(null);
                               }}
-                              className="w-full text-left block px-4 py-2 hover:bg-blood-red/10 hover:text-blood-red text-hunger-red/80 transition-colors cursor-pointer"
+                              className="w-full text-left flex items-center px-4 py-2 hover:bg-blood-red/10 hover:text-blood-red text-hunger-red/80 transition-colors cursor-pointer"
                             >
-                              🗑️ Excluir
+                              <svg className="w-3.5 h-3.5 mr-2 text-hunger-red/70" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              </svg>
+                              Excluir
                             </button>
                           </div>
                         )}
@@ -496,7 +510,7 @@ export default function HubClient({
                     return (
                       <div 
                         key={camp.id} 
-                        className="bg-bg-card border border-white/10 hover:border-gold-accent/40 p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative"
+                        className="bg-bg-card border border-white/10 hover:border-gold-accent/50 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(212,175,55,0.08)] p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative"
                       >
                         <div className="flex justify-between items-start">
                           <div className="max-w-[70%]">
@@ -587,7 +601,7 @@ export default function HubClient({
                   return (
                     <div 
                       key={char.id} 
-                      className="bg-bg-card border border-white/10 hover:border-gold-accent/40 p-5 rounded-sm flex items-center justify-between transition-all duration-200 group gap-4 relative pr-10"
+                      className="bg-bg-card border border-white/10 hover:border-gold-accent/50 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(212,175,55,0.08)] p-5 rounded-sm flex items-center justify-between transition-all duration-200 group gap-4 relative pr-10"
                     >
                       <div className="flex items-center space-x-4">
                         {/* Avatar temático minimalista */}
@@ -634,27 +648,37 @@ export default function HubClient({
                           >
                             <Link
                               href={`/campanhas/${char.campaignId || "cofre"}/personagens/${char.id}`}
-                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
+                              className="w-full text-left flex items-center px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
                             >
-                              🩸 Abrir Ficha
+                              <svg className="w-3.5 h-3.5 mr-2 text-text-dim" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                              </svg>
+                              Abrir Ficha
                             </Link>
                             <button
                               onClick={async () => {
                                 setActiveMenuId(null);
                                 await handleDuplicateCharacter(char.id);
                               }}
-                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
+                              className="w-full text-left flex items-center px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
                             >
-                              👥 Duplicar
+                              <svg className="w-3.5 h-3.5 mr-2 text-text-dim" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                              </svg>
+                              Duplicar
                             </button>
                             <button
                               onClick={() => {
                                 openTransferModal(char);
                                 setActiveMenuId(null);
                               }}
-                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
+                              className="w-full text-left flex items-center px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
                             >
-                              ✉️ Transferir
+                              <svg className="w-3.5 h-3.5 mr-2 text-text-dim" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path d="m22 2-7 20-4-9-9-4Z M22 2 11 13" />
+                              </svg>
+                              Transferir
                             </button>
                             <div className="h-px bg-white/5 my-1" />
                             <button
@@ -662,9 +686,12 @@ export default function HubClient({
                                 openDeleteConfirmModal({ id: char.id, name: char.name });
                                 setActiveMenuId(null);
                               }}
-                              className="w-full text-left block px-4 py-2 hover:bg-hunger-red/10 hover:text-hunger-red text-hunger-red/80 transition-colors cursor-pointer"
+                              className="w-full text-left flex items-center px-4 py-2 hover:bg-hunger-red/10 hover:text-hunger-red text-hunger-red/80 transition-colors cursor-pointer"
                             >
-                              🗑️ Excluir
+                              <svg className="w-3.5 h-3.5 mr-2 text-hunger-red/70" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              </svg>
+                              Excluir
                             </button>
                           </div>
                         )}

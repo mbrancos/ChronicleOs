@@ -1170,22 +1170,31 @@ export default function CharacterSheetClient({
           </Link>
 
           {/* INDICADOR VISUAL DE AUTOSAVE DEBOUNCED */}
-          <div className="flex items-center space-x-4 font-data text-xs">
-            <div className="min-h-5 flex items-center">
+          <div className="flex items-center space-x-4 font-data text-xs select-none">
+            <div className="min-h-6 flex items-center animate-fade-in">
               {syncStatus === "saving" && (
-                <span className="text-text-muted uppercase tracking-wider animate-pulse flex items-center space-x-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold-accent animate-ping mr-1" />
-                  Salvando alterações...
+                <span className="text-text-muted uppercase tracking-wider flex items-center space-x-1.5 text-[10px]">
+                  <svg className="animate-spin h-3.5 w-3.5 text-gold-accent shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Salvando alterações...</span>
                 </span>
               )}
               {syncStatus === "saved" && (
-                <span className="text-gold-accent uppercase tracking-wider font-semibold flex items-center">
-                  ✓ Sincronizado
+                <span className="text-gold-accent uppercase tracking-wider font-semibold flex items-center space-x-1.5 text-[10px]">
+                  <svg className="w-3.5 h-3.5 text-gold-accent shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Nuvem Sincronizada</span>
                 </span>
               )}
               {syncStatus === "error" && (
-                <span className="text-hunger-red uppercase tracking-wider font-semibold animate-bounce flex items-center">
-                  ⚠️ Falha na sincronia (Banco offline)
+                <span className="text-hunger-red uppercase tracking-wider font-semibold animate-bounce flex items-center space-x-1.5 text-[10px]">
+                  <svg className="w-3.5 h-3.5 text-hunger-red shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>Erro ao Salvar</span>
                 </span>
               )}
             </div>

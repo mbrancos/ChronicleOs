@@ -698,8 +698,13 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       </div>
 
       {/* 4. BARRA LATERAL DIREITA DE GERENCIAMENTO (Fichas e Figurantes) */}
-      {isRightSidebarOpen && (
-        <div className="w-60 h-full bg-bg-card-dark/95 backdrop-blur-md border-l border-white/10 flex flex-col z-35 select-none shrink-0 p-4 space-y-4 overflow-y-auto scrollbar-none">
+      <div 
+        className={`h-full bg-bg-card-dark/95 backdrop-blur-md flex flex-col z-35 select-none shrink-0 overflow-y-auto scrollbar-none transition-all duration-300 ease-in-out ${
+          isRightSidebarOpen 
+            ? "w-60 p-4 opacity-100 border-l border-white/10" 
+            : "w-0 p-0 opacity-0 border-l-0 border-r-0 overflow-hidden pointer-events-none"
+        }`}
+      >
         {/* Seção: Personagens da Crônica */}
         <div className="flex flex-col space-y-2">
           <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold border-b border-white/10 pb-1">
@@ -904,7 +909,6 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           </form>
         </div>
       </div>
-      )}
 
       {/* 5. GAVETA DE FICHA DO PERSONAGEM (Drawer) */}
       {selectedChar && (

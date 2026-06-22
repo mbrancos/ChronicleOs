@@ -52,11 +52,32 @@ export default function DotSlider({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    let newValue = value;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      newValue = Math.min(5, value + 1);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      newValue = Math.max(allowZero ? 0 : 1, value - 1);
+    } else if (e.key >= "0" && e.key <= "5") {
+      const num = Number(e.key);
+      if (num === 0 && !allowZero) {
+        newValue = 1;
+      } else {
+        newValue = num;
+      }
+    } else {
+      return;
+    }
+    e.preventDefault();
+    onChange(newValue);
+  };
+
   const isRed = variant === "red";
 
   return (
     <div 
-      className={`flex justify-between items-center h-11 border-b border-white/5 hover:bg-white/5 px-2 rounded-sm transition-colors group ${
+      className={`flex justify-between items-center h-11 border-b border-white/5 hover:bg-white/5 focus-visible:bg-white/5 focus-visible:ring-1 focus-visible:ring-gold-accent/50 focus-visible:outline-none px-2 rounded-sm transition-all group ${
         (disabled && !onLabelClick) ? "pointer-events-none" : ""
       }`}
       role="slider"
@@ -64,6 +85,8 @@ export default function DotSlider({
       aria-valuemin={allowZero ? 0 : 1}
       aria-valuemax={5}
       aria-valuenow={value}
+      tabIndex={disabled ? -1 : 0}
+      onKeyDown={handleKeyDown}
     >
       {/* NOME DA HABILIDADE / ATRIBUTO */}
       <div 
