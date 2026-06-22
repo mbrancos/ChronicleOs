@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
@@ -102,6 +103,7 @@ export default function HubClient({
 
   // Controle do Menu Kebab Ativo
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   // Toast Feedback
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -125,12 +127,25 @@ export default function HubClient({
 
   const toggleMenu = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setActiveMenuId(activeMenuId === id ? null : id);
+    if (activeMenuId === id) {
+      setActiveMenuId(null);
+      setMenuPosition(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.right + window.scrollX
+      });
+      setActiveMenuId(id);
+    }
   };
 
   // Fecha menus kebabs ao clicar fora
   useEffect(() => {
-    const closeAllMenus = () => setActiveMenuId(null);
+    const closeAllMenus = () => {
+      setActiveMenuId(null);
+      setMenuPosition(null);
+    };
     window.addEventListener("click", closeAllMenus);
     return () => window.removeEventListener("click", closeAllMenus);
   }, []);
@@ -419,9 +434,16 @@ export default function HubClient({
                         >
                           ⋮
                         </button>
-                        {activeMenuId === camp.id && (
+                        {activeMenuId === camp.id && typeof document !== "undefined" && createPortal(
                           <div 
-                            className="absolute right-0 mt-1 w-44 bg-bg-card border border-white/15 rounded-sm shadow-2xl z-20 py-1 font-data text-[10px] uppercase tracking-wider text-left"
+                            className="bg-bg-card border border-white/15 rounded-sm shadow-2xl z-50 py-1 font-data text-[10px] uppercase tracking-wider text-left"
+                            style={{
+                              position: "absolute",
+                              top: `${menuPosition?.top}px`,
+                              left: `${menuPosition?.left}px`,
+                              transform: "translateX(-100%)",
+                              width: "11rem"
+                            }}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Link
@@ -472,7 +494,8 @@ export default function HubClient({
                               </svg>
                               Excluir
                             </button>
-                          </div>
+                          </div>,
+                          document.body
                         )}
                       </div>
                     </div>
@@ -641,9 +664,16 @@ export default function HubClient({
                         >
                           ⋮
                         </button>
-                        {activeMenuId === char.id && (
+                        {activeMenuId === char.id && typeof document !== "undefined" && createPortal(
                           <div 
-                            className="absolute right-0 mt-1 w-40 bg-bg-card border border-white/15 rounded-sm shadow-2xl z-20 py-1 font-data text-[10px] uppercase tracking-wider text-left"
+                            className="bg-bg-card border border-white/15 rounded-sm shadow-2xl z-50 py-1 font-data text-[10px] uppercase tracking-wider text-left"
+                            style={{
+                              position: "absolute",
+                              top: `${menuPosition?.top}px`,
+                              left: `${menuPosition?.left}px`,
+                              transform: "translateX(-100%)",
+                              width: "10rem"
+                            }}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Link
@@ -693,7 +723,8 @@ export default function HubClient({
                               </svg>
                               Excluir
                             </button>
-                          </div>
+                          </div>,
+                          document.body
                         )}
                       </div>
                     </div>
