@@ -686,7 +686,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
       {/* 4. BARRA LATERAL DIREITA DE GERENCIAMENTO (Fichas e Figurantes) */}
       {isRightSidebarOpen && (
-        <div className="w-80 h-full bg-bg-card-dark/95 backdrop-blur-md border-l border-white/10 flex flex-col z-35 select-none shrink-0 p-4 space-y-4 overflow-y-auto scrollbar-none">
+        <div className="w-60 h-full bg-bg-card-dark/95 backdrop-blur-md border-l border-white/10 flex flex-col z-35 select-none shrink-0 p-4 space-y-4 overflow-y-auto scrollbar-none">
         {/* Seção: Personagens da Crônica */}
         <div className="flex flex-col space-y-2">
           <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold border-b border-white/10 pb-1">
@@ -703,7 +703,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                 const isOnBoard = tokensList.some((t) => t.characterId === p.id);
                 return (
                   <div key={p.id} className="flex justify-between items-center bg-black/35 p-1.5 rounded-sm border border-white/5">
-                    <span className="text-xs font-semibold truncate max-w-[130px]" title={p.name}>
+                    <span className="text-xs font-semibold truncate max-w-[85px]" title={p.name}>
                       {p.name}
                     </span>
                     <div className="flex items-center space-x-1.5">
@@ -737,7 +737,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                 const isOnBoard = tokensList.some((t) => t.characterId === npc.id);
                 return (
                   <div key={npc.id} className="flex justify-between items-center bg-black/35 p-1.5 rounded-sm border border-white/5">
-                    <span className="text-xs font-semibold truncate max-w-[130px]" title={npc.name}>
+                    <span className="text-xs font-semibold truncate max-w-[85px]" title={npc.name}>
                       {npc.name}
                     </span>
                     <div className="flex items-center space-x-1.5">

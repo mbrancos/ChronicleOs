@@ -153,7 +153,7 @@ export default function ActionFeed({
   };
 
   return (
-    <div className="w-80 h-full bg-bg-card-dark/95 backdrop-blur-md border-r border-white/10 flex flex-col justify-end overflow-hidden z-30 shrink-0 p-4 select-none">
+    <div className="w-60 h-full bg-bg-card-dark/95 backdrop-blur-md border-r border-white/10 flex flex-col justify-end overflow-hidden z-30 shrink-0 p-4 select-none">
       {/* Container de scroll do histórico estilo chat */}
       <div
         ref={scrollRef}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Token, { TokenData } from "./Token";
 import { updateTokenPosition } from "@/app/actions/sceneActions";
 import { CharacterSheetData } from "@/types/character";
@@ -39,10 +39,44 @@ export default function DirectorBoard({
   onResetRound,
 }: DirectorBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
   const [draggedTokenId, setDraggedTokenId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [prevTokens, setPrevTokens] = useState<TokenData[]>(tokens);
   const [localTokens, setLocalTokens] = useState<TokenData[]>(tokens);
+
+  // Efeito para calcular escala de forma responsiva monitorando a área disponível da mesa central
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const parent = containerRef.current;
+
+    const updateScale = () => {
+      const parentRect = parent.getBoundingClientRect();
+      const availableWidth = parentRect.width - 32;
+      const availableHeight = parentRect.height - 32;
+
+      const scaleX = availableWidth / 1000;
+      const scaleY = availableHeight / 600;
+
+      // Fator de escala ideal mantendo proporções (sem limite máximo para o tabuleiro poder expandir)
+      const factor = Math.min(scaleX, scaleY);
+      setScale(factor);
+    };
+
+    updateScale();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateScale();
+    });
+    resizeObserver.observe(parent);
+
+    window.addEventListener("resize", updateScale);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateScale);
+    };
+  }, []);
 
   // Sincronizar tokens do servidor durante a renderização (React Best Practice)
   if (tokens !== prevTokens) {
@@ -60,10 +94,10 @@ export default function DirectorBoard({
     const token = localTokens.find((t) => t.id === tokenId);
     if (!token) return;
 
-    // Posição do clique relativa ao tabuleiro
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
+    // Posição do clique relativa ao tabuleiro e convertida para coordenadas lógicas baseadas na escala
+    const clickX = (e.clientX - rect.left) / scale;
+    const clickY = (e.clientY - rect.top) / scale;
+ 
     // Distância do clique em relação ao centro do token
     setDragOffset({
       x: clickX - token.x,
@@ -76,8 +110,8 @@ export default function DirectorBoard({
     if (!isStoryteller || !draggedTokenId || !boardRef.current) return;
 
     const rect = boardRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    const clickX = (e.clientX - rect.left) / scale;
+    const clickY = (e.clientY - rect.top) / scale;
 
     let newX = clickX - dragOffset.x;
     let newY = clickY - dragOffset.y;
@@ -126,19 +160,37 @@ export default function DirectorBoard({
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-bg-main overflow-auto p-4 scrollbar-none select-none">
-      {/* Tabuleiro de tamanho fixo 1000x600 para manter coordenadas consistentes entre resoluções */}
+    <div 
+      ref={containerRef}
+      className="w-full h-full flex items-center justify-center bg-bg-main overflow-hidden p-4 scrollbar-none select-none"
+    >
+      {/* Wrapper para limitar o tamanho de layout ao tamanho escalado do tabuleiro */}
       <div
-        ref={boardRef}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        className="w-[1000px] h-[600px] bg-bg-card-dark/40 border border-white/5 rounded-md relative overflow-hidden shrink-0 shadow-2xl select-none"
         style={{
-          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.015) 1px, transparent 1px)",
-          backgroundSize: "24px 24px",
+          width: 1000 * scale,
+          height: 600 * scale,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
         }}
+        className="shrink-0 transition-all duration-300"
       >
+        {/* Tabuleiro de tamanho fixo 1000x600 para manter coordenadas consistentes entre resoluções */}
+        <div
+          ref={boardRef}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          className="w-[1000px] h-[600px] bg-bg-card-dark/40 border border-white/5 rounded-md relative overflow-hidden shrink-0 shadow-2xl select-none"
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "center center",
+            willChange: "transform",
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.015) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        >
         {/* RETÂNGULO DO PALCO (800x400px no centro, left: 100px, top: 100px) */}
         <div
           style={{
@@ -207,6 +259,7 @@ export default function DirectorBoard({
             onUpdateCharacterStatus={onUpdateCharacterStatus}
           />
         ))}
+      </div>
       </div>
     </div>
   );
