@@ -177,6 +177,12 @@ export default function NarratorDashboardClient({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/campanhas/${campaign.id}/mesa`}
+              className="px-4 py-1.5 bg-blood-red hover:bg-burgundy text-white text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_8px_rgba(200,36,52,0.4)] flex items-center gap-1.5"
+            >
+              🦇 Abrir Mesa de Jogo
+            </Link>
             <button
               onClick={() => setIsSettingsModalOpen(true)}
               className="px-3.5 py-1.5 border border-white/10 hover:border-gold-accent text-xs uppercase tracking-widest font-data text-text-muted hover:text-white transition-all duration-200 rounded-sm bg-bg-card/45 cursor-pointer"

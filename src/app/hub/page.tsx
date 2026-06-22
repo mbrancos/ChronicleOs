@@ -15,13 +15,14 @@ export default async function HubPage() {
     throw new Error(result.error || "Erro ao carregar os dados do Hub.");
   }
 
-  const { campaigns, characters, user } = result.data;
+  const { narratorCampaigns, playerCampaigns, characters, user } = result.data;
 
   // 2. Renderizar o Client Component passando os dados carregados
   return (
     <HubClient
       user={user}
-      campaigns={campaigns}
+      narratorCampaigns={narratorCampaigns}
+      playerCampaigns={playerCampaigns}
       characters={characters}
     />
   );

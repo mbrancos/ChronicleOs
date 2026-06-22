@@ -28,7 +28,7 @@ export default async function CharacterPage({ params }: PageProps) {
       campaignId={campaign_id}
       initialData={initialData}
       initialName={response.name ?? ""}
-      initialStatus={response.status as "DRAFT" | "READY" | "IN_PLAY" || "DRAFT"}
+      initialStatus={(response.status === "IN_PLAY" || campaign_id !== "cofre") ? "IN_PLAY" : "DRAFT"}
       initialBuildState={response.buildState}
     />
   );

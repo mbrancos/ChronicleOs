@@ -69,9 +69,9 @@ export default async function MesaPage({ params }: PageProps) {
     )
     .limit(1);
 
-  // Segurança: se o usuário não possuir ficha associada a esta crônica, chuta ele para o Hub
+  // Segurança: se o usuário não possuir ficha associada a esta crônica, chuta ele para o Hub com erro de acesso
   if (userCharacters.length === 0) {
-    redirect("/hub");
+    redirect("/hub?error=acesso_negado");
   }
 
   const character = userCharacters[0];

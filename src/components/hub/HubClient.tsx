@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   createCampaignAction, 
   createCharacterAction, 
@@ -16,10 +16,22 @@ import {
   transferCharacterAction 
 } from "@/app/actions/characterActions";
 
-interface Campaign {
+interface NarratorCampaign {
   id: string;
   name: string;
   description: string | null;
+  status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
+}
+
+interface PlayerCampaign {
+  id: string;
+  name: string;
+  description: string | null;
+  status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
+  powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+  narratorName: string;
+  characterName: string;
+  characterId: string;
 }
 
 interface Character {
@@ -37,12 +49,23 @@ interface HubClientProps {
     name: string;
     email: string;
   };
-  campaigns: Campaign[];
+  narratorCampaigns: NarratorCampaign[];
+  playerCampaigns: PlayerCampaign[];
   characters: Character[];
 }
 
-export default function HubClient({ user, campaigns, characters }: HubClientProps) {
+export default function HubClient({ 
+  user, 
+  narratorCampaigns, 
+  playerCampaigns, 
+  characters 
+}: HubClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get("error");
+
+  // Estado para aba ativa de campanhas
+  const [activeCampaignTab, setActiveCampaignTab] = useState<"narrator" | "player">("narrator");
 
   // Controle de abertura dos modais
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
@@ -64,13 +87,13 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
 
   // Estados para Edição de Crônica
   const [isEditCampaignModalOpen, setIsEditCampaignModalOpen] = useState(false);
-  const [campaignToEdit, setCampaignToEdit] = useState<Campaign | null>(null);
+  const [campaignToEdit, setCampaignToEdit] = useState<NarratorCampaign | null>(null);
   const [editCampaignName, setEditCampaignName] = useState("");
   const [editCampaignDesc, setEditCampaignDesc] = useState("");
 
   // Estados para Exclusão de Crônica
   const [isDeleteCampaignModalOpen, setIsDeleteCampaignModalOpen] = useState(false);
-  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [campaignToDelete, setCampaignToDelete] = useState<NarratorCampaign | null>(null);
 
   // Estados para Transferência de Personagem
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -89,6 +112,16 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
       setToast(null);
     }, 4000);
   };
+
+  // Tratar erros de acesso negado vindos de redirecionamentos de rotas (mesa/ficha)
+  useEffect(() => {
+    if (errorParam === "acesso_negado") {
+      showToast("Acesso Negado: Você não faz parte desta crônica ou não possui personagem nela! 🩸", "error");
+      
+      // Limpa os parâmetros da URL de forma segura no Next.js sem quebrar o histórico de navegação
+      router.replace("/hub", { scroll: false });
+    }
+  }, [errorParam, router]);
 
   const toggleMenu = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -161,7 +194,7 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
     setLoading(false);
   };
 
-  const openEditCampaignModal = (camp: Campaign) => {
+  const openEditCampaignModal = (camp: NarratorCampaign) => {
     setErrorMsg(null);
     setCampaignToEdit(camp);
     setEditCampaignName(camp.name);
@@ -187,7 +220,7 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
     setLoading(false);
   };
 
-  const openDeleteCampaignConfirmModal = (camp: Campaign) => {
+  const openDeleteCampaignConfirmModal = (camp: NarratorCampaign) => {
     setErrorMsg(null);
     setCampaignToDelete(camp);
     setIsDeleteCampaignModalOpen(true);
@@ -288,127 +321,224 @@ export default function HubClient({ user, campaigns, characters }: HubClientProp
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
           {/* ========================================== */}
-          {/* SEÇÃO DO NARRADOR - MINHAS CRÔNICAS */}
+          {/* SEÇÃO DE CRÔNICAS (NARRADOR E JOGADOR) */}
           {/* ========================================== */}
           <section className="space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-white/5">
-              <h2 className="text-xl font-gothic tracking-wider text-blood-red uppercase flex items-center gap-2">
-                <span>Minhas Crônicas</span>
-                <span className="text-xs font-data text-text-muted font-normal bg-white/5 px-2 py-0.5 rounded-full">
-                  {campaigns.length}
-                </span>
-              </h2>
-              <button
-                onClick={() => {
-                  setErrorMsg(null);
-                  setIsCampaignModalOpen(true);
-                }}
-                className="px-3 py-1 bg-blood-red hover:bg-burgundy text-text-primary text-xs uppercase tracking-widest font-data font-semibold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(200,36,52,0.4)]"
-              >
-                + Nova Crônica
-              </button>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-2 border-b border-white/5 gap-3">
+              {/* Abas Góticas */}
+              <div className="flex space-x-1 font-data text-xs uppercase tracking-wider">
+                <button
+                  onClick={() => setActiveCampaignTab("narrator")}
+                  className={`px-4 py-2 rounded-xs font-bold transition-all duration-200 cursor-pointer ${
+                    activeCampaignTab === "narrator"
+                      ? "bg-blood-red/10 text-blood-red border border-blood-red/25 shadow-[0_0_10px_rgba(200,36,52,0.15)]"
+                      : "text-text-dim hover:text-text-primary hover:bg-white/2"
+                  }`}
+                >
+                  Crônicas que Narro ({narratorCampaigns.length})
+                </button>
+                <button
+                  onClick={() => setActiveCampaignTab("player")}
+                  className={`px-4 py-2 rounded-xs font-bold transition-all duration-200 cursor-pointer ${
+                    activeCampaignTab === "player"
+                      ? "bg-gold-accent/10 text-gold-accent border border-gold-accent/25 shadow-[0_0_10px_rgba(255,216,77,0.1)]"
+                      : "text-text-dim hover:text-text-primary hover:bg-white/2"
+                  }`}
+                >
+                  Crônicas que Jogo ({playerCampaigns.length})
+                </button>
+              </div>
+
+              {activeCampaignTab === "narrator" && (
+                <button
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setIsCampaignModalOpen(true);
+                  }}
+                  className="px-3 py-1 bg-blood-red hover:bg-burgundy text-text-primary text-xs uppercase tracking-widest font-data font-semibold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(200,36,52,0.4)]"
+                >
+                  + Nova Crônica
+                </button>
+              )}
             </div>
 
-            {campaigns.length === 0 ? (
-              <div 
-                onClick={() => {
-                  setErrorMsg(null);
-                  setIsCampaignModalOpen(true);
-                }}
-                className="border border-dashed border-blood-red/30 hover:border-blood-red/60 bg-bg-card/20 rounded-sm p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 h-64 group"
-              >
-                <svg className="w-12 h-12 text-blood-red/40 group-hover:text-blood-red/75 transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                <p className="font-gothic text-lg text-text-primary tracking-wide">Seu grimório está silencioso</p>
-                <p className="text-xs text-text-muted max-w-xs pt-1">
-                  Nenhuma crônica ativa na névoa do tempo. Clique aqui para narrar uma nova história gótica.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-1">
-                {campaigns.map(camp => (
-                  <div 
-                    key={camp.id} 
-                    className="bg-bg-card border border-white/10 hover:border-blood-red/40 p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative pr-8"
-                  >
-                    <div>
-                      <h3 className="text-2xl font-gothic tracking-wide text-blood-red group-hover:text-hunger-red transition-colors pr-6">
-                        {camp.name.toUpperCase()}
-                      </h3>
-                      <p className="text-xs text-text-muted font-reading leading-relaxed line-clamp-2 pt-1.5">
-                        {camp.description || "Nenhuma sinopse registrada para esta campanha nas sombras."}
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1">
-                      <span className="text-[10px] uppercase tracking-wider text-text-dim font-data">
-                        ID: {camp.id.slice(0, 8)}
-                      </span>
-                      <div className="flex items-center space-x-4">
-                        <Link
-                          href={`/campanhas/${camp.id}/narrador`}
-                          className="text-xs uppercase tracking-widest font-data font-bold text-gold-accent hover:text-white transition-colors"
-                        >
-                          Painel →
-                        </Link>
+            {/* ABA DO NARRADOR */}
+            {activeCampaignTab === "narrator" && (
+              narratorCampaigns.length === 0 ? (
+                <div 
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setIsCampaignModalOpen(true);
+                  }}
+                  className="border border-dashed border-blood-red/30 hover:border-blood-red/60 bg-bg-card/20 rounded-sm p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 h-64 group"
+                >
+                  <svg className="w-12 h-12 text-blood-red/40 group-hover:text-blood-red/75 transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <p className="font-gothic text-lg text-text-primary tracking-wide">Seu grimório está silencioso</p>
+                  <p className="text-xs text-text-muted max-w-xs pt-1">
+                    Nenhuma crônica ativa na névoa do tempo. Clique aqui para narrar uma nova história gótica.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-1">
+                  {narratorCampaigns.map(camp => (
+                    <div 
+                      key={camp.id} 
+                      className="bg-bg-card border border-white/10 hover:border-blood-red/40 p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative pr-8"
+                    >
+                      <div>
+                        <h3 className="text-2xl font-gothic tracking-wide text-blood-red group-hover:text-hunger-red transition-colors pr-6">
+                          {camp.name.toUpperCase()}
+                        </h3>
+                        <p className="text-xs text-text-muted font-reading leading-relaxed line-clamp-2 pt-1.5">
+                          {camp.description || "Nenhuma sinopse registrada para esta campanha nas sombras."}
+                        </p>
                       </div>
-                    </div>
 
-                    {/* Botão Kebab para Opções da Crônica */}
-                    <div className="absolute top-4 right-4">
-                      <button
-                        onClick={(e) => toggleMenu(camp.id, e)}
-                        className="text-text-dim hover:text-blood-red transition-colors cursor-pointer p-1 text-sm font-bold focus:outline-none"
-                        title="Opções da Crônica"
-                      >
-                        ⋮
-                      </button>
-                      {activeMenuId === camp.id && (
-                        <div 
-                          className="absolute right-0 mt-1 w-44 bg-bg-card border border-white/15 rounded-sm shadow-2xl z-20 py-1 font-data text-[10px] uppercase tracking-wider text-left"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                      <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1 font-data text-[10px]">
+                        <span className="uppercase tracking-wider text-text-dim">
+                          ID: {camp.id.slice(0, 8)}
+                        </span>
+                        <div className="flex items-center space-x-4">
                           <Link
                             href={`/campanhas/${camp.id}/narrador`}
-                            className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
+                            className="text-xs uppercase tracking-widest font-bold text-gold-accent hover:text-white transition-colors"
                           >
-                            🖥️ Narrador
+                            Painel →
                           </Link>
-                          <button
-                            onClick={() => {
-                              handleCopyInvite(camp.id);
-                              setActiveMenuId(null);
-                            }}
-                            className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
-                          >
-                            🔗 Convite
-                          </button>
-                          <button
-                            onClick={() => {
-                              openEditCampaignModal(camp);
-                              setActiveMenuId(null);
-                            }}
-                            className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
-                          >
-                            ✏️ Editar
-                          </button>
-                          <div className="h-px bg-white/5 my-1" />
-                          <button
-                            onClick={() => {
-                              openDeleteCampaignConfirmModal(camp);
-                              setActiveMenuId(null);
-                            }}
-                            className="w-full text-left block px-4 py-2 hover:bg-blood-red/10 hover:text-blood-red text-hunger-red/80 transition-colors cursor-pointer"
-                          >
-                            🗑️ Excluir
-                          </button>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Botão Kebab para Opções da Crônica */}
+                      <div className="absolute top-4 right-4">
+                        <button
+                          onClick={(e) => toggleMenu(camp.id, e)}
+                          className="text-text-dim hover:text-blood-red transition-colors cursor-pointer p-1 text-sm font-bold focus:outline-none"
+                          title="Opções da Crônica"
+                        >
+                          ⋮
+                        </button>
+                        {activeMenuId === camp.id && (
+                          <div 
+                            className="absolute right-0 mt-1 w-44 bg-bg-card border border-white/15 rounded-sm shadow-2xl z-20 py-1 font-data text-[10px] uppercase tracking-wider text-left"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Link
+                              href={`/campanhas/${camp.id}/narrador`}
+                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
+                            >
+                              🖥️ Narrador
+                            </Link>
+                            <button
+                              onClick={() => {
+                                handleCopyInvite(camp.id);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
+                            >
+                              🔗 Convite
+                            </button>
+                            <button
+                              onClick={() => {
+                                openEditCampaignModal(camp);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full text-left block px-4 py-2 hover:bg-white/5 hover:text-gold-accent text-text-muted transition-colors cursor-pointer"
+                            >
+                              ✏️ Editar
+                            </button>
+                            <div className="h-px bg-white/5 my-1" />
+                            <button
+                              onClick={() => {
+                                openDeleteCampaignConfirmModal(camp);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full text-left block px-4 py-2 hover:bg-blood-red/10 hover:text-blood-red text-hunger-red/80 transition-colors cursor-pointer"
+                            >
+                              🗑️ Excluir
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* ABA DO JOGADOR */}
+            {activeCampaignTab === "player" && (
+              playerCampaigns.length === 0 ? (
+                <div 
+                  className="border border-dashed border-gold-accent/20 bg-bg-card/10 rounded-sm p-8 flex flex-col items-center justify-center text-center h-64"
+                >
+                  <svg className="w-12 h-12 text-gold-accent/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <p className="font-gothic text-lg text-text-primary tracking-wide">Sem matilhas ativas</p>
+                  <p className="text-xs text-text-muted max-w-xs pt-1">
+                    Você não faz parte de nenhuma crônica como jogador no momento. Insira o link de convite enviado pelo seu Narrador.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-1">
+                  {playerCampaigns.map(camp => {
+                    const statusLabels: Record<string, { label: string; class: string }> = {
+                      DRAFT: { label: "Rascunho", class: "bg-white/5 border-white/10 text-text-dim" },
+                      RECRUITING: { label: "Recrutando", class: "bg-green-500/10 border-green-500/25 text-green-400" },
+                      IN_PROGRESS: { label: "Em Jogo", class: "bg-blood-red/15 border-blood-red/35 text-blood-red animate-pulse" },
+                      PAUSED: { label: "Pausada", class: "bg-amber-500/10 border-amber-500/25 text-amber-400" },
+                      ARCHIVED: { label: "Arquivada", class: "bg-white/5 border-white/10 text-text-muted/65" }
+                    };
+                    const statusInfo = statusLabels[camp.status] || { label: camp.status, class: "bg-white/5 border-white/10" };
+
+                    return (
+                      <div 
+                        key={camp.id} 
+                        className="bg-bg-card border border-white/10 hover:border-gold-accent/40 p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="max-w-[70%]">
+                            <h3 className="text-2xl font-gothic tracking-wide text-text-primary group-hover:text-gold-accent transition-colors truncate">
+                              {camp.name.toUpperCase()}
+                            </h3>
+                            <p className="text-[9px] uppercase tracking-wider text-text-muted font-data pt-0.5">
+                              Narrador: <span className="text-gold-accent font-semibold">{camp.narratorName}</span>
+                            </p>
+                          </div>
+                          
+                          <span className={`px-2 py-0.5 rounded-xs border text-[8px] uppercase font-bold tracking-wider font-data ${statusInfo.class}`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
+
+                        <div className="bg-black/30 border border-white/5 rounded-xs p-2.5 flex justify-between items-center text-[10px]">
+                          <div className="flex flex-col">
+                            <span className="text-[8px] uppercase font-bold text-text-dim font-data">Membro Vinculado</span>
+                            <span className="text-text-primary font-medium">{camp.characterName.toUpperCase()}</span>
+                          </div>
+                          <span className="text-[8px] uppercase font-bold font-data text-gold-accent bg-gold-accent/10 border border-gold-accent/20 px-2 py-0.5 rounded-xs">
+                            {camp.powerLevel === "FLEDGLING" ? "Cria" : camp.powerLevel === "NEONATE" ? "Neófito" : "Ancila"}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1 font-data text-[10px]">
+                          <span className="uppercase tracking-wider text-text-dim">
+                            ID: {camp.id.slice(0, 8)}
+                          </span>
+                          <Link
+                            href={`/campanhas/${camp.id}/jogador`}
+                            className="text-xs uppercase tracking-widest font-bold text-gold-accent hover:text-white transition-colors"
+                          >
+                            Entrar no Lobby →
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
             )}
           </section>
 

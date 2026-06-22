@@ -1,9 +1,9 @@
 "use server";
 
 import { db } from "@/db";
-import { campaigns, characters } from "@/db/schema";
+import { campaigns, characters, users } from "@/db/schema";
 import { auth } from "@/lib/auth/server";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { DEFAULT_CHARACTER_DATA } from "@/types/character";
 import { headers } from "next/headers";
@@ -20,12 +20,34 @@ export async function getUserHubData() {
     const userId = session.user.id;
 
     // 1. Buscar campanhas criadas pelo usuário (Narrador)
-    const userCampaigns = await db
+    const narratorCampaigns = await db
       .select()
       .from(campaigns)
       .where(eq(campaigns.narratorId, userId));
 
-    // 2. Buscar personagens criados pelo usuário com o nome da campanha associada
+    // 2. Buscar campanhas onde o usuário joga (possui personagem de jogador vinculado)
+    const playerCampaigns = await db
+      .select({
+        id: campaigns.id,
+        name: campaigns.name,
+        description: campaigns.description,
+        status: campaigns.status,
+        powerLevel: campaigns.powerLevel,
+        narratorName: users.name, // Nome do Narrador da crônica
+        characterName: characters.name, // Nome do personagem do jogador nesta campanha
+        characterId: characters.id, // ID do personagem do jogador nesta campanha
+      })
+      .from(campaigns)
+      .innerJoin(characters, eq(campaigns.id, characters.campaignId))
+      .innerJoin(users, eq(campaigns.narratorId, users.id))
+      .where(
+        and(
+          eq(characters.userId, userId),
+          eq(characters.type, "jogador")
+        )
+      );
+
+    // 3. Buscar todos os personagens criados pelo usuário (Cofre / Geral)
     const userCharacters = await db
       .select({
         id: characters.id,
@@ -42,7 +64,8 @@ export async function getUserHubData() {
     return {
       success: true,
       data: {
-        campaigns: userCampaigns,
+        narratorCampaigns,
+        playerCampaigns,
         characters: userCharacters,
         user: {
           id: session.user.id,
