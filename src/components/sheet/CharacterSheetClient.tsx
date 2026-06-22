@@ -1694,13 +1694,12 @@ export default function CharacterSheetClient({
                       <div className="flex items-center space-x-2">
                         {onTraitClick && (
                           <button
-                            disabled={status === "IN_PLAY"}
                             onClick={() => onTraitClick({ id: disc.id, label: disc.name, value: disc.level })}
                             className={`cursor-pointer select-none text-base transition-all duration-150 hover:scale-125 hover:text-hunger-red ${
                               dicePool.some(p => p.id === disc.id)
                                 ? "text-hunger-red font-bold scale-115 animate-pulse"
                                 : "text-text-muted hover:text-text-primary"
-                            } ${status === "IN_PLAY" ? "pointer-events-none" : ""}`}
+                            }`}
                             title="Selecionar para o Carrinho de Dados"
                           >
                             🎲

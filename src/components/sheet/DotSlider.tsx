@@ -57,7 +57,7 @@ export default function DotSlider({
   return (
     <div 
       className={`flex justify-between items-center h-11 border-b border-white/5 hover:bg-white/5 px-2 rounded-sm transition-colors group ${
-        disabled ? "pointer-events-none" : ""
+        (disabled && !onLabelClick) ? "pointer-events-none" : ""
       }`}
       role="slider"
       aria-label={`${label}: ${value} de 5`}
@@ -67,8 +67,8 @@ export default function DotSlider({
     >
       {/* NOME DA HABILIDADE / ATRIBUTO */}
       <div 
-        className={`flex flex-col justify-center leading-none ${onLabelClick && !disabled ? "cursor-pointer select-none" : ""}`}
-        onClick={onLabelClick && !disabled ? (e) => {
+        className={`flex flex-col justify-center leading-none ${onLabelClick ? "cursor-pointer select-none" : ""}`}
+        onClick={onLabelClick ? (e) => {
           e.stopPropagation();
           onLabelClick();
         } : undefined}
