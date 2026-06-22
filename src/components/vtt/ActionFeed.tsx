@@ -108,12 +108,47 @@ export default function ActionFeed({
       setLocalRolls((prev) => [...prev, virtualRoll]);
     };
 
+    const handleDamageApplied = (data: {
+      characterId: string;
+      characterName: string;
+      trackType: "health" | "willpower";
+      amount: number;
+      damageType: "superficial" | "aggravated" | "override";
+      newSuperficial: number;
+      newAggravated: number;
+      isCritical: boolean;
+      createdAt: string | Date;
+    }) => {
+      const virtualRoll: RollItem = {
+        id: `damage-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+        campaignId: campaignId,
+        characterId: data.characterId,
+        characterName: data.characterName,
+        poolName: "Registro de Dano",
+        resultData: {
+          type: "damage_log",
+          trackType: data.trackType,
+          amount: data.amount,
+          damageType: data.damageType,
+          newSuperficial: data.newSuperficial,
+          newAggravated: data.newAggravated,
+          isCritical: data.isCritical,
+        } as any,
+        hungerDice: 0,
+        isRerolled: false,
+        isSecret: false,
+        createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+      };
+      setLocalRolls((prev) => [...prev, virtualRoll]);
+    };
+
     // 1. Assinar canal público
     const publicChannelName = `public-campaign-${campaignId}`;
     const publicChannel = pusher.subscribe(publicChannelName);
     publicChannel.bind("new-roll", handleNewRoll);
     publicChannel.bind("update-roll", handleUpdateRoll);
     publicChannel.bind("xp-granted", handleXpGranted);
+    publicChannel.bind("damage-applied", handleDamageApplied);
 
     // 2. Se for Narrador, assinar canal privado
     let privateChannel: Channel | null = null;
@@ -122,6 +157,7 @@ export default function ActionFeed({
       privateChannel = pusher.subscribe(privateChannelName);
       privateChannel.bind("new-roll", handleNewRoll);
       privateChannel.bind("update-roll", handleUpdateRoll);
+      privateChannel.bind("damage-applied", handleDamageApplied);
     }
 
     return () => {

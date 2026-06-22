@@ -17,6 +17,7 @@ interface PlayerDockProps {
   clearPool?: () => void;
   onStandardRoll?: (totalPool: number, difficulty: number, poolName: string) => void;
   onRouseCheck?: () => void;
+  onOpenDamageModal?: () => void;
 }
 
 export default function PlayerDock({ 
@@ -25,7 +26,8 @@ export default function PlayerDock({
   dicePool = [],
   clearPool,
   onStandardRoll,
-  onRouseCheck
+  onRouseCheck,
+  onOpenDamageModal
 }: PlayerDockProps) {
   const sheet = character.sheetData as CharacterSheetData;
   
@@ -214,7 +216,11 @@ export default function PlayerDock({
       <div className="flex items-center space-x-6 sm:space-x-8">
         
         {/* VITALIDADE COMPACTA (HEALTH) */}
-        <div className="flex flex-col items-end leading-none space-y-1">
+        <div 
+          onClick={onOpenDamageModal}
+          className="flex flex-col items-end leading-none space-y-1 cursor-pointer hover:bg-white/5 p-1 rounded-sm transition-all"
+          title="Clique para aplicar Dano/Cura"
+        >
           <span className="text-[9px] uppercase tracking-wider font-data text-text-muted font-bold">
             Vitalidade
           </span>

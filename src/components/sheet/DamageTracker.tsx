@@ -1,9 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useTransition } from "react";
 import { Tracker } from "@/types/character";
+import TrackerBoxes from "./TrackerBoxes";
+import { setTrackerDamageAction } from "@/app/actions/damageActions";
 
 interface DamageTrackerProps {
+  characterId: string;
   label: string;
   value: Tracker;
   onChange: (val: Tracker) => void;
@@ -11,14 +14,15 @@ interface DamageTrackerProps {
 }
 
 export default function DamageTracker({
+  characterId,
   label,
   value,
   onChange,
   variant
 }: DamageTrackerProps) {
   const { max, superficial, aggravated } = value;
+  const [isPending, startTransition] = useTransition();
 
-  // Lógica de clique por intenção de valor (anti-teleporte)
   const handleBoxClick = (idx: number) => {
     let newSuperficial = superficial;
     let newAggravated = aggravated;
@@ -46,10 +50,24 @@ export default function DamageTracker({
       }
     }
 
-    onChange({
-      max,
-      superficial: newSuperficial,
-      aggravated: newAggravated
+    // Disparar transição e chamada imediata ao banco para evitar race conditions do autosave da ficha
+    startTransition(async () => {
+      try {
+        const res = await setTrackerDamageAction(
+          characterId,
+          variant,
+          newSuperficial,
+          newAggravated
+        );
+        if (res.success && res[variant]) {
+          // Atualiza a ficha localmente de forma otimista após a confirmação do banco
+          onChange(res[variant]);
+        } else {
+          console.error("Erro ao registrar alteração de dano no banco:", res.error);
+        }
+      } catch (err) {
+        console.error("Erro inesperado na chamada de dano:", err);
+      }
     });
   };
 
@@ -58,47 +76,19 @@ export default function DamageTracker({
       {/* CADASTRAR ACESSIBILIDADE */}
       <div className="flex justify-between items-center text-xs font-data uppercase font-semibold text-text-muted">
         <span>{label}</span>
-        <span className="text-[10px] text-text-dim font-normal">
-          Clique no símbolo para curar ou alterar
+        <span className="text-[10px] text-text-dim font-normal select-none">
+          {isPending ? "Sincronizando..." : "Clique para alterar ou curar"}
         </span>
       </div>
 
-      <div 
-        className="flex space-x-1.5 h-11 items-center"
-        role="group"
-        aria-label={`${label}: Max ${max}, Superficiais ${superficial}, Agravados ${aggravated}`}
-      >
-        {Array.from({ length: max }).map((_, idx) => {
-          const isAgg = idx < aggravated;
-          const isSup = !isAgg && idx < aggravated + superficial;
-          
-          let char = "";
-          let colorClass = "border-text-muted text-text-primary bg-bg-input";
-
-          if (isSup) {
-            char = "/";
-            if (variant === "willpower") {
-              colorClass = "border-willpower-blue text-willpower-blue bg-willpower-blue/10";
-            } else {
-              colorClass = "border-text-primary text-text-primary bg-bg-input";
-            }
-          } else if (isAgg) {
-            char = "X";
-            colorClass = "border-deep-crimson text-hunger-red bg-deep-crimson/15 font-bold";
-          }
-
-          return (
-            <button
-              key={idx}
-              onClick={() => handleBoxClick(idx)}
-              className={`w-7 h-7 rounded-sm border flex items-center justify-center text-xs cursor-pointer focus:outline-none transition-all duration-150 hover:border-gold-accent ${colorClass}`}
-              aria-label={`Caixa ${idx + 1}: ${isAgg ? "Dano Agravado" : isSup ? "Dano Superficial" : "Livre"}`}
-            >
-              {char}
-            </button>
-          );
-        })}
-      </div>
+      <TrackerBoxes
+        max={max}
+        superficial={superficial}
+        aggravated={aggravated}
+        variant={variant}
+        onBoxClick={handleBoxClick}
+        disabled={isPending}
+      />
     </div>
   );
 }

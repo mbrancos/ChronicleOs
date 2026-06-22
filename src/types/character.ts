@@ -184,4 +184,30 @@ export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
   notes: ""
 };
 
+export function getMaxHealth(sheet: CharacterSheetData): number {
+  const stamina = Number(sheet.attributes?.physical?.stamina) || 1;
+  let max = stamina + 3;
+
+  // Verificar se o personagem tem a disciplina Fortitude e o poder Resiliência (ou Resilience)
+  const fortitude = sheet.disciplines?.find(
+    (d) => d.name.toLowerCase().includes("fortitude")
+  );
+  if (fortitude) {
+    const hasResilience = fortitude.powers?.some(
+      (p) => p.toLowerCase().includes("resili") || p.toLowerCase().includes("resilience")
+    );
+    if (hasResilience) {
+      max += fortitude.level;
+    }
+  }
+
+  return max;
+}
+
+export function getMaxWillpower(sheet: CharacterSheetData): number {
+  const composure = Number(sheet.attributes?.social?.composure) || 1;
+  const resolve = Number(sheet.attributes?.mental?.resolve) || 1;
+  return composure + resolve;
+}
+
 

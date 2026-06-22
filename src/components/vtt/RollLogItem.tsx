@@ -88,6 +88,100 @@ export default function RollLogItem({
     );
   }
 
+  if ((roll.resultData as any).type === "damage_log") {
+    const damageData = roll.resultData as any;
+    const isHealth = damageData.trackType === "health";
+    const trackLabel = isHealth ? "Vitalidade" : "Força de Vontade";
+    const icon = isHealth ? "🩸" : "🧠";
+
+    let actionDesc = "";
+    const characterName = roll.characterName || "Personagem";
+    const isOverride = damageData.damageType === "override";
+    
+    if (isOverride) {
+      actionDesc = `ajustou a trilha de ${trackLabel} para: ${damageData.newSuperficial} Superficial / ${damageData.newAggravated} Agravado.`;
+    } else {
+      const isHeal = damageData.amount < 0;
+      const absAmount = Math.abs(damageData.amount);
+      const isAgg = damageData.damageType === "aggravated";
+      const dmgTypeLabel = isAgg ? "Agravado" : "Superficial";
+      
+      if (isHeal) {
+        actionDesc = `curou ${absAmount} de Dano ${dmgTypeLabel} em ${trackLabel}.`;
+      } else {
+        actionDesc = `sofreu ${absAmount} de Dano ${dmgTypeLabel} em ${trackLabel}.`;
+      }
+    }
+
+    const isCritical = damageData.isCritical;
+    const borderClass = isCritical
+      ? "border-hunger-red shadow-[0_0_12px_rgba(239,68,68,0.25)] animate-pulse"
+      : isHealth 
+        ? "border-blood-red/20 hover:border-blood-red/35 shadow-[0_2px_8px_rgba(139,0,0,0.1)]"
+        : "border-willpower-blue/20 hover:border-willpower-blue/35 shadow-[0_2px_8px_rgba(59,130,246,0.1)]";
+
+    return (
+      <div className={`backdrop-blur-md bg-bg-card-dark/90 rounded-sm p-3 flex flex-col space-y-2 border select-text ${borderClass}`}>
+        {/* Cabeçalho */}
+        <div className="flex justify-between items-center text-[9px] font-data tracking-wider font-bold">
+          <div className="flex items-center space-x-1.5 truncate">
+            <span className={isCritical ? "text-hunger-red animate-pulse" : isHealth ? "text-blood-red" : "text-willpower-blue"}>
+              {icon} {isCritical ? "ESTADO CRÍTICO" : "REGISTRO DE DANO"}
+            </span>
+          </div>
+          <span className="text-[8px] text-text-dim/75 font-mono">
+            {timeStr}
+          </span>
+        </div>
+
+        {/* Descrição principal */}
+        <div className="space-y-1">
+          <div className="text-xs text-text-primary font-reading leading-relaxed">
+            <span className="font-bold text-gold-accent font-data uppercase tracking-wider">{characterName}</span>{" "}
+            {actionDesc}
+          </div>
+
+          {isCritical && (
+            <div className="mt-1 bg-hunger-red/10 border border-hunger-red/30 rounded-xs p-2 flex items-center space-x-2 text-hunger-red text-[10px] font-bold uppercase tracking-wider font-data">
+              <span>💀</span>
+              <span>
+                {isHealth
+                  ? "O personagem entrou em Torpor!"
+                  : "O personagem sofreu um Colapso Mental!"}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Estado atualizado da trilha */}
+        <div className="bg-black/35 border border-white/5 rounded-xs p-2 flex items-center justify-between text-[9.5px] font-data text-text-muted">
+          <span>Nova Trilha:</span>
+          <div className="flex items-center space-x-2">
+            <div className="flex space-x-0.5">
+              {Array.from({ length: damageData.newSuperficial + damageData.newAggravated }).map((_, idx) => {
+                const isAgg = idx < damageData.newAggravated;
+                const charSymbol = isAgg ? "✕" : "╱";
+                const colorClass = isAgg ? "text-hunger-red bg-hunger-red/10 border-hunger-red/30" : "text-white bg-white/5 border-white/10";
+                return (
+                  <span 
+                    key={idx} 
+                    className={`w-3.5 h-3.5 border flex items-center justify-center font-bold text-[8px] rounded-xs ${colorClass}`}
+                    title={isAgg ? "Dano Agravado" : "Dano Superficial"}
+                  >
+                    {charSymbol}
+                  </span>
+                );
+              })}
+              {damageData.newSuperficial + damageData.newAggravated === 0 && (
+                <span className="text-[9px] text-green-500 font-bold uppercase font-data">✓ Integro</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Ordenação inteligente de dados (preservando o índice original para dados normais)
   let sortedNormalDice: Array<{ value: number; originalIdx: number }> = [];
   let sortedHungerDice: number[] = [];

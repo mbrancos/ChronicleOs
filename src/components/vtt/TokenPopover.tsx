@@ -18,6 +18,7 @@ interface TokenPopoverProps {
       willpower?: { max: number; superficial: number; aggravated: number };
     }
   ) => void;
+  onOpenDamageModal?: (characterId: string, characterName: string) => void;
 }
 
 export default function TokenPopover({
@@ -27,6 +28,7 @@ export default function TokenPopover({
   onQuickRoll,
   onUpdateQuickHealth,
   onUpdateCharacterStatus,
+  onOpenDamageModal,
 }: TokenPopoverProps) {
   const isQuickNpc = token.type === "quick_npc";
   
@@ -161,6 +163,17 @@ export default function TokenPopover({
       ) : (
         // --- SEÇÃO PLAYER E NPC COMPLETO ---
         <div className="space-y-3 pt-0.5">
+          {onOpenDamageModal && token.characterId && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenDamageModal(token.characterId!, token.name);
+              }}
+              className="w-full py-1 bg-blood-red/10 hover:bg-blood-red border border-blood-red/20 hover:border-blood-red text-hunger-red hover:text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
+            >
+              🩸 Aplicar Dano/Cura
+            </button>
+          )}
           {characterSheetData ? (
             <>
               {/* Vitalidade */}

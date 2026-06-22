@@ -23,6 +23,7 @@ interface DirectorBoardProps {
     }
   ) => void;
   onResetRound?: () => void;
+  onOpenDamageModal?: (characterId: string, characterName: string) => void;
 }
 
 export default function DirectorBoard({
@@ -37,6 +38,7 @@ export default function DirectorBoard({
   onUpdateQuickHealth,
   onUpdateCharacterStatus,
   onResetRound,
+  onOpenDamageModal,
 }: DirectorBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -257,6 +259,7 @@ export default function DirectorBoard({
             onToggleActed={onToggleTokenActed}
             onUpdateQuickHealth={onUpdateQuickHealth}
             onUpdateCharacterStatus={onUpdateCharacterStatus}
+            onOpenDamageModal={onOpenDamageModal}
           />
         ))}
       </div>

@@ -8,7 +8,9 @@ import {
   Advantage, 
   RollMacro,
   CharacterSkills,
-  DEFAULT_CHARACTER_DATA
+  DEFAULT_CHARACTER_DATA,
+  getMaxHealth,
+  getMaxWillpower
 } from "@/types/character";
 import Link from "next/link";
 import DotSlider from "@/components/sheet/DotSlider";
@@ -616,6 +618,37 @@ export default function CharacterSheetClient({
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+
+  // Sincronizar trilhas máximas de forma reativa quando atributos ou disciplinas mudam
+  useEffect(() => {
+    const computedMaxHealth = getMaxHealth(character);
+    const computedMaxWillpower = getMaxWillpower(character);
+
+    if (
+      computedMaxHealth !== character.status.health.max ||
+      computedMaxWillpower !== character.status.willpower.max
+    ) {
+      setCharacter((prev) => ({
+        ...prev,
+        status: {
+          ...prev.status,
+          health: {
+            ...prev.status.health,
+            max: computedMaxHealth,
+          },
+          willpower: {
+            ...prev.status.willpower,
+            max: computedMaxWillpower,
+          },
+        },
+      }));
+    }
+  }, [
+    character.attributes.physical.stamina,
+    character.attributes.social.composure,
+    character.attributes.mental.resolve,
+    character.disciplines,
+  ]);
 
   // CALLBACK DE SALVAMENTO DEBOUNCED
   const triggerSave = useCallback(async (dataToSave: CharacterSheetData) => {
@@ -1325,6 +1358,7 @@ export default function CharacterSheetClient({
             
             {/* VITALIDADE (HEALTH) - DAMAGE TRACKER */}
             <DamageTracker 
+              characterId={characterId}
               label="Vitalidade" 
               value={character.status.health} 
               onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, health: val } }))} 
@@ -1333,6 +1367,7 @@ export default function CharacterSheetClient({
 
             {/* FORÇA DE VONTADE (WILLPOWER) - DAMAGE TRACKER */}
             <DamageTracker 
+              characterId={characterId}
               label="Força de Vontade" 
               value={character.status.willpower} 
               onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, willpower: val } }))} 

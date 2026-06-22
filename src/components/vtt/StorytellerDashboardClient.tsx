@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ActionFeed, { RollItem } from "./ActionFeed";
 import DirectorBoard from "./DirectorBoard";
+import DamageModal from "./DamageModal";
 import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import { TokenData } from "./Token";
@@ -79,6 +80,17 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   const [baseXp, setBaseXp] = useState(2);
   const [individualXpData, setIndividualXpData] = useState<Record<string, { presence: boolean; desire: boolean; ambition: boolean; extra: number }>>({});
   const [recentXpSpends, setRecentXpSpends] = useState<any[]>([]);
+
+  // Estados para Rastreamento Dinâmico de Dano (Fase 28)
+  const [isDamageModalOpen, setIsDamageModalOpen] = useState(false);
+  const [damageTargetId, setDamageTargetId] = useState<string | null>(null);
+  const [damageTargetName, setDamageTargetName] = useState("");
+
+  const handleOpenDamageModal = useCallback((characterId: string, characterName: string) => {
+    setDamageTargetId(characterId);
+    setDamageTargetName(characterName);
+    setIsDamageModalOpen(true);
+  }, []);
 
   const isFetchingRolls = useRef(false);
   const isFetchingTokens = useRef(false);
@@ -591,6 +603,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           onUpdateQuickHealth={handleUpdateQuickHealth}
           onUpdateCharacterStatus={handleUpdateCharacterStatus}
           onResetRound={handleResetRound}
+          onOpenDamageModal={handleOpenDamageModal}
         />
 
         {/* 3. DOCK DO NARRADOR (relativo à mesa central, reativo ao tamanho) */}
@@ -1093,6 +1106,23 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             </div>
           </div>
         </div>
+      )}
+
+      {isDamageModalOpen && damageTargetId && (
+        <DamageModal
+          isOpen={isDamageModalOpen}
+          onClose={() => {
+            setIsDamageModalOpen(false);
+            setDamageTargetId(null);
+          }}
+          characterId={damageTargetId}
+          characterName={damageTargetName}
+          onDamageApplied={async () => {
+            await fetchCampaignCharacters();
+            await fetchSceneTokens();
+            await fetchRecentRolls();
+          }}
+        />
       )}
     </div>
   );

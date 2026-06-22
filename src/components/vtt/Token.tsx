@@ -43,6 +43,7 @@ interface TokenProps {
       willpower?: { max: number; superficial: number; aggravated: number };
     }
   ) => void;
+  onOpenDamageModal?: (characterId: string, characterName: string) => void;
 }
 
 export default function Token({
@@ -56,6 +57,7 @@ export default function Token({
   onToggleActed,
   onUpdateQuickHealth,
   onUpdateCharacterStatus,
+  onOpenDamageModal,
 }: TokenProps) {
   const [showPopover, setShowPopover] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -216,6 +218,7 @@ export default function Token({
             }}
             onUpdateQuickHealth={onUpdateQuickHealth}
             onUpdateCharacterStatus={onUpdateCharacterStatus}
+            onOpenDamageModal={onOpenDamageModal}
           />
         </div>
       )}

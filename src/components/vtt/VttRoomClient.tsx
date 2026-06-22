@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import PlayerDock from "./PlayerDock";
+import DamageModal from "./DamageModal";
 import SheetDrawer from "./SheetDrawer";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import ActionFeed, { RollItem } from "./ActionFeed";
@@ -39,6 +40,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
   const [rollsList, setRollsList] = useState<RollItem[]>([]);
   const [tokensList, setTokensList] = useState<TokenData[]>([]);
   const [isRerolling, setIsRerolling] = useState(false);
+  const [isDamageModalOpen, setIsDamageModalOpen] = useState(false);
   const isFetching = useRef(false);
   const isFetchingTokens = useRef(false);
 
@@ -141,11 +143,43 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
       setTokensList((prev) => prev.map((t) => ({ ...t, hasActed: false })));
     };
 
+    const handleDamageAppliedEvent = (data: {
+      characterId: string;
+      trackType: "health" | "willpower";
+      newSuperficial: number;
+      newAggravated: number;
+    }) => {
+      if (data.characterId === character.id) {
+        setLocalCharacter((prev) => {
+          const track = prev.sheetData.status?.[data.trackType];
+          if (!track) return prev;
+          
+          const updatedTrack = {
+            ...track,
+            superficial: data.newSuperficial,
+            aggravated: data.newAggravated,
+          };
+          
+          return {
+            ...prev,
+            sheetData: {
+              ...prev.sheetData,
+              status: {
+                ...prev.sheetData.status,
+                [data.trackType]: updatedTrack,
+              },
+            },
+          };
+        });
+      }
+    };
+
     // Registrar binds no canal público do jogador
     publicChannel.bind("token-created", handleTokenCreated);
     publicChannel.bind("token-updated", handleTokenUpdated);
     publicChannel.bind("token-deleted", handleTokenDeleted);
     publicChannel.bind("round-reset", handleRoundReset);
+    publicChannel.bind("damage-applied", handleDamageAppliedEvent);
 
     // 3. Lógica de Resiliência: fetch pontual em reconexão ou foco ativo da aba do navegador
     const handleSync = () => {
@@ -344,6 +378,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
         clearPool={clearPool}
         onStandardRoll={handleStandardRoll}
         onRouseCheck={handleRouseCheck}
+        onOpenDamageModal={() => setIsDamageModalOpen(true)}
       />
 
       {/* GAVETA DA FICHA (z-50) */}
@@ -398,6 +433,30 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
           }}
         />
       </SheetDrawer>
+
+      {isDamageModalOpen && (
+        <DamageModal
+          isOpen={isDamageModalOpen}
+          onClose={() => setIsDamageModalOpen(false)}
+          characterId={character.id}
+          characterName={character.name}
+          onDamageApplied={(trackType, updatedData) => {
+            setLocalCharacter((prev) => {
+              const updatedSheetData = {
+                ...prev.sheetData,
+                status: {
+                  ...prev.sheetData.status,
+                  [trackType]: updatedData,
+                },
+              };
+              return {
+                ...prev,
+                sheetData: updatedSheetData,
+              };
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
