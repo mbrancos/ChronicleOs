@@ -323,7 +323,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
         />
 
         {/* O TABULEIRO 2D (DirectorBoard em modo Jogador) */}
-        <div className="flex-1 h-full relative flex items-center justify-center p-4">
+        <div className="flex-1 h-full relative flex items-center justify-center p-4 min-w-0">
           <DirectorBoard
             tokens={tokensList}
             isStoryteller={false}

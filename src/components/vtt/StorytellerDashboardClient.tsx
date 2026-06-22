@@ -550,7 +550,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       <ActionFeed rolls={rollsList} campaignId={campaign.id} isStoryteller={true} />
 
       {/* 2. MESA CENTRAL COM TABULEIRO 2D (DirectorBoard) */}
-      <div className="flex-1 h-full relative flex items-center justify-center p-4">
+      <div className="flex-1 h-full relative flex items-center justify-center p-4 min-w-0">
         {/* Título de Contexto no topo central */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-center select-none">
           <h1 className="text-xl font-gothic text-blood-red tracking-widest uppercase">
