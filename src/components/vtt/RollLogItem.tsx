@@ -195,6 +195,82 @@ export default function RollLogItem({
     );
   }
 
+  if ((roll.resultData as any).type === "remorse_log") {
+    const remorseData = roll.resultData as any;
+    const hasSuccess = remorseData.isSuccess;
+    const oldHum = remorseData.oldHumanity;
+    const newHum = remorseData.newHumanity;
+    const oldStn = remorseData.oldStains;
+    const pool = remorseData.dicePool;
+    const rolled = remorseData.rolledDice || [];
+    const characterName = roll.characterName || "Personagem";
+
+    const borderClass = hasSuccess
+      ? "border-emerald-500/30 hover:border-emerald-500/45 shadow-[0_2px_8px_rgba(16,185,129,0.06)]"
+      : "border-hunger-red/35 hover:border-hunger-red/50 shadow-[0_2px_10px_rgba(239,68,68,0.15)] animate-pulse-subtle";
+
+    return (
+      <div className={`backdrop-blur-md bg-bg-card-dark/95 rounded-sm p-3 flex flex-col space-y-2 border select-text ${borderClass}`}>
+        {/* Cabeçalho */}
+        <div className="flex justify-between items-center text-[9px] font-data tracking-wider font-bold">
+          <div className="flex items-center space-x-1.5 truncate">
+            <span className={`flex items-center gap-1.5 ${hasSuccess ? "text-emerald-400" : "text-hunger-red"}`}>
+              <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+              </svg>
+              <span>{hasSuccess ? "REMORSO SENTIDO" : "A BESTA VENCEU"}</span>
+            </span>
+          </div>
+          <span className="text-[8px] text-text-dim/75 font-mono">
+            {timeStr}
+          </span>
+        </div>
+
+        {/* Descrição principal */}
+        <div className="space-y-1">
+          <div className="text-xs text-text-primary font-reading leading-relaxed">
+            <span className="font-bold text-gold-accent font-data uppercase tracking-wider">{characterName}</span>{" "}
+            realizou o teste de Remorso de fim de sessão com uma parada de <span className="font-bold text-text-primary">{pool} dados</span>.
+          </div>
+
+          {/* Dados rolados */}
+          <div className="flex flex-wrap gap-1 py-1.5 items-center justify-start bg-black/20 p-2 rounded-xs border border-white/5">
+            {rolled.map((val: number, idx: number) => {
+              const isWin = val >= 6;
+              const bgStyle = isWin 
+                ? "bg-gold-accent border-gold-accent text-bg-main font-bold shadow-[0_0_6px_rgba(255,216,77,0.3)]" 
+                : "bg-black/45 border-white/5 text-text-muted/60";
+              return (
+                <div key={idx} className={`w-6 h-6 border rounded-xs flex items-center justify-center font-data text-[9.5px] ${bgStyle}`}>
+                  {val}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Veredito */}
+          {hasSuccess ? (
+            <div className="mt-2 bg-emerald-950/20 border border-emerald-500/30 rounded-xs p-2.5 text-[10px] font-data text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🌹</span>
+              <span>A Culpa o assombra. A Alma sobrevive. A Humanidade foi mantida em {newHum}.</span>
+            </div>
+          ) : (
+            <div className="mt-2 bg-hunger-red/10 border border-hunger-red/30 rounded-xs p-2.5 text-[10px] font-data text-hunger-red uppercase tracking-wider flex items-center gap-1.5 animate-pulse">
+              <span>💀</span>
+              <span>Degradação moral! A Humanidade caiu de {oldHum} para {newHum}.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Rodapé informativo */}
+        <div className="flex justify-between items-center text-[8.5px] font-data text-text-dim/70 pt-1 border-t border-white/5">
+          <span>Máculas anteriores: {oldStn}</span>
+          <span>Sincronizado ✓</span>
+        </div>
+      </div>
+    );
+  }
+
   // Ordenação inteligente de dados (preservando o índice original para dados normais)
   let sortedNormalDice: Array<{ value: number; originalIdx: number }> = [];
   let sortedHungerDice: number[] = [];

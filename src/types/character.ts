@@ -136,6 +136,12 @@ export interface CharacterSheetData {
     resonance: string;
     dyscrasia: string;
   };
+  convictions: Array<{
+    id: string;
+    conviction: string;
+    touchstone: string;
+    isAlive: boolean;
+  }>;
 }
 
 export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
@@ -196,7 +202,8 @@ export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
   bloodState: {
     resonance: "Vazio",
     dyscrasia: ""
-  }
+  },
+  convictions: []
 };
 
 export function getMaxHealth(sheet: CharacterSheetData): number {

@@ -22,6 +22,7 @@ import { spendCharacterXpAction } from "@/app/actions/xpActions";
 import InlineEdit from "@/components/sheet/InlineEdit";
 import BloodPanel from "@/components/sheet/BloodPanel";
 import InventoryManager from "@/components/sheet/InventoryManager";
+import ConvictionsPanel from "@/components/sheet/ConvictionsPanel";
 
 const CLAN_OPTIONS = [
   "Banu Haqim",
@@ -1396,6 +1397,7 @@ export default function CharacterSheetClient({
 
             {/* HUMANIDADE & MÁCULAS (HUMANITY & STAINS) - HUMANITY TRACKER */}
             <HumanityTracker
+              characterId={characterId}
               humanity={character.status.humanity}
               stains={character.status.stains}
               onHumanityChange={handleHumanityChange}
@@ -1450,6 +1452,11 @@ export default function CharacterSheetClient({
           {/* TAB 1: NÚCLEO */}
           {activeTab === "nucleo" && (
             <div className="space-y-8">
+              {/* PAINEL DE CONVICÇÕES E PILARES (ÂNCORAS MORAIS) */}
+              <ConvictionsPanel
+                items={character.convictions}
+                onChange={(newConvictions) => setCharacter(prev => ({ ...prev, convictions: newConvictions }))}
+              />
               
               {/* GRADE DE ATRIBUTOS */}
               <div>
