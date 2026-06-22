@@ -20,6 +20,8 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { updateCharacterSheet, getCharacterXpLedger } from "@/app/actions/characterActions";
 import { spendCharacterXpAction } from "@/app/actions/xpActions";
 import InlineEdit from "@/components/sheet/InlineEdit";
+import BloodPanel from "@/components/sheet/BloodPanel";
+import InventoryManager from "@/components/sheet/InventoryManager";
 
 const CLAN_OPTIONS = [
   "Banu Haqim",
@@ -1678,7 +1680,13 @@ export default function CharacterSheetClient({
                   </div>
                 )}
               </div>
-
+              {/* SEÇÃO DE INVENTÁRIO (PERTENCES) */}
+              <div className="mt-8 pt-6 border-t border-white/10">
+                <InventoryManager
+                  items={character.inventory}
+                  onChange={(newInventory) => setCharacter(prev => ({ ...prev, inventory: newInventory }))}
+                />
+              </div>
             </div>
           )}
 
@@ -1717,6 +1725,12 @@ export default function CharacterSheetClient({
                   />
                 </div>
               </div>
+
+              {/* PAINEL DE FISIOLOGIA DO SANGUE (RESSONÂNCIA & DISCRASI) */}
+              <BloodPanel
+                value={character.bloodState}
+                onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {character.disciplines.map(disc => (

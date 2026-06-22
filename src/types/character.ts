@@ -126,6 +126,16 @@ export interface CharacterSheetData {
   advantages: Advantage[];
   macros: RollMacro[];
   notes: string;
+  inventory: Array<{
+    id: string;
+    name: string;
+    effect: string;
+    description: string;
+  }>;
+  bloodState: {
+    resonance: string;
+    dyscrasia: string;
+  };
 }
 
 export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
@@ -181,7 +191,12 @@ export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
       rouse_check: false
     }
   ],
-  notes: ""
+  notes: "",
+  inventory: [],
+  bloodState: {
+    resonance: "Vazio",
+    dyscrasia: ""
+  }
 };
 
 export function getMaxHealth(sheet: CharacterSheetData): number {
