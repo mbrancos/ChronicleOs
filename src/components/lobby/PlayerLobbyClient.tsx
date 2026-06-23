@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePresence } from "@/hooks/usePresence";
 
 interface LobbyCampaign {
   id: string;
@@ -24,6 +25,7 @@ interface CoterieMember {
   id: string;
   name: string;
   clan: string;
+  userId?: string | null;
 }
 
 interface PlayerLobbyClientProps {
@@ -39,6 +41,7 @@ export default function PlayerLobbyClient({
 }: PlayerLobbyClientProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const onlineUsers = usePresence(campaign.id);
 
   // Mapeamento visual do status da crônica
   const statusLabels = {
@@ -209,10 +212,20 @@ export default function PlayerLobbyClient({
                       className="bg-black/35 border border-white/5 p-3 rounded-xs flex items-center space-x-3.5"
                     >
                       {/* Avatar Placeholder para Aliados */}
-                      <div className="w-10 h-10 rounded-full bg-bg-main border border-white/10 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-bg-main border border-white/10 flex items-center justify-center shrink-0 relative">
                         <svg className="w-5 h-5 text-text-dim/40" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                         </svg>
+                        
+                        {/* Indicador de presença */}
+                        <span 
+                          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-bg-card shrink-0 ${
+                            member.userId && onlineUsers.includes(member.userId)
+                              ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)] animate-pulse" 
+                              : "bg-zinc-600"
+                          }`}
+                          title={member.userId && onlineUsers.includes(member.userId) ? "Aliado Online" : "Aliado Offline"}
+                        />
                       </div>
                       
                       <div className="truncate">

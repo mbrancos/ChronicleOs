@@ -12,10 +12,12 @@ interface CharacterMiniCardProps {
     type: string;
     sheetData: any; // JSONB
     status?: "DRAFT" | "READY" | "IN_PLAY";
+    userId?: string | null;
   };
+  isOnline?: boolean;
 }
 
-export default function CharacterMiniCard({ character }: CharacterMiniCardProps) {
+export default function CharacterMiniCard({ character, isOnline }: CharacterMiniCardProps) {
   const sheet = character.sheetData as CharacterSheetData;
 
   const clan = sheet?.profile?.clan || "Sem Clã";
@@ -76,9 +78,21 @@ export default function CharacterMiniCard({ character }: CharacterMiniCardProps)
       {/* Informações Básicas */}
       <div className="space-y-1">
         <div className="flex justify-between items-start">
-          <h3 className="text-xl font-gothic tracking-wide text-text-primary group-hover:text-gold-accent transition-colors truncate pr-2">
-            {character.name.toUpperCase()}
-          </h3>
+          <div className="flex items-center gap-2 truncate pr-2">
+            {isOnline !== undefined && (
+              <span 
+                className={`w-2 h-2 rounded-full shrink-0 ${
+                  isOnline 
+                    ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" 
+                    : "bg-zinc-600"
+                }`}
+                title={isOnline ? "Membro Online" : "Membro Offline"}
+              />
+            )}
+            <h3 className="text-xl font-gothic tracking-wide text-text-primary group-hover:text-gold-accent transition-colors truncate">
+              {character.name.toUpperCase()}
+            </h3>
+          </div>
           <span className={`text-[9px] font-data uppercase tracking-widest px-2 py-0.5 rounded-sm ${
             character.type === "npc" ? "bg-hunger-red/10 text-hunger-red border border-hunger-red/20" : "bg-gold-accent/10 text-gold-accent border border-gold-accent/20"
           }`}>

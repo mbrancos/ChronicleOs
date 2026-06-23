@@ -19,6 +19,7 @@ export const campaigns = pgTable("campaigns", {
   extraXp: integer("extra_xp").default(0).notNull(),
   allowedClans: jsonb("allowed_clans").$type<string[]>(), // Nulo significa todos permitidos
   tenets: jsonb("tenets").$type<string[]>().default([]).notNull(),
+  currentSession: integer("current_session").default(1).notNull(),
   rollEffectMode: text("roll_effect_mode", { enum: ["NONE", "HORROR", "COMEDY"] })
     .$type<"NONE" | "HORROR" | "COMEDY">()
     .default("HORROR")

@@ -63,13 +63,22 @@ export async function POST(req: Request) {
     }
 
     // 4. Se passou pela segurança, autoriza o canal no Pusher
-    const authResponse = pusherServer.authorizeChannel(socketId, channelName, {
-      user_id: sessionData.user.id,
-      user_info: {
-        name: sessionData.user.name || "Usuário",
-        email: sessionData.user.email || "",
-      },
-    });
+    let authResponse;
+    if (channelName.startsWith("presence-")) {
+      const presenceData = {
+        user_id: sessionData.user.id,
+        user_info: { name: sessionData.user.name || "Usuário" }
+      };
+      authResponse = pusherServer.authorizeChannel(socketId, channelName, presenceData);
+    } else {
+      authResponse = pusherServer.authorizeChannel(socketId, channelName, {
+        user_id: sessionData.user.id,
+        user_info: {
+          name: sessionData.user.name || "Usuário",
+          email: sessionData.user.email || "",
+        },
+      });
+    }
 
     return NextResponse.json(authResponse);
   } catch (error) {

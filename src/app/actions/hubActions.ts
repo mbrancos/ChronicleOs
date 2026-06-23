@@ -268,6 +268,7 @@ export async function updateCampaignSettingsAction(
     extraXp: number;
     allowedClans: string[];
     tenets?: string[];
+    currentSession?: number;
     rollEffectMode: "NONE" | "HORROR" | "COMEDY";
     comedyImageUrl?: string | null;
   }
@@ -307,6 +308,7 @@ export async function updateCampaignSettingsAction(
         extraXp: Math.max(0, Number(settings.extraXp) || 0),
         allowedClans: settings.allowedClans,
         tenets: settings.tenets || [],
+        currentSession: Math.max(1, Number(settings.currentSession) || 1),
         rollEffectMode: settings.rollEffectMode,
         comedyImageUrl: settings.comedyImageUrl?.trim() || null,
       })
@@ -319,5 +321,52 @@ export async function updateCampaignSettingsAction(
   } catch (err: any) {
     console.error("Erro em updateCampaignSettingsAction:", err);
     return { success: false, error: err?.message || "Falha ao atualizar configurações da crônica." };
+  }
+}
+
+// Server Action para atualizar rapidamente apenas a sessão da crônica
+export async function updateCampaignSessionAction(campaignId: string, currentSession: number) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(campaignId)) {
+      return { success: false, error: "ID de crônica inválido." };
+    }
+
+    // 1. Verificar se o usuário é o narrador criador da crônica
+    const campResult = await db
+      .select({ narratorId: campaigns.narratorId })
+      .from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1);
+
+    if (campResult.length === 0) {
+      return { success: false, error: "Crônica não encontrada." };
+    }
+
+    if (campResult[0].narratorId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Apenas o Narrador criador pode editar esta crônica." };
+    }
+
+    // 2. Atualizar a sessão com a trava Math.max(1, currentSession)
+    const safeSession = Math.max(1, currentSession);
+    await db
+      .update(campaigns)
+      .set({ currentSession: safeSession })
+      .where(eq(campaigns.id, campaignId));
+
+    revalidatePath("/hub");
+    revalidatePath(`/campanhas/${campaignId}/narrador`);
+    revalidatePath(`/campanhas/${campaignId}/jogador`);
+    revalidatePath(`/campanhas/${campaignId}/mesa`);
+    
+    return { success: true, currentSession: safeSession };
+  } catch (err: any) {
+    console.error("Erro em updateCampaignSessionAction:", err);
+    return { success: false, error: err?.message || "Falha ao alterar a sessão." };
   }
 }

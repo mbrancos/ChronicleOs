@@ -79,6 +79,7 @@ export default async function PlayerLobbyPage({ params }: PageProps) {
       id: characters.id,
       name: characters.name,
       sheetData: characters.sheetData,
+      userId: characters.userId,
     })
     .from(characters)
     .where(
@@ -96,6 +97,7 @@ export default async function PlayerLobbyPage({ params }: PageProps) {
       id: char.id,
       name: char.name,
       clan: data?.profile?.clan || "Vampiro",
+      userId: char.userId,
     };
   });
 

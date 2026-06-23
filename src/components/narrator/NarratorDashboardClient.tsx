@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import CharacterMiniCard from "./CharacterMiniCard";
-import { createCharacterAction, updateCampaignSettingsAction } from "@/app/actions/hubActions";
+import { createCharacterAction, updateCampaignSettingsAction, updateCampaignSessionAction } from "@/app/actions/hubActions";
+import { usePresence } from "@/hooks/usePresence";
 
 interface Campaign {
   id: string;
@@ -15,6 +16,7 @@ interface Campaign {
   extraXp: number;
   allowedClans: string[] | null;
   tenets?: string[];
+  currentSession: number;
   rollEffectMode: "NONE" | "HORROR" | "COMEDY";
   comedyImageUrl: string | null;
 }
@@ -26,6 +28,7 @@ interface Character {
   type: string;
   sheetData: any;
   status?: "DRAFT" | "READY" | "IN_PLAY";
+  userId?: string | null;
 }
 
 interface NarratorDashboardClientProps {
@@ -39,6 +42,7 @@ export default function NarratorDashboardClient({
   players,
   npcs
 }: NarratorDashboardClientProps) {
+  const onlineUsers = usePresence(campaign.id);
   const [activeTab, setActiveTab] = useState<"players" | "npcs">("players");
   
   // Estados para cópia do convite
@@ -62,6 +66,7 @@ export default function NarratorDashboardClient({
   );
   const [campaignTenets, setCampaignTenets] = useState<string[]>(campaign.tenets || []);
   const [newTenet, setNewTenet] = useState("");
+  const [campaignSession, setCampaignSession] = useState(campaign.currentSession || 1);
   const [rollEffectMode, setRollEffectMode] = useState<"NONE" | "HORROR" | "COMEDY">(campaign.rollEffectMode || "HORROR");
   const [comedyImageUrl, setComedyImageUrl] = useState<string>(campaign.comedyImageUrl || "");
   const [isImageValid, setIsImageValid] = useState<boolean>(true);
@@ -122,6 +127,7 @@ export default function NarratorDashboardClient({
       extraXp: Number(campaignExtraXp) || 0,
       allowedClans: campaignAllowedClans,
       tenets: campaignTenets,
+      currentSession: Number(campaignSession) || 1,
       rollEffectMode,
       comedyImageUrl: rollEffectMode === "COMEDY" ? comedyImageUrl : null,
     });
@@ -179,10 +185,47 @@ export default function NarratorDashboardClient({
         {/* CABEÇALHO DO ESCUDO */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-white/10 gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold border border-gold-accent/30 px-2 py-0.5 rounded-sm">
                 Escudo do Narrador
               </span>
+              
+              {/* Relógio da Crônica */}
+              <div className="flex items-center gap-1.5 border border-blood-red/30 bg-blood-red/5 px-2 py-0.5 rounded-sm">
+                <span className="text-[9px] uppercase tracking-wider text-blood-red font-data font-bold">
+                  Sessão {String(campaign.currentSession).padStart(2, "0")}
+                </span>
+                <div className="h-2.5 w-px bg-blood-red/20 mx-0.5" />
+                <button
+                  onClick={async () => {
+                    const newSess = campaign.currentSession + 1;
+                    const res = await updateCampaignSessionAction(campaign.id, newSess);
+                    if (res.success) {
+                      window.location.reload();
+                    }
+                  }}
+                  className="text-[9px] font-bold text-text-muted hover:text-gold-accent transition-colors font-mono px-0.5 cursor-pointer"
+                  title="Avançar Sessão"
+                >
+                  +
+                </button>
+                <button
+                  onClick={async () => {
+                    const newSess = campaign.currentSession - 1;
+                    if (newSess >= 1) {
+                      const res = await updateCampaignSessionAction(campaign.id, newSess);
+                      if (res.success) {
+                        window.location.reload();
+                      }
+                    }
+                  }}
+                  disabled={campaign.currentSession <= 1}
+                  className="text-[9px] font-bold text-text-muted hover:text-gold-accent disabled:text-text-dim/20 disabled:hover:text-text-dim/20 disabled:cursor-not-allowed transition-colors font-mono px-0.5 cursor-pointer"
+                  title="Retroceder Sessão"
+                >
+                  -
+                </button>
+              </div>
             </div>
             <h1 className="text-4xl font-gothic tracking-widest text-blood-red pt-2 uppercase">
               {campaign.name}
@@ -230,7 +273,7 @@ export default function NarratorDashboardClient({
                 : "border-transparent text-text-muted hover:text-text-primary hover:bg-white/2"
             }`}
           >
-            Matilha (Jogadores) • {players.length}
+            Coterie (Jogadores) • {players.length}
           </button>
           <button
             onClick={() => setActiveTab("npcs")}
@@ -253,7 +296,7 @@ export default function NarratorDashboardClient({
                   <svg className="w-12 h-12 text-text-dim/20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <p className="font-gothic text-lg text-text-primary tracking-wide">A matilha está dispersa nas sombras</p>
+                  <p className="font-gothic text-lg text-text-primary tracking-wide">A Coterie está dispersa nas sombras</p>
                   <p className="text-xs text-text-muted max-w-md pt-1 leading-relaxed">
                     Nenhum jogador se uniu a este templo ainda. Compartilhe o link de convite acima para invocar sua prole e iniciar a história.
                   </p>
@@ -261,7 +304,11 @@ export default function NarratorDashboardClient({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {players.map(char => (
-                    <CharacterMiniCard key={char.id} character={char} />
+                    <CharacterMiniCard 
+                      key={char.id} 
+                      character={char} 
+                      isOnline={char.userId ? onlineUsers.includes(char.userId) : false}
+                    />
                   ))}
                 </div>
               )}
@@ -442,6 +489,18 @@ export default function NarratorDashboardClient({
                   min="0"
                   value={campaignExtraXp}
                   onChange={(e) => setCampaignExtraXp(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-blood-red outline-none transition-colors"
+                />
+              </div>
+
+              {/* Sessão Atual */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest text-text-muted block">Sessão Atual</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={campaignSession}
+                  onChange={(e) => setCampaignSession(Math.max(1, Number(e.target.value) || 1))}
                   className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-blood-red outline-none transition-colors"
                 />
               </div>
