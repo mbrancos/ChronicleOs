@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { campaigns, characters } from "@/db/schema";
+import { campaigns, characters, users } from "@/db/schema";
 import { auth } from "@/lib/auth/server";
 import { eq, and, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
@@ -60,7 +60,16 @@ export default async function InvitePage({ params }: PageProps) {
 
   const campaign = result[0];
 
-  // 3. Verificar se o jogador já possui sessão de Better Auth ativa
+  // 3. Buscar o nome do Narrador da campanha
+  const narratorResult = await db
+    .select({ name: users.name })
+    .from(users)
+    .where(eq(users.id, campaign.narratorId))
+    .limit(1);
+  
+  const narratorName = narratorResult[0]?.name ?? "Narrador Desconhecido";
+
+  // 4. Verificar se o jogador já possui sessão de Better Auth ativa
   const { data: session } = await auth.getSession();
 
   if (!session || !session.user) {
@@ -68,11 +77,14 @@ export default async function InvitePage({ params }: PageProps) {
     redirect(`/cadastro?callbackUrl=/convite/${campaign_id}`);
   }
 
-  // 4. Buscar os personagens do jogador que estão no Cofre (campaignId é nulo)
+  // 5. Buscar os personagens do jogador que estão no Cofre (campaignId é nulo) com detalhes
   const vaultCharacters = await db
     .select({
       id: characters.id,
       name: characters.name,
+      status: characters.status,
+      sheetData: characters.sheetData,
+      buildState: characters.buildState,
     })
     .from(characters)
     .where(
@@ -82,13 +94,19 @@ export default async function InvitePage({ params }: PageProps) {
       )
     );
 
-  // 5. Renderizar a interface cliente de onboarding do jogador
+  // 6. Renderizar a interface cliente de onboarding do jogador
   return (
     <InviteClient
       campaign={{
         id: campaign.id,
         name: campaign.name,
+        description: campaign.description,
+        powerLevel: campaign.powerLevel,
+        extraXp: campaign.extraXp,
+        allowedClans: campaign.allowedClans,
+        tenets: campaign.tenets,
       }}
+      narratorName={narratorName}
       user={{
         id: session.user.id,
         name: session.user.name ?? "Membro da Camarilla",

@@ -14,6 +14,7 @@ interface Campaign {
   powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
   extraXp: number;
   allowedClans: string[] | null;
+  tenets?: string[];
   rollEffectMode: "NONE" | "HORROR" | "COMEDY";
   comedyImageUrl: string | null;
 }
@@ -59,6 +60,8 @@ export default function NarratorDashboardClient({
       "Banu Haqim", "Brujah", "Gangrel", "Hecata", "Lasombra", "Malkaviano", "Malkavian", "Ministério", "Nosferatu", "Ravnos", "Salubri", "Toreador", "Tremere", "Tzimisce", "Ventrue", "Caitiff", "Sem Clã"
     ]
   );
+  const [campaignTenets, setCampaignTenets] = useState<string[]>(campaign.tenets || []);
+  const [newTenet, setNewTenet] = useState("");
   const [rollEffectMode, setRollEffectMode] = useState<"NONE" | "HORROR" | "COMEDY">(campaign.rollEffectMode || "HORROR");
   const [comedyImageUrl, setComedyImageUrl] = useState<string>(campaign.comedyImageUrl || "");
   const [isImageValid, setIsImageValid] = useState<boolean>(true);
@@ -92,6 +95,18 @@ export default function NarratorDashboardClient({
     setIsImageValid(false);
   };
 
+  const handleAddTenet = () => {
+    const trimmed = newTenet.trim();
+    if (trimmed && !campaignTenets.includes(trimmed)) {
+      setCampaignTenets([...campaignTenets, trimmed]);
+      setNewTenet("");
+    }
+  };
+
+  const handleRemoveTenet = (indexToRemove: number) => {
+    setCampaignTenets(campaignTenets.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rollEffectMode === "COMEDY" && (!comedyImageUrl.trim() || !isImageValid)) {
@@ -106,6 +121,7 @@ export default function NarratorDashboardClient({
       powerLevel: campaignPowerLevel,
       extraXp: Number(campaignExtraXp) || 0,
       allowedClans: campaignAllowedClans,
+      tenets: campaignTenets,
       rollEffectMode,
       comedyImageUrl: rollEffectMode === "COMEDY" ? comedyImageUrl : null,
     });
@@ -447,6 +463,61 @@ export default function NarratorDashboardClient({
                       <span className="text-text-primary font-medium">{clan}</span>
                     </label>
                   ))}
+                </div>
+              </div>
+
+              {/* Princípios da Crônica (Tenets) */}
+              <div className="space-y-2 pt-2 border-t border-white/5">
+                <label className="text-[10px] uppercase tracking-widest text-text-muted block">
+                  Princípios da Crônica (Chronicle Tenets)
+                </label>
+                <p className="text-[9px] text-text-dim leading-normal font-sans">
+                  Diretrizes morais comuns a todos os personagens. Transgredir estes princípios gera Máculas.
+                </p>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newTenet}
+                    onChange={(e) => setNewTenet(e.target.value)}
+                    placeholder="Ex: Não matarás inocentes"
+                    className="flex-1 bg-bg-input border border-white/10 rounded-sm p-2 text-xs font-reading text-text-primary focus:border-blood-red outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddTenet();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddTenet}
+                    className="px-3 bg-blood-red hover:bg-burgundy text-white text-xs uppercase tracking-widest font-bold rounded-sm transition-colors cursor-pointer"
+                  >
+                    Adicionar
+                  </button>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  {campaignTenets.map((tenet, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between bg-bg-main/40 border border-white/5 p-2 rounded-xs text-xs"
+                    >
+                      <span className="text-text-primary font-reading italic">“{tenet}”</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTenet(idx)}
+                        className="text-hunger-red hover:text-red-500 font-bold px-1.5 uppercase font-data text-[10px] tracking-wider cursor-pointer"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                  {campaignTenets.length === 0 && (
+                    <span className="text-[10px] text-text-dim/60 italic block text-center py-2 bg-black/15 rounded-xs border border-dashed border-white/5">
+                      Nenhum princípio moral definido para esta crônica.
+                    </span>
+                  )}
                 </div>
               </div>
 

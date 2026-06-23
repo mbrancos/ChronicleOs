@@ -267,6 +267,7 @@ export async function updateCampaignSettingsAction(
     powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
     extraXp: number;
     allowedClans: string[];
+    tenets?: string[];
     rollEffectMode: "NONE" | "HORROR" | "COMEDY";
     comedyImageUrl?: string | null;
   }
@@ -305,6 +306,7 @@ export async function updateCampaignSettingsAction(
         powerLevel: settings.powerLevel,
         extraXp: Math.max(0, Number(settings.extraXp) || 0),
         allowedClans: settings.allowedClans,
+        tenets: settings.tenets || [],
         rollEffectMode: settings.rollEffectMode,
         comedyImageUrl: settings.comedyImageUrl?.trim() || null,
       })
