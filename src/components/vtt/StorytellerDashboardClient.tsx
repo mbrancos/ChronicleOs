@@ -570,23 +570,14 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           </p>
         </div>
 
-        {/* Botão de Toggle da Barra Lateral Direita */}
+        {/* Botão de Toggle — slim vertical tab no canto direito da mesa */}
         <button
           onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-          className="absolute top-4 right-4 z-20 px-2.5 py-1.5 bg-bg-card-dark/95 backdrop-blur-md border border-white/10 hover:border-gold-accent text-gold-accent hover:text-white font-data font-bold text-[9px] uppercase tracking-widest rounded-xs transition-all duration-300 shadow-md cursor-pointer flex items-center space-x-1"
+          className="absolute top-1/2 -translate-y-1/2 right-0 z-20 w-5 h-16 bg-bg-card-dark/95 backdrop-blur-md border border-white/10 hover:border-gold-accent text-gold-accent hover:text-white font-mono font-bold text-[11px] rounded-l-sm transition-all duration-300 shadow-md cursor-pointer flex items-center justify-center"
           title={isRightSidebarOpen ? "Ocultar Painel Lateral" : "Exibir Painel Lateral"}
+          aria-label={isRightSidebarOpen ? "Ocultar Painel Lateral" : "Exibir Painel Lateral"}
         >
-          {isRightSidebarOpen ? (
-            <>
-              <span>Ocultar Painel</span>
-              <span className="font-mono">❯</span>
-            </>
-          ) : (
-            <>
-              <span className="font-mono">❮</span>
-              <span>Exibir Painel</span>
-            </>
-          )}
+          {isRightSidebarOpen ? "❯" : "❮"}
         </button>
 
         <DirectorBoard
@@ -604,150 +595,61 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           sceneBackground={sceneBackground}
         />
 
-        {/* 3. DOCK DO NARRADOR (relativo à mesa central, reativo ao tamanho) */}
-        <div className="absolute bottom-4 left-4 right-4 flex justify-center z-40 pointer-events-none">
-          <div className="pointer-events-auto w-[620px] bg-bg-card-dark/95 backdrop-blur-md border border-white/10 rounded-sm p-3 shadow-2xl flex items-center justify-between space-x-4 select-none">
-            {/* Seletor de Pool de Dados */}
-            <div className="flex flex-col space-y-1">
-              <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Pool de Dados</span>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setNarratorPool(Math.max(1, narratorPool - 1))}
-                  className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                >
-                  -
-                </button>
-                <span className="w-6 text-center text-sm font-bold font-mono text-gold-accent">{narratorPool}</span>
-                <button
-                  onClick={() => setNarratorPool(Math.min(20, narratorPool + 1))}
-                  className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                >
-                  +
-                </button>
-              </div>
+        {/* 3. DOCK DO NARRADOR — slim, largura total da mesa central */}
+        <div className="absolute bottom-0 left-0 right-0 flex justify-center z-40 pointer-events-none">
+          <div className="pointer-events-auto w-full bg-bg-card-dark/98 backdrop-blur-md border-t border-white/8 py-1.5 px-6 shadow-2xl flex items-center justify-center gap-5 select-none">
+
+            {/* Pool de Dados */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Pool</span>
+              <button onClick={() => setNarratorPool(Math.max(1, narratorPool - 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">-</button>
+              <span className="w-5 text-center text-sm font-bold font-mono text-gold-accent">{narratorPool}</span>
+              <button onClick={() => setNarratorPool(Math.min(20, narratorPool + 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">+</button>
             </div>
 
-            {/* Seletor de Dificuldade */}
-            <div className="flex flex-col space-y-1">
-              <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Dificuldade</span>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setNarratorDifficulty(Math.max(0, narratorDifficulty - 1))}
-                  className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                >
-                  -
-                </button>
-                <span className="w-6 text-center text-sm font-bold font-mono text-gold-accent">{narratorDifficulty}</span>
-                <button
-                  onClick={() => setNarratorDifficulty(Math.min(10, narratorDifficulty + 1))}
-                  className="w-6 h-6 border border-white/10 hover:border-white/20 bg-white/5 rounded-xs flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                >
-                  +
-                </button>
-              </div>
+            <div className="h-6 w-px bg-white/10 shrink-0" />
+
+            {/* Dificuldade */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Dif.</span>
+              <button onClick={() => setNarratorDifficulty(Math.max(0, narratorDifficulty - 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">-</button>
+              <span className="w-5 text-center text-sm font-bold font-mono text-gold-accent">{narratorDifficulty}</span>
+              <button onClick={() => setNarratorDifficulty(Math.min(10, narratorDifficulty + 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">+</button>
             </div>
 
-            {/* Nome da Ação Customizada */}
-            <div className="flex-1 flex flex-col space-y-1">
-              <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">Ação</span>
+            <div className="h-6 w-px bg-white/10 shrink-0" />
+
+            {/* Ação */}
+            <div className="flex items-center gap-1.5 flex-1 max-w-[220px]">
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Ação</span>
               <input
                 type="text"
                 value={customActionName}
                 onChange={(e) => setCustomActionName(e.target.value)}
                 placeholder="Ex: Ataque de Garra"
-                className="px-2 py-1 text-xs border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary"
+                className="flex-1 px-2 py-0.5 text-[11px] border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary min-w-0"
               />
             </div>
 
-            {/* Botões de Ação */}
-            <div className="flex items-center space-x-2 pt-4">
-              <div className="flex flex-col space-y-1">
-                <button
-                  onClick={() => handleNarratorRoll(false)}
-                  className="py-1 px-2.5 bg-linear-to-r from-red-700 to-burgundy hover:from-red-600 hover:to-red-700 text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer"
-                >
-                  Público
-                </button>
-                <button
-                  onClick={() => handleNarratorRoll(true)}
-                  className="py-1 px-2.5 bg-willpower-blue hover:bg-blue-600 text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer"
-                >
-                  Secreto
-                </button>
-              </div>
+            <div className="h-6 w-px bg-white/10 shrink-0" />
 
-              <div className="flex flex-col space-y-1 border-l border-white/10 pl-2">
-                <button
-                  onClick={() => handleNarratorRouseCheck(false)}
-                  className="py-1 px-2 bg-white/5 hover:bg-white/15 text-text-primary font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-white/10"
-                >
-                  Despertar Púb.
-                </button>
-                <button
-                  onClick={() => handleNarratorRouseCheck(true)}
-                  className="py-1 px-2 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-willpower-blue font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-willpower-blue/20"
-                >
-                  Despertar Sec.
-                </button>
-              </div>
+            {/* Botões de Rolagem */}
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => handleNarratorRoll(false)} className="h-7 px-3 bg-linear-to-r from-red-700 to-burgundy hover:from-red-600 hover:to-red-700 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">Público</button>
+              <button onClick={() => handleNarratorRoll(true)} className="h-7 px-3 bg-willpower-blue hover:bg-blue-600 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">Secreto</button>
             </div>
 
-            {/* Separador vertical */}
-            <div className="h-10 w-px bg-white/10 shrink-0" />
+            <div className="h-6 w-px bg-white/10 shrink-0" />
 
-            {/* Campo de Fundo de Cena */}
-            <div className="flex flex-col space-y-1 min-w-[150px]">
-              <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">🌄 Fundo da Cena</span>
-              <div className="flex items-center space-x-1">
-                <input
-                  type="text"
-                  value={sceneBackgroundInput}
-                  onChange={(e) => setSceneBackgroundInput(e.target.value)}
-                  placeholder="URL da imagem..."
-                  className="flex-1 px-2 py-1 text-[10px] border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary min-w-0"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && sceneBackgroundInput.trim()) {
-                      const url = sceneBackgroundInput.trim();
-                      setSceneBackground(url);
-                      updateSceneBackground(campaign.id, url);
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => {
-                    const url = sceneBackgroundInput.trim();
-                    if (url) {
-                      setSceneBackground(url);
-                      updateSceneBackground(campaign.id, url);
-                    }
-                  }}
-                  title="Aplicar fundo"
-                  className="w-7 h-7 bg-gold-accent/20 hover:bg-gold-accent/40 border border-gold-accent/30 rounded-xs flex items-center justify-center text-gold-accent text-xs cursor-pointer transition-all shrink-0"
-                >
-                  ✓
-                </button>
-                {sceneBackground && (
-                  <button
-                    onClick={() => {
-                      setSceneBackground(null);
-                      setSceneBackgroundInput("");
-                      updateSceneBackground(campaign.id, null);
-                    }}
-                    title="Remover fundo"
-                    className="w-7 h-7 bg-hunger-red/15 hover:bg-hunger-red/30 border border-hunger-red/30 rounded-xs flex items-center justify-center text-hunger-red text-xs cursor-pointer transition-all shrink-0"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-              {sceneBackground && (
-                <span className="text-[8px] text-gold-accent/60 truncate max-w-[150px]">Ativo ●</span>
-              )}
+            {/* Despertar */}
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => handleNarratorRouseCheck(false)} className="h-7 px-2.5 bg-white/5 hover:bg-white/15 text-text-primary font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-white/10">Desp. Púb.</button>
+              <button onClick={() => handleNarratorRouseCheck(true)} className="h-7 px-2.5 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-willpower-blue font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-willpower-blue/20">Desp. Sec.</button>
             </div>
+
           </div>
         </div>
       </div>
-
 
       {/* 4. BARRA LATERAL DIREITA DE GERENCIAMENTO (Fichas e Figurantes) */}
       <div 
@@ -757,7 +659,8 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             : "w-0 p-0 opacity-0 border-l-0 border-r-0 overflow-hidden pointer-events-none"
         }`}
       >
-        {/* Seção: Personagens da Crônica */}
+        {/* ===== SIDEBAR REORGANIZADO ===== */}
+        {/* GRUPO 1: Personagens da Crônica */}
         <div className="flex flex-col space-y-2">
           <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold border-b border-white/10 pb-1">
             Fichas da Crônica
@@ -773,21 +676,10 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                 const isOnBoard = tokensList.some((t) => t.characterId === p.id);
                 return (
                   <div key={p.id} className="flex justify-between items-center bg-black/35 p-1.5 rounded-sm border border-white/5">
-                    <span className="text-xs font-semibold truncate max-w-[85px]" title={p.name}>
-                      {p.name}
-                    </span>
+                    <span className="text-xs font-semibold truncate max-w-[85px]" title={p.name}>{p.name}</span>
                     <div className="flex items-center space-x-1.5">
-                      <button
-                        onClick={() => handleDoubleClickToken(p.id)}
-                        className="text-[9px] text-text-muted hover:text-white uppercase font-bold cursor-pointer"
-                      >
-                        Ficha
-                      </button>
-                      <button
-                        disabled={isOnBoard}
-                        onClick={() => handleAddCharacterToBoard(p)}
-                        className="text-[9px] text-gold-accent hover:text-amber-300 disabled:text-text-dim/40 uppercase font-bold cursor-pointer"
-                      >
+                      <button onClick={() => handleDoubleClickToken(p.id)} className="text-[9px] text-text-muted hover:text-white uppercase font-bold cursor-pointer">Ficha</button>
+                      <button disabled={isOnBoard} onClick={() => handleAddCharacterToBoard(p)} className="text-[9px] text-gold-accent hover:text-amber-300 disabled:text-text-dim/40 uppercase font-bold cursor-pointer">
                         {isOnBoard ? "Em Jogo" : "+ Tabuleiro"}
                       </button>
                     </div>
@@ -798,7 +690,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           </div>
 
           {/* NPCs Completos */}
-          <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-none pt-2">
+          <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-none pt-1">
             <span className="text-[9px] font-bold text-text-muted uppercase">NPCs Completos</span>
             {npcsList.length === 0 ? (
               <div className="text-[10px] text-text-dim italic">Sem NPCs cadastrados.</div>
@@ -807,21 +699,10 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                 const isOnBoard = tokensList.some((t) => t.characterId === npc.id);
                 return (
                   <div key={npc.id} className="flex justify-between items-center bg-black/35 p-1.5 rounded-sm border border-white/5">
-                    <span className="text-xs font-semibold truncate max-w-[85px]" title={npc.name}>
-                      {npc.name}
-                    </span>
+                    <span className="text-xs font-semibold truncate max-w-[85px]" title={npc.name}>{npc.name}</span>
                     <div className="flex items-center space-x-1.5">
-                      <button
-                        onClick={() => handleDoubleClickToken(npc.id)}
-                        className="text-[9px] text-text-muted hover:text-white uppercase font-bold cursor-pointer"
-                      >
-                        Ficha
-                      </button>
-                      <button
-                        disabled={isOnBoard}
-                        onClick={() => handleAddCharacterToBoard(npc)}
-                        className="text-[9px] text-gold-accent hover:text-amber-300 disabled:text-text-dim/40 uppercase font-bold cursor-pointer"
-                      >
+                      <button onClick={() => handleDoubleClickToken(npc.id)} className="text-[9px] text-text-muted hover:text-white uppercase font-bold cursor-pointer">Ficha</button>
+                      <button disabled={isOnBoard} onClick={() => handleAddCharacterToBoard(npc)} className="text-[9px] text-gold-accent hover:text-amber-300 disabled:text-text-dim/40 uppercase font-bold cursor-pointer">
                         {isOnBoard ? "Em Jogo" : "+ Tabuleiro"}
                       </button>
                     </div>
@@ -829,36 +710,54 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                 );
               })
             )}
-        </div>
-      </div>
-
-      {/* Distribuição e Auditoria de XP (Fase 25) */}
-        <div className="flex flex-col space-y-2 pt-2 border-t border-white/10">
-          <button
-            onClick={() => {
-              // Inicializar dados de XP para cada jogador
-              const initialData: Record<string, any> = {};
-              playersList.forEach(p => {
-                initialData[p.id] = { presence: true, desire: false, ambition: false, extra: 0 };
-              });
-              setIndividualXpData(initialData);
-              setSessionTitle("");
-              setBaseXp(2);
-              setIsXpModalOpen(true);
-            }}
-            className="w-full py-1.5 bg-blood-red hover:bg-burgundy text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-colors shadow-md cursor-pointer border border-blood-red/20"
-          >
-            Distribuir XP da Sessão
-          </button>
+          </div>
         </div>
 
-
-        {/* Seção: Imagem de Cena — Mostrar para Jogadores */}
+        {/* GRUPO 2: Figurante Rápido */}
         <div className="flex flex-col space-y-2 pt-2 border-t border-white/10">
           <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold">
-            🖼️ Imagem de Cena
+            Novo Figurante Rápido
           </span>
+          <form onSubmit={handleCreateQuickNPC} className="space-y-2.5 text-xs">
+            <div className="flex flex-col space-y-1">
+              <label className="text-[9px] text-text-muted font-bold uppercase">Nome</label>
+              <input
+                type="text"
+                value={quickName}
+                onChange={(e) => setQuickName(e.target.value)}
+                placeholder="Ex: Guarda do Porto"
+                className="px-2 py-1 border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col space-y-1">
+                <label className="text-[8px] text-text-muted font-bold uppercase text-center">Físico</label>
+                <input type="number" min="1" max="10" value={quickPhysical} onChange={(e) => setQuickPhysical(Number(e.target.value))} className="px-1 py-1 text-center border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-mono font-bold" />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[8px] text-text-muted font-bold uppercase text-center">Social</label>
+                <input type="number" min="1" max="10" value={quickSocial} onChange={(e) => setQuickSocial(Number(e.target.value))} className="px-1 py-1 text-center border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-mono font-bold" />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[8px] text-text-muted font-bold uppercase text-center">Combate</label>
+                <input type="number" min="1" max="10" value={quickHealth} onChange={(e) => setQuickHealth(Number(e.target.value))} className="px-1 py-1 text-center border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-mono font-bold" />
+              </div>
+            </div>
+            <button type="submit" className="w-full mt-1.5 py-1.5 bg-linear-to-r from-gold-accent to-amber-500 hover:from-amber-400 hover:to-gold-accent text-black font-data font-bold text-xs uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">
+              Criar no Tabuleiro
+            </button>
+          </form>
+        </div>
+
+        {/* GRUPO 3: Imagens (Imagem de Cena + Cenário) */}
+        <div className="flex flex-col space-y-2 pt-2 border-t border-white/10">
+          <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold">
+            Imagens
+          </span>
+
+          {/* Imagem de Cena — mostrar para jogadores */}
           <div className="flex flex-col space-y-1.5">
+            <span className="text-[9px] text-text-muted font-bold uppercase">Imagem de Cena</span>
             <input
               type="text"
               value={narratorImageInput}
@@ -901,77 +800,84 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
               </button>
             )}
             {currentSceneImage && (
-              <div className="relative w-full h-16 overflow-hidden rounded-xs border border-white/10">
+              <div className="relative w-full h-14 overflow-hidden rounded-xs border border-white/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={currentSceneImage} alt="Preview" className="w-full h-full object-cover" />
+                <img src={currentSceneImage ?? ""} alt="Preview" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/20" />
               </div>
             )}
           </div>
-        </div>
 
-        {/* Seção: Criar Figurante Rápido (Quick NPC) */}
-        <div className="flex flex-col space-y-2 pt-2 border-t border-white/10">
-          <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold">
-            Novo Figurante Rápido
-          </span>
-          <form onSubmit={handleCreateQuickNPC} className="space-y-2.5 text-xs">
-            <div className="flex flex-col space-y-1">
-              <label className="text-[9px] text-text-muted font-bold uppercase">Nome</label>
+          {/* Cenário — fundo do tabuleiro */}
+          <div className="flex flex-col space-y-1.5 pt-1.5 border-t border-white/5">
+            <span className="text-[9px] text-text-muted font-bold uppercase">Cenário</span>
+            <div className="flex items-center space-x-1">
               <input
                 type="text"
-                value={quickName}
-                onChange={(e) => setQuickName(e.target.value)}
-                placeholder="Ex: Guarda do Porto"
-                className="px-2 py-1 border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary"
+                value={sceneBackgroundInput}
+                onChange={(e) => setSceneBackgroundInput(e.target.value)}
+                placeholder="URL da imagem de fundo..."
+                className="flex-1 px-2 py-1 text-[10px] border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary min-w-0"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && sceneBackgroundInput.trim()) {
+                    const url = sceneBackgroundInput.trim();
+                    setSceneBackground(url);
+                    updateSceneBackground(campaign.id, url);
+                  }
+                }}
               />
+              <button
+                onClick={() => {
+                  const url = sceneBackgroundInput.trim();
+                  if (url) {
+                    setSceneBackground(url);
+                    updateSceneBackground(campaign.id, url);
+                  }
+                }}
+                title="Aplicar cenário"
+                className="w-7 h-7 bg-gold-accent/20 hover:bg-gold-accent/40 border border-gold-accent/30 rounded-xs flex items-center justify-center text-gold-accent text-xs cursor-pointer transition-all shrink-0"
+              >
+                ✓
+              </button>
+              {sceneBackground && (
+                <button
+                  onClick={() => {
+                    setSceneBackground(null);
+                    setSceneBackgroundInput("");
+                    updateSceneBackground(campaign.id, null);
+                  }}
+                  title="Remover cenário"
+                  className="w-7 h-7 bg-hunger-red/15 hover:bg-hunger-red/30 border border-hunger-red/30 rounded-xs flex items-center justify-center text-hunger-red text-xs cursor-pointer transition-all shrink-0"
+                >
+                  ✕
+                </button>
+              )}
             </div>
+            {sceneBackground && (
+              <span className="text-[8px] text-gold-accent/60">Cenário ativo ●</span>
+            )}
+          </div>
+        </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col space-y-1">
-                <label className="text-[8px] text-text-muted font-bold uppercase text-center">Físico</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={quickPhysical}
-                  onChange={(e) => setQuickPhysical(Number(e.target.value))}
-                  className="px-1 py-1 text-center border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-mono font-bold"
-                />
-              </div>
-
-              <div className="flex flex-col space-y-1">
-                <label className="text-[8px] text-text-muted font-bold uppercase text-center">Social</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={quickSocial}
-                  onChange={(e) => setQuickSocial(Number(e.target.value))}
-                  className="px-1 py-1 text-center border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-mono font-bold"
-                />
-              </div>
-
-              <div className="flex flex-col space-y-1">
-                <label className="text-[8px] text-text-muted font-bold uppercase text-center">Combate</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={quickHealth}
-                  onChange={(e) => setQuickHealth(Number(e.target.value))}
-                  className="px-1 py-1 text-center border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-mono font-bold"
-                />
-              </div>
-            </div>
-
+        {/* GRUPO 4: Distribuir XP — sempre por último */}
+        <div className="flex-1 flex flex-col justify-end pt-2">
+          <div className="border-t border-white/10 pt-3">
             <button
-              type="submit"
-              className="w-full mt-1.5 py-1.5 bg-linear-to-r from-gold-accent to-amber-500 hover:from-amber-400 hover:to-gold-accent text-black font-data font-bold text-xs uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer"
+              onClick={() => {
+                const initialData: Record<string, any> = {};
+                playersList.forEach(p => {
+                  initialData[p.id] = { presence: true, desire: false, ambition: false, extra: 0 };
+                });
+                setIndividualXpData(initialData);
+                setSessionTitle("");
+                setBaseXp(2);
+                setIsXpModalOpen(true);
+              }}
+              className="w-full py-2 bg-blood-red hover:bg-burgundy text-white font-data font-bold text-[10px] uppercase tracking-wider rounded-xs transition-colors shadow-md cursor-pointer border border-blood-red/20"
             >
-              Criar no Tabuleiro
+              Distribuir XP da Sessão
             </button>
-          </form>
+          </div>
         </div>
       </div>
 
@@ -979,20 +885,20 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       {selectedChar && (
         <SheetDrawer isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)}>
           <CharacterSheetClient
-            characterId={selectedChar.id}
+            characterId={selectedChar!.id}
             campaignId={campaign.id}
-            initialData={selectedChar.sheetData as CharacterSheetData}
-            initialName={selectedChar.name}
+            initialData={selectedChar!.sheetData as CharacterSheetData}
+            initialName={selectedChar!.name}
             dicePool={[]} // Narrador não usa pool de dados persistida na ficha
             onTraitClick={() => {}} // Narrador não acumula pool de traits
-            initialStatus={selectedChar.status as "DRAFT" | "READY" | "IN_PLAY" || "DRAFT"}
-            initialBuildState={selectedChar.buildState}
+            initialStatus={selectedChar!.status as "DRAFT" | "READY" | "IN_PLAY" || "DRAFT"}
+            initialBuildState={selectedChar!.buildState}
             onDataChange={async (newData) => {
               // Atualizar estado de personagens localmente de imediato
               const updateLocalList = (list: CampaignCharacter[]) =>
-                list.map((c) => (c.id === selectedChar.id ? { ...c, sheetData: newData, name: newData.profile?.name || c.name } : c));
+                list.map((c) => (c.id === selectedChar!.id ? { ...c, sheetData: newData, name: newData.profile?.name || c.name } : c));
               
-              if (selectedChar.type === "jogador") {
+              if (selectedChar!.type === "jogador") {
                 setPlayersList(updateLocalList(playersList));
               } else {
                 setNpcsList(updateLocalList(npcsList));
@@ -1000,7 +906,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
               // Salvar no Neon DB via Server Action
               try {
-                const res = await updateCharacterSheet(selectedChar.id, newData);
+                const res = await updateCharacterSheet(selectedChar!.id, newData);
                 if (!res.success) {
                   console.error("Falha ao salvar modificações da ficha pelo Narrador:", res.error);
                 }
@@ -1183,7 +1089,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             setIsDamageModalOpen(false);
             setDamageTargetId(null);
           }}
-          characterId={damageTargetId}
+          characterId={damageTargetId ?? ""}
           characterName={damageTargetName}
           onDamageApplied={async () => {
             await fetchCampaignCharacters();

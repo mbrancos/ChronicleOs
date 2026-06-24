@@ -166,8 +166,21 @@ export default function DirectorBoard({
   return (
     <div 
       ref={containerRef}
-      className="w-full h-full flex items-center justify-center bg-bg-main overflow-hidden p-4 scrollbar-none select-none"
+      className="w-full h-full flex items-center justify-center bg-bg-main overflow-hidden p-4 scrollbar-none select-none relative"
     >
+      {/* Botão de Nova Rodada — fora do canvas, canto superior direito da área da mesa */}
+      {isStoryteller && onResetRound && (
+        <button
+          onClick={() => {
+            if (confirm("Reiniciar as ações de todos os personagens no tabuleiro?")) {
+              onResetRound();
+            }
+          }}
+          className="absolute top-2 right-2 z-40 py-1 px-2.5 bg-bg-card-dark/90 hover:bg-black border border-gold-accent/30 hover:border-gold-accent text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all duration-300 shadow-md cursor-pointer select-none"
+        >
+          ↺ Nova Rodada
+        </button>
+      )}
       {/* Wrapper para limitar o tamanho de layout ao tamanho escalado do tabuleiro */}
       <div
         style={{
@@ -223,19 +236,6 @@ export default function DirectorBoard({
           </div>
         </div>
 
-        {/* Botão de Nova Rodada (exclusivo Narrador) */}
-        {isStoryteller && onResetRound && (
-          <button
-            onClick={() => {
-              if (confirm("Reiniciar as ações de todos os personagens no tabuleiro?")) {
-                onResetRound();
-              }
-            }}
-            className="absolute top-4 right-4 z-40 py-1.5 px-3 bg-bg-card-dark/90 hover:bg-black border border-gold-accent/30 hover:border-gold-accent text-gold-accent font-data font-bold text-xs uppercase tracking-wider rounded-sm transition-all duration-300 shadow-md cursor-pointer select-none"
-          >
-            🔄 Nova Rodada
-          </button>
-        )}
 
         {/* Indicadores de Bastidores (exclusivo Narrador) */}
         {isStoryteller && (
