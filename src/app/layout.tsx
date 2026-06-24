@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Barlow, Nunito } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { ToastProvider } from "@/context/ToastContext";
 
 const barlow = Barlow({
   subsets: ["latin"],
@@ -55,7 +56,9 @@ export default function RootLayout({
         className="min-h-full flex flex-col bg-bg-main text-text-primary"
         suppressHydrationWarning
       >
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

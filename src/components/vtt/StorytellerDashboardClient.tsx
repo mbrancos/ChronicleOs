@@ -5,6 +5,7 @@ import ActionFeed, { RollItem } from "./ActionFeed";
 import DirectorBoard from "./DirectorBoard";
 import DamageModal from "./DamageModal";
 import SheetDrawer from "./SheetDrawer";
+import { useToast } from "@/context/ToastContext";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import { TokenData } from "./Token";
 import { getRecentRolls, saveRoll } from "@/app/actions/rolls";
@@ -36,6 +37,7 @@ interface StorytellerDashboardClientProps {
 }
 
 export default function StorytellerDashboardClient({ campaign }: StorytellerDashboardClientProps) {
+  const { showSuccess, showError, showWarning } = useToast();
   // Estados para rolagens e tokens
   const [rollsList, setRollsList] = useState<RollItem[]>([]);
   const [tokensList, setTokensList] = useState<TokenData[]>([]);
@@ -261,7 +263,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       if (res.success) {
         await fetchSceneTokens();
       } else {
-        alert(`Erro ao adicionar personagem: ${res.error}`);
+        showError(`Erro ao adicionar personagem: ${res.error}`, "Adicionar Personagem");
       }
     } catch (err) {
       console.error("Erro ao adicionar personagem ao tabuleiro:", err);
@@ -272,7 +274,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   const handleCreateQuickNPC = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickName.trim()) {
-      alert("Por favor, informe o nome do figurante.");
+      showWarning("Por favor, informe o nome do figurante.", "Campo Obrigatório");
       return;
     }
 
@@ -301,7 +303,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
         setQuickName("");
         await fetchSceneTokens();
       } else {
-        alert(`Erro ao criar figurante: ${res.error}`);
+        showError(`Erro ao criar figurante: ${res.error}`, "Criar Figurante");
       }
     } catch (err) {
       console.error("Erro ao criar figurante rápido:", err);
@@ -827,11 +829,11 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                       if (confirm(`Tem certeza que deseja VETAR a compra de "${spend.metadata?.trait}" do personagem ${spend.characterName}? Isso irá reverter a pontuação na ficha e reembolsar o XP ao jogador.`)) {
                         const res = await vetoXpSpendAction(spend.id);
                         if (res.success) {
-                          alert("Compra vetada e XP reembolsado com sucesso!");
+                          showSuccess("Compra vetada e XP reembolsado com sucesso!", "Veto de XP");
                           fetchRecentXpSpends();
                           fetchCampaignCharacters(); // Recarregar fichas no drawer/lista
                         } else {
-                          alert(`Erro ao vetar: ${res.error}`);
+                          showError(`Erro ao vetar: ${res.error}`, "Falha no Veto");
                         }
                       }
                     }}
@@ -1078,7 +1080,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                   type="button"
                   onClick={async () => {
                     if (!sessionTitle.trim()) {
-                      alert("Por favor, preencha o título da sessão.");
+                      showWarning("Por favor, preencha o título da sessão.", "Campo Obrigatório");
                       return;
                     }
                     
@@ -1094,11 +1096,11 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
                     const res = await grantSessionXpAction(campaign.id, baseXp, grants, sessionTitle);
                     if (res.success) {
-                      alert("XP da sessão distribuído com sucesso para todos os jogadores!");
+                      showSuccess("XP da sessão distribuído com sucesso para todos os jogadores!", "Concessão de XP");
                       setIsXpModalOpen(false);
                       fetchRecentXpSpends();
                     } else {
-                      alert(`Erro ao distribuir XP: ${res.error}`);
+                      showError(`Erro ao distribuir XP: ${res.error}`, "Erro de XP");
                     }
                   }}
                   disabled={playersList.length === 0}

@@ -23,6 +23,7 @@ import InlineEdit from "@/components/sheet/InlineEdit";
 import BloodPanel from "@/components/sheet/BloodPanel";
 import InventoryManager from "@/components/sheet/InventoryManager";
 import ConvictionsPanel from "@/components/sheet/ConvictionsPanel";
+import { useToast } from "@/context/ToastContext";
 
 const CLAN_OPTIONS = [
   "Banu Haqim",
@@ -443,6 +444,7 @@ export default function CharacterSheetClient({
   initialStatus = "DRAFT",
   initialBuildState = {}
 }: CharacterSheetClientProps) {
+  const { showSuccess, showWarning, showError } = useToast();
   
   // ESTADO LOCAL DA FICHA (Mescla com os dados padrão se for novo personagem no banco)
   const [character, setCharacter] = useState<CharacterSheetData>(() => {
@@ -706,7 +708,7 @@ export default function CharacterSheetClient({
     if (status === "IN_PLAY" && isEvolvingMode) {
       const currentVal = Number((character.attributes[category] as any)[attrName]) || 1;
       if (value <= currentVal) {
-        alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+        showWarning("No Modo de Evolução, você apenas pode aumentar características por XP.", "Modo de Evolução");
         return;
       }
       openEvolutionConfirmModal(attrName, "attribute", value, currentVal);
@@ -730,7 +732,7 @@ export default function CharacterSheetClient({
     if (status === "IN_PLAY" && isEvolvingMode) {
       const currentVal = Number(character.skills[skillName]) || 0;
       if (value <= currentVal) {
-        alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+        showWarning("No Modo de Evolução, você apenas pode aumentar características por XP.", "Modo de Evolução");
         return;
       }
       openEvolutionConfirmModal(skillName, "skill", value, currentVal);
@@ -752,7 +754,7 @@ export default function CharacterSheetClient({
       if (isEvolvingMode) {
         const currentVal = character.status.blood_potency || 1;
         if (val <= currentVal) {
-          alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+          showWarning("No Modo de Evolução, você apenas pode aumentar características por XP.", "Modo de Evolução");
           return;
         }
         openEvolutionConfirmModal("Potência de Sangue", "blood_potency", val, currentVal);
@@ -771,7 +773,7 @@ export default function CharacterSheetClient({
       if (isEvolvingMode) {
         const currentVal = character.status.humanity || 7;
         if (val <= currentVal) {
-          alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+          showWarning("No Modo de Evolução, você apenas pode aumentar características por XP.", "Modo de Evolução");
           return;
         }
         openEvolutionConfirmModal("Humanidade", "humanity", val, currentVal);
@@ -885,7 +887,7 @@ export default function CharacterSheetClient({
         });
 
         fetchXpLedger(); // Recarregar histórico
-        alert("Evolução aplicada com sucesso!");
+        showSuccess("Evolução aplicada com sucesso!", "Modo de Evolução");
       } else {
         setEvolutionError(res.error || "Ocorreu um erro ao evoluir.");
       }
@@ -958,7 +960,7 @@ export default function CharacterSheetClient({
       const disc = character.disciplines.find(d => d.id === id);
       if (disc) {
         if (level <= disc.level) {
-          alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+          showWarning("No Modo de Evolução, você apenas pode aumentar características por XP.", "Modo de Evolução");
           return;
         }
         openEvolutionConfirmModal(disc.name, "discipline", level, disc.level);
@@ -1060,7 +1062,7 @@ export default function CharacterSheetClient({
       const adv = character.advantages.find(a => a.id === id);
       if (adv) {
         if (level <= adv.level) {
-          alert("No Modo de Evolução, você apenas pode aumentar características por XP.");
+          showWarning("No Modo de Evolução, você apenas pode aumentar características por XP.", "Modo de Evolução");
           return;
         }
         openEvolutionConfirmModal(adv.id, "advantage", level, adv.level);

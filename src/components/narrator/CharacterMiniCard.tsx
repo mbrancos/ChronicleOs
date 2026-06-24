@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { CharacterSheetData } from "@/types/character";
+import { useToast } from "@/context/ToastContext";
 
 interface CharacterMiniCardProps {
   character: {
@@ -18,6 +19,7 @@ interface CharacterMiniCardProps {
 }
 
 export default function CharacterMiniCard({ character, isOnline }: CharacterMiniCardProps) {
+  const { showSuccess, showError } = useToast();
   const sheet = character.sheetData as CharacterSheetData;
 
   const clan = sheet?.profile?.clan || "Sem Clã";
@@ -158,10 +160,12 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
                   const { anistiaCharacterAction } = await import("@/app/actions/characterActions");
                   const res = await anistiaCharacterAction(character.id);
                   if (res.success) {
-                    alert("Edição destravada! O personagem agora está com status READY.");
-                    window.location.reload();
+                    showSuccess("Edição destravada! O personagem agora está com status READY.", "Anistia de Ficha");
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 1500);
                   } else {
-                    alert(res.error || "Falha ao destravar edição.");
+                    showError(res.error || "Falha ao destravar edição.", "Erro");
                   }
                 }
               }}

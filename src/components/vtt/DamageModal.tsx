@@ -2,6 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { applyDamageAction } from "@/app/actions/damageActions";
+import { useToast } from "@/context/ToastContext";
 
 interface DamageModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export default function DamageModal({
   characterName,
   onDamageApplied
 }: DamageModalProps) {
+  const { showError } = useToast();
   const [track, setTrack] = useState<"health" | "willpower">("health");
   const [operation, setOperation] = useState<"damage" | "heal">("damage");
   const [damageType, setDamageType] = useState<"superficial" | "aggravated">("superficial");
@@ -45,11 +47,11 @@ export default function DamageModal({
           }
           onClose();
         } else {
-          alert(`Falha ao aplicar alteração: ${res.error}`);
+          showError(`Falha ao aplicar alteração: ${res.error}`, "Ajuste de Status");
         }
       } catch (err) {
         console.error("Erro no envio do modal de dano:", err);
-        alert("Erro inesperado ao registrar alteração.");
+        showError("Erro inesperado ao registrar alteração.", "Erro");
       }
     });
   };

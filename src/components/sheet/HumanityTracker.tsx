@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { addStainAction, rollRemorseAction } from "@/app/actions/humanityActions";
+import { useToast } from "@/context/ToastContext";
 
 interface HumanityTrackerProps {
   characterId: string;
@@ -20,6 +21,7 @@ export default function HumanityTracker({
   onStainsChange,
   disabled = false
 }: HumanityTrackerProps) {
+  const { showError, showDegradation } = useToast();
   const [isUpdatingStains, setIsUpdatingStains] = useState(false);
   const [isRemorseModalOpen, setIsRemorseModalOpen] = useState(false);
   const [isRollingRemorse, setIsRollingRemorse] = useState(false);
@@ -51,16 +53,14 @@ export default function HumanityTracker({
       if (res.success) {
         onStainsChange(res.stains ?? stains);
         if (res.degradation && res.degradation > 0) {
-          alert(
-            `💥 Degradação Moral! Suas Máculas ultrapassaram o limite da Humanidade. Você sofreu ${res.degradation} de Dano Agravado na Força de Vontade.`
-          );
+          showDegradation(res.degradation);
         }
       } else {
-        alert(`Erro ao adicionar Mácula: ${res.error}`);
+        showError(res.error || "Erro desconhecido", "Adicionar Mácula");
       }
     } catch (err: any) {
       console.error(err);
-      alert("Erro de conexão ao adicionar Mácula.");
+      showError("Erro de conexão ao adicionar Mácula.", "Erro de Rede");
     } finally {
       setIsUpdatingStains(false);
     }
@@ -76,11 +76,11 @@ export default function HumanityTracker({
       if (res.success) {
         onStainsChange(res.stains ?? stains);
       } else {
-        alert(`Erro ao remover Mácula: ${res.error}`);
+        showError(res.error || "Erro desconhecido", "Remover Mácula");
       }
     } catch (err: any) {
       console.error(err);
-      alert("Erro de conexão ao remover Mácula.");
+      showError("Erro de conexão ao remover Mácula.", "Erro de Rede");
     } finally {
       setIsUpdatingStains(false);
     }
@@ -106,12 +106,12 @@ export default function HumanityTracker({
         onStainsChange(0);
         onHumanityChange(res.newHumanity ?? humanity);
       } else {
-        alert(`Erro ao rolar Remorso: ${res.error}`);
+        showError(res.error || "Erro desconhecido", "Teste de Remorso");
         setIsRemorseModalOpen(false);
       }
     } catch (err: any) {
       console.error(err);
-      alert("Erro ao conectar com o servidor para rolar Remorso.");
+      showError("Erro ao conectar com o servidor para rolar Remorso.", "Erro de Rede");
       setIsRemorseModalOpen(false);
     } finally {
       setIsRollingRemorse(false);
@@ -344,9 +344,7 @@ export default function HumanityTracker({
                   </button>
                 </div>
               </div>
-            )}
-
-          </div>
+            )}          </div>
         </div>
       )}
     </div>

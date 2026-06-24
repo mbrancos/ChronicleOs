@@ -201,3 +201,40 @@ body {
 - Fundo de painéis e cards: `class="bg-bg-card border border-white/10 p-4 rounded"`
 - Cabeçalhos de seção góticos: `class="font-gothic text-2xl text-blood-red"`
 - Dados, Atributos e Números rápidos: `class="font-data text-gold-accent font-bold"`
+
+---
+
+## 7. Sistema de Notificações e Toasts (Global Toast System)
+
+Para feedbacks reativos da aplicação, substitui-se o uso de `alert()` nativo do navegador pelo hook global `useToast()` do `ToastProvider`. As notificações são renderizadas como Toasts temáticos flutuantes de horror no canto superior direito (`fixed top-6 right-6 z-50`).
+
+### Tipos de Toasts e Semântica Visual
+
+| Tipo | Semântica de Uso | Borda | Sombra | Ícone | Tipo de Comportamento |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `success` | Sucesso em transações e alterações | `border-emerald-600/40` | `shadow-[0_0_12px_rgba(16,185,129,0.15)]` | `⚖️` | Temporário (6s) |
+| `error` | Erro ao salvar dados ou falha de conexão | `border-blood-red` | `shadow-[0_0_12px_rgba(200,36,52,0.3)]` | `❌` | Temporário (6s) |
+| `warning`/`info` | Avisos e alertas sobre mecânicas de ficha | `border-gold-accent/40` | `shadow-[0_0_12px_rgba(255,216,77,0.15)]` | `⚜️` | Temporário (6s) |
+| `degradation` | Degradação Moral (Regra de Overflow de Máculas) | `border-hunger-red` | `shadow-[0_0_20px_rgba(255,92,107,0.35)]` | `💀` | Persistente (requer confirmação) |
+
+### Como Usar no Código:
+
+1. Importe o hook no componente cliente:
+   ```tsx
+   import { useToast } from "@/context/ToastContext";
+   ```
+2. Invoque o hook no corpo do componente:
+   ```tsx
+   const { showSuccess, showError, showWarning, showInfo, showDegradation } = useToast();
+   ```
+3. Dispare as notificações conforme o fluxo:
+   ```tsx
+   // Sucesso simples
+   showSuccess("Evolução aplicada com sucesso!");
+
+   // Erro detalhado
+   showError("Não foi possível conectar com o servidor.", "Falha de Conexão");
+
+   // Evento mecânico de Degradação Moral
+   showDegradation(degradationAmount);
+   ```

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import PlayerDock from "./PlayerDock";
 import DamageModal from "./DamageModal";
 import SheetDrawer from "./SheetDrawer";
+import { useToast } from "@/context/ToastContext";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import ActionFeed, { RollItem } from "./ActionFeed";
 import DirectorBoard from "./DirectorBoard";
@@ -34,6 +35,7 @@ interface VttRoomClientProps {
 }
 
 export default function VttRoomClient({ character, campaignSettings }: VttRoomClientProps) {
+  const { showError, showWarning } = useToast();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [localCharacter, setLocalCharacter] = useState(character);
   const [dicePool, setDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
@@ -275,7 +277,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
   const handleWillpowerReroll = async (rollId: string, indices: number[]) => {
     const willpower = localCharacter.sheetData.status?.willpower;
     if (!willpower) {
-      alert("Erro: Informações de Força de Vontade não encontradas na ficha.");
+      showError("Informações de Força de Vontade não encontradas na ficha.", "Erro de Ficha");
       return;
     }
 
@@ -284,7 +286,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
     const max = willpower.max ?? 5;
 
     if (superficial + aggravated >= max) {
-      alert("Força de Vontade insuficiente! Você não pode gastar Força de Vontade se todos os espaços de dano estiverem cheios.");
+      showWarning("Você não pode gastar Força de Vontade se todos os espaços de dano estiverem cheios.", "Força de Vontade Insuficiente");
       return;
     }
 
@@ -294,7 +296,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
       // 1. Executar a ação de rerrolagem no servidor
       const res = await executeWillpowerReroll(rollId, indices, character.id);
       if (!res.success) {
-        alert(`Falha ao rerrolar: ${res.error}`);
+        showError(`Falha ao rerrolar: ${res.error}`, "Falha na Rerrolagem");
         return;
       }
 
@@ -328,7 +330,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
       await fetchRecentRolls();
     } catch (err) {
       console.error("Erro na rerrolagem de Força de Vontade:", err);
-      alert("Erro inesperado ao processar rerrolagem de Força de Vontade.");
+      showError("Erro inesperado ao processar rerrolagem de Força de Vontade.", "Erro de Rerrolagem");
     } finally {
       setIsRerolling(false);
     }
