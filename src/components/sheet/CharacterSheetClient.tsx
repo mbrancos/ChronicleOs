@@ -234,7 +234,7 @@ const DISCIPLINE_OPTIONS = [
 function getPowerLevelRules(concept: string) {
   const normalized = String(concept).toLowerCase().trim();
   if (normalized === "cria" || normalized === "fledgling") {
-    return { name: "Cria", disciplines: 2, advantages: 7, bloodPotency: 1 };
+    return { name: "Cria", disciplines: 2, advantages: 7, bloodPotency: 0 };
   }
   if (normalized === "ancila" || normalized === "ancillae") {
     return { name: "Ancila", disciplines: 3, advantages: 9, bloodPotency: 2 };
@@ -900,17 +900,70 @@ export default function CharacterSheetClient({
 
   // Alterações de Perfil (InlineEdit)
   const handleProfileChange = (field: keyof typeof character.profile, value: string | number) => {
+    let finalValue = value;
+    let autoAdjusted = false;
+    let toastMessage = "";
+
+    const currentConcept = field === "concept" ? String(value) : (character.profile.concept || "Neófito");
+    const normalizedConcept = currentConcept.toLowerCase().trim();
+
+    let genMin = 12;
+    let genMax = 13;
+    let genDefault = 12;
+    let bpDefault = 1;
+    let conceptLabel = "Neófito";
+
+    if (normalizedConcept === "cria" || normalizedConcept === "fledgling") {
+      genMin = 14;
+      genMax = 16;
+      genDefault = 14;
+      bpDefault = 0;
+      conceptLabel = "Cria";
+    } else if (normalizedConcept === "ancila" || normalizedConcept === "ancillae") {
+      genMin = 10;
+      genMax = 11;
+      genDefault = 10;
+      bpDefault = 2;
+      conceptLabel = "Ancila";
+    }
+
+    if (field === "generation") {
+      const numGen = Number(value);
+      if (numGen < genMin) {
+        finalValue = genMin;
+        autoAdjusted = true;
+        toastMessage = `Geração ajustada para ${genMin}ª (limite oficial para ${conceptLabel} no V5).`;
+      } else if (numGen > genMax) {
+        finalValue = genMax;
+        autoAdjusted = true;
+        toastMessage = `Geração ajustada para ${genMax}ª (limite oficial para ${conceptLabel} no V5).`;
+      }
+    }
+
+    if (autoAdjusted && toastMessage) {
+      showWarning(toastMessage, "Regras de Geração");
+    }
+
     setCharacter(prev => {
       const updatedProfile = {
         ...prev.profile,
-        [field]: value
+        [field]: finalValue
       };
+
+      let updatedBloodPotency = prev.status.blood_potency;
+      if (field === "concept") {
+        const currentGen = prev.profile.generation || 12;
+        if (currentGen < genMin || currentGen > genMax) {
+          updatedProfile.generation = genDefault;
+        }
+        updatedBloodPotency = Math.max(bpDefault, prev.status.blood_potency);
+      }
+
       let updatedDisciplines = prev.disciplines;
-      
       if (field === "clan") {
         const newClan = String(value);
         updatedProfile.bane = CLAN_BANE_MAPPING[newClan] || "";
-        
+
         const allowedDiscs = CLAN_DISCIPLINE_MAPPING[newClan] || [];
         if (allowedDiscs.length > 0) {
           updatedDisciplines = allowedDiscs.map((discName, index) => ({
@@ -923,11 +976,15 @@ export default function CharacterSheetClient({
           updatedDisciplines = [];
         }
       }
-      
+
       return {
         ...prev,
         profile: updatedProfile,
-        disciplines: updatedDisciplines
+        disciplines: updatedDisciplines,
+        status: {
+          ...prev.status,
+          blood_potency: updatedBloodPotency
+        }
       };
     });
   };
@@ -1311,21 +1368,7 @@ export default function CharacterSheetClient({
               <span className="text-text-dim">•</span>
               <InlineEdit
                 value={character.profile.concept || "Neófito"}
-                onChange={(val) => {
-                  handleProfileChange("concept", val);
-                  const newRules = getPowerLevelRules(val);
-                  setCharacter(prev => {
-                    const currentBloodPotency = prev.status.blood_potency;
-                    const updatedBloodPotency = Math.max(newRules.bloodPotency, currentBloodPotency);
-                    return {
-                      ...prev,
-                      status: {
-                        ...prev.status,
-                        blood_potency: updatedBloodPotency
-                      }
-                    };
-                  });
-                }}
+                onChange={(val) => handleProfileChange("concept", val)}
                 type="select"
                 options={POWER_LEVEL_OPTIONS}
                 disabled={status === "IN_PLAY"}
