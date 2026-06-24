@@ -326,3 +326,49 @@ export async function updateTokenQuickHealth(
     return { success: false, error: error instanceof Error ? error.message : "Falha ao atualizar vida do figurante" };
   }
 }
+
+/**
+ * Atualiza a imagem de fundo do tabuleiro de cena e sincroniza via Pusher.
+ * O narrador fornece uma URL de imagem; todos os jogadores recebem o evento.
+ */
+export async function updateSceneBackground(campaignId: string, imageUrl: string | null) {
+  try {
+    if (!uuidRegex.test(campaignId)) {
+      return { success: false, error: "ID de campanha inválido" };
+    }
+
+    const payload = { imageUrl: imageUrl ?? null };
+
+    // Notificar o canal público (jogadores) e o privado (narrador também vê)
+    await pusherServer.trigger(`public-campaign-${campaignId}`, "scene-background-changed", payload);
+    await pusherServer.trigger(`private-gm-${campaignId}`, "scene-background-changed", payload);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro em updateSceneBackground:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Falha ao atualizar fundo da cena" };
+  }
+}
+
+/**
+ * Mostra uma imagem de item/cena para todos os jogadores via overlay modal.
+ * imageUrl = null remove a imagem (fecha o overlay nos clientes).
+ */
+export async function showSceneImageAction(campaignId: string, imageUrl: string | null) {
+  try {
+    if (!uuidRegex.test(campaignId)) {
+      return { success: false, error: "ID de campanha inválido" };
+    }
+
+    const eventName = imageUrl ? "scene-image-shown" : "scene-image-hidden";
+    const payload = { imageUrl: imageUrl ?? null };
+
+    // Apenas canal público: a imagem é para os jogadores verem
+    await pusherServer.trigger(`public-campaign-${campaignId}`, eventName, payload);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro em showSceneImageAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Falha ao exibir imagem de cena" };
+  }
+}

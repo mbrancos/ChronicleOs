@@ -9,7 +9,7 @@ import { useToast } from "@/context/ToastContext";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import { TokenData } from "./Token";
 import { getRecentRolls, saveRoll } from "@/app/actions/rolls";
-import { getSceneTokens, createSceneToken, deleteSceneToken, toggleTokenAction, resetRound, updateTokenQuickHealth } from "@/app/actions/sceneActions";
+import { getSceneTokens, createSceneToken, deleteSceneToken, toggleTokenAction, resetRound, updateTokenQuickHealth, updateSceneBackground, showSceneImageAction } from "@/app/actions/sceneActions";
 import { getCampaignDashboard } from "@/app/actions/narratorActions";
 import { updateCharacterSheet } from "@/app/actions/characterActions";
 import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
@@ -17,9 +17,7 @@ import { characters } from "@/db/schema";
 import { CharacterSheetData } from "@/types/character";
 import Pusher from "pusher-js";
 import { 
-  grantSessionXpAction, 
-  vetoXpSpendAction, 
-  getRecentCampaignXpSpends 
+  grantSessionXpAction 
 } from "@/app/actions/xpActions";
 import RollEffects from "./RollEffects";
 
@@ -81,12 +79,20 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   const [sessionTitle, setSessionTitle] = useState("");
   const [baseXp, setBaseXp] = useState(2);
   const [individualXpData, setIndividualXpData] = useState<Record<string, { presence: boolean; desire: boolean; ambition: boolean; extra: number }>>({});
-  const [recentXpSpends, setRecentXpSpends] = useState<any[]>([]);
 
   // Estados para Rastreamento Dinâmico de Dano (Fase 28)
   const [isDamageModalOpen, setIsDamageModalOpen] = useState(false);
   const [damageTargetId, setDamageTargetId] = useState<string | null>(null);
   const [damageTargetName, setDamageTargetName] = useState("");
+
+  // Estados para Fundo de Cena (Issue 3)
+  const [sceneBackground, setSceneBackground] = useState<string | null>(null);
+  const [sceneBackgroundInput, setSceneBackgroundInput] = useState("");
+
+  // Estados para Imagem de Cena (Issue 4)
+  const [narratorImageInput, setNarratorImageInput] = useState("");
+  const [isShowingSceneImage, setIsShowingSceneImage] = useState(false);
+  const [currentSceneImage, setCurrentSceneImage] = useState<string | null>(null);
 
   const handleOpenDamageModal = useCallback((characterId: string, characterName: string) => {
     setDamageTargetId(characterId);
@@ -146,17 +152,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     }
   }, [campaign.id]);
 
-  // 4. Buscar Gastos Recentes de XP
-  const fetchRecentXpSpends = useCallback(async () => {
-    try {
-      const res = await getRecentCampaignXpSpends(campaign.id);
-      if (res.success && res.data) {
-        setRecentXpSpends(res.data);
-      }
-    } catch (err) {
-      console.error("Erro ao buscar gastos recentes de XP:", err);
-    }
-  }, [campaign.id]);
+
 
   // Configuração Geral das Escutas do Pusher (WebSocket) e Sincronizações Resilientes
   useEffect(() => {
@@ -165,7 +161,6 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       fetchRecentRolls();
       fetchSceneTokens();
       fetchCampaignCharacters();
-      fetchRecentXpSpends();
     });
 
     // 2. Conectar Cliente Pusher
@@ -606,6 +601,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           onUpdateCharacterStatus={handleUpdateCharacterStatus}
           onResetRound={handleResetRound}
           onOpenDamageModal={handleOpenDamageModal}
+          sceneBackground={sceneBackground}
         />
 
         {/* 3. DOCK DO NARRADOR (relativo à mesa central, reativo ao tamanho) */}
@@ -695,9 +691,63 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                 </button>
               </div>
             </div>
+
+            {/* Separador vertical */}
+            <div className="h-10 w-px bg-white/10 shrink-0" />
+
+            {/* Campo de Fundo de Cena */}
+            <div className="flex flex-col space-y-1 min-w-[150px]">
+              <span className="text-[9px] uppercase tracking-wider text-text-muted font-data font-bold">🌄 Fundo da Cena</span>
+              <div className="flex items-center space-x-1">
+                <input
+                  type="text"
+                  value={sceneBackgroundInput}
+                  onChange={(e) => setSceneBackgroundInput(e.target.value)}
+                  placeholder="URL da imagem..."
+                  className="flex-1 px-2 py-1 text-[10px] border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary min-w-0"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && sceneBackgroundInput.trim()) {
+                      const url = sceneBackgroundInput.trim();
+                      setSceneBackground(url);
+                      updateSceneBackground(campaign.id, url);
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    const url = sceneBackgroundInput.trim();
+                    if (url) {
+                      setSceneBackground(url);
+                      updateSceneBackground(campaign.id, url);
+                    }
+                  }}
+                  title="Aplicar fundo"
+                  className="w-7 h-7 bg-gold-accent/20 hover:bg-gold-accent/40 border border-gold-accent/30 rounded-xs flex items-center justify-center text-gold-accent text-xs cursor-pointer transition-all shrink-0"
+                >
+                  ✓
+                </button>
+                {sceneBackground && (
+                  <button
+                    onClick={() => {
+                      setSceneBackground(null);
+                      setSceneBackgroundInput("");
+                      updateSceneBackground(campaign.id, null);
+                    }}
+                    title="Remover fundo"
+                    className="w-7 h-7 bg-hunger-red/15 hover:bg-hunger-red/30 border border-hunger-red/30 rounded-xs flex items-center justify-center text-hunger-red text-xs cursor-pointer transition-all shrink-0"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {sceneBackground && (
+                <span className="text-[8px] text-gold-accent/60 truncate max-w-[150px]">Ativo ●</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
 
       {/* 4. BARRA LATERAL DIREITA DE GERENCIAMENTO (Fichas e Figurantes) */}
       <div 
@@ -802,47 +852,60 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           </button>
         </div>
 
+
+        {/* Seção: Imagem de Cena — Mostrar para Jogadores */}
         <div className="flex flex-col space-y-2 pt-2 border-t border-white/10">
           <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold">
-            Auditoria Recente de XP
+            🖼️ Imagem de Cena
           </span>
-          <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-none pr-1">
-            {recentXpSpends.length === 0 ? (
-              <div className="text-[9px] text-text-dim/60 italic">Nenhuma compra recente.</div>
-            ) : (
-              recentXpSpends.map((spend) => (
-                <div key={spend.id} className="bg-black/35 border border-white/5 p-2 rounded-xs flex flex-col space-y-1 text-[10px]">
-                  <div className="flex justify-between items-center font-bold text-text-primary">
-                    <span className="truncate max-w-[120px]">{spend.characterName}</span>
-                    <span className="text-hunger-red font-mono font-bold">{spend.xpChange} XP</span>
-                  </div>
-                  <div className="text-[9px] text-text-muted">
-                    {spend.description}
-                  </div>
-                  {spend.metadata && (
-                    <div className="text-[8px] text-amber-500/80 font-semibold uppercase tracking-wider">
-                      Item: {spend.metadata.trait} ({spend.metadata.previousLevel} → {spend.metadata.newLevel})
-                    </div>
-                  )}
-                  <button
-                    onClick={async () => {
-                      if (confirm(`Tem certeza que deseja VETAR a compra de "${spend.metadata?.trait}" do personagem ${spend.characterName}? Isso irá reverter a pontuação na ficha e reembolsar o XP ao jogador.`)) {
-                        const res = await vetoXpSpendAction(spend.id);
-                        if (res.success) {
-                          showSuccess("Compra vetada e XP reembolsado com sucesso!", "Veto de XP");
-                          fetchRecentXpSpends();
-                          fetchCampaignCharacters(); // Recarregar fichas no drawer/lista
-                        } else {
-                          showError(`Erro ao vetar: ${res.error}`, "Falha no Veto");
-                        }
-                      }
-                    }}
-                    className="w-full mt-1 py-0.5 border border-hunger-red/35 hover:bg-hunger-red/10 text-hunger-red font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
-                  >
-                    Vetar Compra
-                  </button>
-                </div>
-              ))
+          <div className="flex flex-col space-y-1.5">
+            <input
+              type="text"
+              value={narratorImageInput}
+              onChange={(e) => setNarratorImageInput(e.target.value)}
+              placeholder="URL da imagem de item/cena"
+              className="px-2 py-1 text-[10px] border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary"
+            />
+            <button
+              onClick={async () => {
+                const url = narratorImageInput.trim();
+                if (!url) return;
+                const res = await showSceneImageAction(campaign.id, url);
+                if (res.success) {
+                  setCurrentSceneImage(url);
+                  setIsShowingSceneImage(true);
+                  showSuccess("Imagem exibida para os jogadores!", "Imagem de Cena");
+                } else {
+                  showError("Erro ao exibir imagem.", "Imagem de Cena");
+                }
+              }}
+              disabled={!narratorImageInput.trim()}
+              className="w-full py-1 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Mostrar para Jogadores
+            </button>
+            {isShowingSceneImage && (
+              <button
+                onClick={async () => {
+                  const res = await showSceneImageAction(campaign.id, null);
+                  if (res.success) {
+                    setCurrentSceneImage(null);
+                    setIsShowingSceneImage(false);
+                    setNarratorImageInput("");
+                    showSuccess("Imagem removida dos jogadores.", "Imagem de Cena");
+                  }
+                }}
+                className="w-full py-1 bg-hunger-red/15 hover:bg-hunger-red/25 border border-hunger-red/30 text-hunger-red font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer"
+              >
+                Remover Imagem ✕
+              </button>
+            )}
+            {currentSceneImage && (
+              <div className="relative w-full h-16 overflow-hidden rounded-xs border border-white/10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={currentSceneImage} alt="Preview" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/20" />
+              </div>
             )}
           </div>
         </div>
@@ -1098,7 +1161,6 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                     if (res.success) {
                       showSuccess("XP da sessão distribuído com sucesso para todos os jogadores!", "Concessão de XP");
                       setIsXpModalOpen(false);
-                      fetchRecentXpSpends();
                     } else {
                       showError(`Erro ao distribuir XP: ${res.error}`, "Erro de XP");
                     }

@@ -8,6 +8,7 @@ import { CharacterSheetData } from "@/types/character";
 interface DirectorBoardProps {
   tokens: TokenData[];
   isStoryteller: boolean;
+  sceneBackground?: string | null;
   getCharacterSheetData?: (characterId: string) => CharacterSheetData | null;
   onTokensChange?: (updatedTokens: TokenData[]) => void;
   onDoubleClickToken?: (characterId: string) => void;
@@ -29,6 +30,7 @@ interface DirectorBoardProps {
 export default function DirectorBoard({
   tokens,
   isStoryteller,
+  sceneBackground,
   getCharacterSheetData,
   onTokensChange,
   onDoubleClickToken,
@@ -189,8 +191,12 @@ export default function DirectorBoard({
             transform: `scale(${scale})`,
             transformOrigin: "center center",
             willChange: "transform",
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.015) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
+            // Imagem de fundo da cena: exibida como cover quando definida pelo narrador
+            backgroundImage: sceneBackground
+              ? `radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px), url(${JSON.stringify(sceneBackground)})`
+              : "radial-gradient(circle, rgba(255,255,255,0.015) 1px, transparent 1px)",
+            backgroundSize: sceneBackground ? "24px 24px, cover" : "24px 24px",
+            backgroundPosition: sceneBackground ? "0 0, center center" : "0 0",
           }}
         >
         {/* RETÂNGULO DO PALCO (800x400px no centro, left: 100px, top: 100px) */}

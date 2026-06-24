@@ -43,6 +43,8 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
   const [tokensList, setTokensList] = useState<TokenData[]>([]);
   const [isRerolling, setIsRerolling] = useState(false);
   const [isDamageModalOpen, setIsDamageModalOpen] = useState(false);
+  const [sceneBackground, setSceneBackground] = useState<string | null>(null);
+  const [sceneImage, setSceneImage] = useState<string | null>(null);
   const isFetching = useRef(false);
   const isFetchingTokens = useRef(false);
 
@@ -182,6 +184,17 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
     publicChannel.bind("token-deleted", handleTokenDeleted);
     publicChannel.bind("round-reset", handleRoundReset);
     publicChannel.bind("damage-applied", handleDamageAppliedEvent);
+
+    // Escutar eventos de Fundo e Imagem de Cena (Issues 3 e 4)
+    publicChannel.bind("scene-background-changed", (data: { imageUrl: string | null }) => {
+      setSceneBackground(data.imageUrl);
+    });
+    publicChannel.bind("scene-image-shown", (data: { imageUrl: string | null }) => {
+      setSceneImage(data.imageUrl);
+    });
+    publicChannel.bind("scene-image-hidden", () => {
+      setSceneImage(null);
+    });
 
     // 3. Lógica de Resiliência: fetch pontual em reconexão ou foco ativo da aba do navegador
     const handleSync = () => {
@@ -347,8 +360,8 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
         />
       )}
       
-      {/* AREA DE JOGO SUPERIOR (Sidebar + Mesa) */}
-      <div className="flex flex-row flex-1 h-[calc(100vh-5rem)] w-full overflow-hidden">
+      {/* AREA DE JOGO SUPERIOR (Sidebar + Mesa) — 80px = h-20 do PlayerDock fixo */}
+      <div className="flex flex-row h-[calc(100vh-80px)] w-full overflow-hidden">
         {/* FEED DE ROLAGENS MULTIPLAYER (Sidebar Esquerdo) */}
         <ActionFeed 
           rolls={rollsList} 
@@ -363,6 +376,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
           <DirectorBoard
             tokens={tokensList}
             isStoryteller={false}
+            sceneBackground={sceneBackground}
             onDoubleClickToken={(charId) => {
               if (charId === character.id) {
                 setIsSheetOpen(true);
@@ -458,6 +472,46 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
             });
           }}
         />
+      )}
+
+      {/* OVERLAY DE IMAGEM DE CENA (enviada pelo Narrador via Pusher) */}
+      {sceneImage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md"
+          onClick={() => setSceneImage(null)}
+        >
+          <div
+            className="relative max-w-3xl w-full mx-4 flex flex-col items-center space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between w-full px-1">
+              <span className="text-[10px] font-data uppercase tracking-widest text-gold-accent/80 font-bold">
+                🖼️ Narrador revelou uma imagem
+              </span>
+              <button
+                onClick={() => setSceneImage(null)}
+                className="text-text-muted hover:text-white text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
+              >
+                Fechar [X]
+              </button>
+            </div>
+            {/* Imagem */}
+            <div className="w-full rounded-sm border border-gold-accent/20 overflow-hidden shadow-[0_0_40px_rgba(180,130,60,0.2)] relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={sceneImage}
+                alt="Imagem revelada pelo Narrador"
+                className="w-full max-h-[70vh] object-contain bg-bg-main"
+              />
+              {/* Borda gótica sutil */}
+              <div className="absolute inset-0 border border-gold-accent/10 rounded-sm pointer-events-none" />
+            </div>
+            <p className="text-[9px] text-text-dim/60 font-data uppercase tracking-widest">
+              Clique fora da imagem para fechar
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
