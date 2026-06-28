@@ -64,7 +64,8 @@ export default async function MesaPage({ params }: PageProps) {
     .where(
       and(
         eq(characters.campaignId, campaign_id),
-        eq(characters.userId, session.user.id)
+        eq(characters.userId, session.user.id),
+        eq(characters.type, "jogador")
       )
     )
     .limit(1);

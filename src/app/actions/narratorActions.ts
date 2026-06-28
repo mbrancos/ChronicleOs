@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { campaigns, characters } from "@/db/schema";
 import { auth } from "@/lib/auth/server";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull, or, ne } from "drizzle-orm";
 
 export async function getCampaignDashboard(campaignId: string) {
   try {
@@ -45,13 +45,28 @@ export async function getCampaignDashboard(campaignId: string) {
     const players = campaignCharacters.filter(c => c.type === "jogador");
     const npcs = campaignCharacters.filter(c => c.type === "npc");
 
+    // 4. Buscar personagens do Narrador (pertencem a ele, no cofre ou em outras crônicas)
+    const vaultCharacters = await db
+      .select()
+      .from(characters)
+      .where(
+        and(
+          eq(characters.userId, session.user.id),
+          or(
+            isNull(characters.campaignId),
+            ne(characters.campaignId, campaignId)
+          )
+        )
+      );
+
     return JSON.parse(
       JSON.stringify({
         success: true,
         data: {
           campaign,
           players,
-          npcs
+          npcs,
+          vaultCharacters
         }
       })
     );

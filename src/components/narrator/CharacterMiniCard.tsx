@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { CharacterSheetData } from "@/types/character";
 import { useToast } from "@/context/ToastContext";
@@ -20,6 +20,8 @@ interface CharacterMiniCardProps {
 
 export default function CharacterMiniCard({ character, isOnline }: CharacterMiniCardProps) {
   const { showSuccess, showError } = useToast();
+  const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const sheet = character.sheetData as CharacterSheetData;
 
   const clan = sheet?.profile?.clan || "Sem Clã";
@@ -155,20 +157,7 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
         <div className="flex items-center space-x-3">
           {character.type === "jogador" && character.status === "IN_PLAY" && (
             <button
-              onClick={async () => {
-                if (confirm(`Deseja destravar a ficha de ${character.name.toUpperCase()} para edições e correções?`)) {
-                  const { anistiaCharacterAction } = await import("@/app/actions/characterActions");
-                  const res = await anistiaCharacterAction(character.id);
-                  if (res.success) {
-                    showSuccess("Edição destravada! O personagem agora está com status READY.", "Anistia de Ficha");
-                    setTimeout(() => {
-                      window.location.reload();
-                    }, 1500);
-                  } else {
-                    showError(res.error || "Falha ao destravar edição.", "Erro");
-                  }
-                }
-              }}
+              onClick={() => setIsUnlockConfirmOpen(true)}
               className="text-gold-accent hover:text-white transition-colors uppercase tracking-widest font-bold text-[10px] cursor-pointer"
             >
               Destravar 🔓
@@ -182,6 +171,60 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
           </Link>
         </div>
       </div>
+
+      {isUnlockConfirmOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in normal-case text-left font-sans">
+          <div
+            className="w-full max-w-md bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(255,216,77,0.1)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setIsUnlockConfirmOpen(false)}
+              className="absolute top-4 right-4 text-text-muted hover:text-white text-lg font-data focus:outline-none cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-xl font-gothic tracking-widest text-gold-accent uppercase pb-2 border-b border-white/5 mb-4">
+              Destravar Ficha
+            </h3>
+
+            <p className="text-xs text-text-primary font-reading leading-relaxed mb-6">
+              Deseja destravar a ficha de <strong className="text-gold-accent">{character.name.toUpperCase()}</strong> para edições e correções? O personagem sairá do estado de jogo temporariamente.
+            </p>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsUnlockConfirmOpen(false)}
+                className="px-4 py-2 border border-white/10 hover:border-white text-text-muted hover:text-white text-xs uppercase tracking-widest font-data transition-colors rounded-sm cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  setIsUnlocking(true);
+                  const { anistiaCharacterAction } = await import("@/app/actions/characterActions");
+                  const res = await anistiaCharacterAction(character.id);
+                  if (res.success) {
+                    showSuccess("Edição destravada! O personagem agora está com status READY.", "Anistia de Ficha");
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 1500);
+                  } else {
+                    showError(res.error || "Falha ao destravar edição.", "Erro");
+                    setIsUnlocking(false);
+                  }
+                }}
+                disabled={isUnlocking}
+                className="px-5 py-2 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(255,216,77,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUnlocking ? "Destravando..." : "Destravar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

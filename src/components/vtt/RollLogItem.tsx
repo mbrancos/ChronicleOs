@@ -367,31 +367,44 @@ export default function RollLogItem({
             </div>
           )
         ) : isStandard ? (
-          // Dados Normais Ordenados
-          <>
-            {sortedNormalDice.map(({ value, originalIdx }) => {
-              const isSelected = selectedDiceIndices.includes(originalIdx);
-              return (
-                <div
-                  key={`normal-${originalIdx}`}
-                  className={getDieClass(value, false, isSelected, isClickable)}
-                  onClick={() => isClickable && onSelectDie(roll.id, originalIdx)}
-                >
-                  {value}
+          <div className="flex flex-col space-y-1.5 w-full">
+            {/* Dados de Fome Ordenados (se houver Fome) */}
+            {sortedHungerDice.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-bold font-data text-hunger-red/90 shrink-0 w-5 tracking-wider">DF</span>
+                <div className="flex flex-wrap gap-1">
+                  {sortedHungerDice.map((value, idx) => (
+                    <div
+                      key={`hunger-${idx}`}
+                      className={getDieClass(value, true, false, false)}
+                      title="Dado de Fome (Inalterável)"
+                    >
+                      {value}
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
-            {/* Dados de Fome Ordenados */}
-            {sortedHungerDice.map((value, idx) => (
-              <div
-                key={`hunger-${idx}`}
-                className={getDieClass(value, true, false, false)}
-                title="Dado de Fome (Inalterável)"
-              >
-                {value}
               </div>
-            ))}
-          </>
+            )}
+            
+            {/* Dados Normais Ordenados */}
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold font-data text-text-dim/80 shrink-0 w-5 tracking-wider">DN</span>
+              <div className="flex flex-wrap gap-1">
+                {sortedNormalDice.map(({ value, originalIdx }) => {
+                  const isSelected = selectedDiceIndices.includes(originalIdx);
+                  return (
+                    <div
+                      key={`normal-${originalIdx}`}
+                      className={getDieClass(value, false, isSelected, isClickable)}
+                      onClick={() => isClickable && onSelectDie(roll.id, originalIdx)}
+                    >
+                      {value}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         ) : (
           // Dado de Rouse Check (Despertar)
           <div
@@ -421,7 +434,7 @@ export default function RollLogItem({
                 </span>
                 {standardResult.difficulty > 0 && (
                   <span className="text-text-dim/60">
-                    / Alvo {standardResult.difficulty}
+                    / Dificuldade {standardResult.difficulty}
                   </span>
                 )}
               </div>

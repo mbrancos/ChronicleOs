@@ -6,7 +6,7 @@ import { calculateSpentXp } from "@/lib/xpUtils";
 interface CampaignSettings {
   id: string;
   name: string;
-  powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+  powerLevel: string;
   extraXp: number;
   allowedClans: string[] | null;
 }
@@ -52,12 +52,22 @@ export default function VaultImportModal({
 
   if (!isOpen) return null;
 
-  const maxAllowedXp = (POWER_LEVEL_XP_MAP[campaign.powerLevel] ?? 15) + (campaign.extraXp || 0);
+  const conceptToPowerLevel = (concept: string): "FLEDGLING" | "NEONATE" | "ANCILLAE" => {
+    const normalized = String(concept).toLowerCase().trim();
+    if (normalized === "cria" || normalized === "fledgling") return "FLEDGLING";
+    if (normalized === "ancila" || normalized === "ancillae") return "ANCILLAE";
+    return "NEONATE";
+  };
 
   // Mapear personagens e calcular regras da alfândega
   const validatedCharacters = vaultCharacters.map((char) => {
     const clan = char.sheetData?.profile?.clan || "Sem Clã";
+    const concept = char.sheetData?.profile?.concept || "Neófito";
+    const charPowerLevel = conceptToPowerLevel(concept);
+    const allowedPowerLevels = (campaign.powerLevel || "NEONATE").split(",");
+    
     const spentXp = calculateSpentXp(clan, char.buildState);
+    const maxAllowedXpForChar = (POWER_LEVEL_XP_MAP[charPowerLevel] ?? 15) + (campaign.extraXp || 0);
 
     let isValid = true;
     let reason = "";
@@ -76,16 +86,22 @@ export default function VaultImportModal({
       isValid = false;
       reason = `Incompatível: Clã '${clan}' não permitido nesta crônica.`;
     }
-    // 3. Validação de Limite de XP
-    else if (spentXp > maxAllowedXp) {
+    // 3. Validação de Nível de Poder Permitido
+    else if (!allowedPowerLevels.includes(charPowerLevel)) {
       isValid = false;
-      reason = `Incompatível: Gastou ${spentXp} XP (o limite da crônica é ${maxAllowedXp} XP). Reduza os pontos em excesso no Cofre.`;
+      reason = `Incompatível: Nível de poder '${charPowerLevel}' (baseado no conceito '${concept}') não é permitido nesta crônica.`;
+    }
+    // 4. Validação de Limite de XP
+    else if (spentXp > maxAllowedXpForChar) {
+      isValid = false;
+      reason = `Incompatível: Gastou ${spentXp} XP (limite da crônica para a categoria ${charPowerLevel} é ${maxAllowedXpForChar} XP). Reduza os pontos em excesso no Cofre.`;
     }
 
     return {
       ...char,
       clan,
       spentXp,
+      charPowerLevel,
       isValid,
       reason,
     };
@@ -126,11 +142,11 @@ export default function VaultImportModal({
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-text-primary text-[11px]">
             <div>
-              <span className="text-text-dim">Nível de Poder:</span>{" "}
+              <span className="text-text-dim">Níveis de Poder Permitidos:</span>{" "}
               <span className="font-semibold text-gold-accent">
-                {POWER_LEVEL_LABEL_MAP[campaign.powerLevel]} {campaign.extraXp > 0 ? `+ ${campaign.extraXp} XP extra` : ""}
-              </span>{" "}
-              <span className="text-text-dim">({maxAllowedXp} XP Max)</span>
+                {campaign.powerLevel.split(",").map(lvl => lvl === "FLEDGLING" ? "Cria" : lvl === "NEONATE" ? "Neófito" : "Ancila").join(" / ")}
+                {campaign.extraXp > 0 ? ` (+ ${campaign.extraXp} XP extra)` : ""}
+              </span>
             </div>
             <div>
               <span className="text-text-dim">Clãs Permitidos:</span>{" "}
@@ -180,6 +196,8 @@ export default function VaultImportModal({
                     
                     <div className="flex items-center space-x-3 text-[10px] font-mono text-text-dim">
                       <span>Clã: <strong className="text-text-primary">{char.clan}</strong></span>
+                      <span>•</span>
+                      <span>Categoria: <strong className="text-text-primary">{char.charPowerLevel}</strong></span>
                       <span>•</span>
                       <span>XP Gasto: <strong className="text-text-primary">{char.spentXp} XP</strong></span>
                       <span>•</span>

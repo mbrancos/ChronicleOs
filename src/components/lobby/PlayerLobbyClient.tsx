@@ -10,7 +10,7 @@ interface LobbyCampaign {
   name: string;
   description: string | null;
   status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
-  powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+  powerLevel: string;
   narratorName: string;
 }
 
@@ -82,6 +82,27 @@ export default function PlayerLobbyClient({
           </div>
 
           <div className="flex items-center gap-3">
+            {campaign.status !== "IN_PROGRESS" && (
+              <button
+                onClick={async () => {
+                  if (confirm("Deseja realmente desvincular este personagem e retirá-lo da crônica? Você voltará ao Hub e poderá selecionar outra ficha.")) {
+                    setLoading(true);
+                    const { leaveCampaignAction } = await import("@/app/actions/characterActions");
+                    const res = await leaveCampaignAction(character.id);
+                    if (res.success) {
+                      router.push("/hub");
+                    } else {
+                      alert(res.error || "Erro ao desvincular.");
+                      setLoading(false);
+                    }
+                  }
+                }}
+                disabled={loading}
+                className="px-4 py-1.5 bg-hunger-red/10 border border-hunger-red/35 hover:border-hunger-red hover:bg-hunger-red hover:text-white text-[10px] font-bold uppercase tracking-widest font-data text-hunger-red transition-all duration-200 rounded-sm cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                {loading ? "Retirando..." : "Retirar da Crônica"}
+              </button>
+            )}
             <Link
               href="/hub"
               className="px-4 py-1.5 border border-white/10 hover:border-blood-red text-xs uppercase tracking-widest font-data text-text-dim hover:text-hunger-red transition-all duration-200 rounded-sm bg-bg-card/20 cursor-pointer"

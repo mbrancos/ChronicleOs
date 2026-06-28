@@ -12,7 +12,7 @@ interface Campaign {
   description: string | null;
   narratorId: string;
   status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
-  powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+  powerLevel: string;
   extraXp: number;
   allowedClans: string[] | null;
   tenets?: string[];
@@ -35,16 +35,18 @@ interface NarratorDashboardClientProps {
   campaign: Campaign;
   players: Character[];
   npcs: Character[];
+  vaultCharacters?: Character[];
 }
 
 export default function NarratorDashboardClient({
   campaign,
   players,
-  npcs
+  npcs,
+  vaultCharacters = []
 }: NarratorDashboardClientProps) {
   const onlineUsers = usePresence(campaign.id);
   const [activeTab, setActiveTab] = useState<"players" | "npcs">("players");
-  
+
   // Estados para cópia do convite
   const [copied, setCopied] = useState(false);
 
@@ -57,7 +59,15 @@ export default function NarratorDashboardClient({
   // Estados para modal de configurações da campanha
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [campaignStatus, setCampaignStatus] = useState(campaign.status || "RECRUITING");
-  const [campaignPowerLevel, setCampaignPowerLevel] = useState(campaign.powerLevel || "NEONATE");
+  const [campaignPowerLevels, setCampaignPowerLevels] = useState<string[]>(() => {
+    if (!campaign.powerLevel) return ["FLEDGLING", "NEONATE", "ANCILLAE"];
+    return campaign.powerLevel.split(",");
+  });
+
+  // Estados para modal de Puxar do Cofre
+  const [isPullModalOpen, setIsPullModalOpen] = useState(false);
+  const [selectedVaultCharIds, setSelectedVaultCharIds] = useState<string[]>([]);
+  const [pullLoading, setPullLoading] = useState(false);
   const [campaignExtraXp, setCampaignExtraXp] = useState(campaign.extraXp || 0);
   const [campaignAllowedClans, setCampaignAllowedClans] = useState<string[]>(
     campaign.allowedClans || [
@@ -123,7 +133,7 @@ export default function NarratorDashboardClient({
 
     const response = await updateCampaignSettingsAction(campaign.id, {
       status: campaignStatus,
-      powerLevel: campaignPowerLevel,
+      powerLevel: campaignPowerLevels.join(","),
       extraXp: Number(campaignExtraXp) || 0,
       allowedClans: campaignAllowedClans,
       tenets: campaignTenets,
@@ -181,7 +191,7 @@ export default function NarratorDashboardClient({
   return (
     <main className="min-h-screen bg-bg-main text-text-primary p-4 md:p-8 font-reading flex flex-col items-center">
       <div className="w-full max-w-6xl space-y-8">
-        
+
         {/* CABEÇALHO DO ESCUDO */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-white/10 gap-4">
           <div>
@@ -189,7 +199,7 @@ export default function NarratorDashboardClient({
               <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold border border-gold-accent/30 px-2 py-0.5 rounded-sm">
                 Escudo do Narrador
               </span>
-              
+
               {/* Relógio da Crônica */}
               <div className="flex items-center gap-1.5 border border-blood-red/30 bg-blood-red/5 px-2 py-0.5 rounded-sm">
                 <span className="text-[9px] uppercase tracking-wider text-blood-red font-data font-bold">
@@ -267,21 +277,19 @@ export default function NarratorDashboardClient({
         <div className="flex border-b border-white/5 gap-2">
           <button
             onClick={() => setActiveTab("players")}
-            className={`px-5 py-3 text-xs uppercase tracking-widest font-data font-bold transition-all duration-200 border-b-2 cursor-pointer ${
-              activeTab === "players"
+            className={`px-5 py-3 text-xs uppercase tracking-widest font-data font-bold transition-all duration-200 border-b-2 cursor-pointer ${activeTab === "players"
                 ? "border-blood-red text-blood-red bg-white/5"
                 : "border-transparent text-text-muted hover:text-text-primary hover:bg-white/2"
-            }`}
+              }`}
           >
             Coterie (Jogadores) • {players.length}
           </button>
           <button
             onClick={() => setActiveTab("npcs")}
-            className={`px-5 py-3 text-xs uppercase tracking-widest font-data font-bold transition-all duration-200 border-b-2 cursor-pointer ${
-              activeTab === "npcs"
+            className={`px-5 py-3 text-xs uppercase tracking-widest font-data font-bold transition-all duration-200 border-b-2 cursor-pointer ${activeTab === "npcs"
                 ? "border-gold-accent text-gold-accent bg-white/5"
                 : "border-transparent text-text-muted hover:text-text-primary hover:bg-white/2"
-            }`}
+              }`}
           >
             Antagonistas (NPCs) • {npcs.length}
           </button>
@@ -304,9 +312,9 @@ export default function NarratorDashboardClient({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {players.map(char => (
-                    <CharacterMiniCard 
-                      key={char.id} 
-                      character={char} 
+                    <CharacterMiniCard
+                      key={char.id}
+                      character={char}
                       isOnline={char.userId ? onlineUsers.includes(char.userId) : false}
                     />
                   ))}
@@ -315,25 +323,36 @@ export default function NarratorDashboardClient({
             </section>
           ) : (
             <section className="space-y-6">
-              
-              {/* Cabeçalho da Seção NPC */}
+
               <div className="flex justify-between items-center pb-2 border-b border-white/5">
                 <h2 className="text-sm font-data uppercase tracking-widest text-gold-accent font-bold">
                   Aliados, Antagonistas & Criaturas
                 </h2>
-                <button
-                  onClick={() => {
-                    setErrorMsg(null);
-                    setIsNpcModalOpen(true);
-                  }}
-                  className="px-3.5 py-1.5 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(255,216,77,0.25)]"
-                >
-                  + Novo Antagonista
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      setSelectedVaultCharIds([]);
+                      setErrorMsg(null);
+                      setIsPullModalOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 border border-gold-accent/40 hover:border-gold-accent text-gold-accent hover:text-white text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors"
+                  >
+                    Puxar do Cofre 📥
+                  </button>
+                  <button
+                    onClick={() => {
+                      setErrorMsg(null);
+                      setIsNpcModalOpen(true);
+                    }}
+                    className="px-3.5 py-1.5 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(255,216,77,0.25)]"
+                  >
+                    + Novo Personagem
+                  </button>
+                </div>
               </div>
 
               {npcs.length === 0 ? (
-                <div 
+                <div
                   onClick={() => {
                     setErrorMsg(null);
                     setIsNpcModalOpen(true);
@@ -366,12 +385,12 @@ export default function NarratorDashboardClient({
       {/* ========================================== */}
       {isNpcModalOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div 
+          <div
             className="w-full max-w-md bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(255,216,77,0.1)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Botão de Fechar */}
-            <button 
+            <button
               onClick={() => setIsNpcModalOpen(false)}
               className="absolute top-4 right-4 text-text-muted hover:text-white text-lg font-data focus:outline-none cursor-pointer"
             >
@@ -428,11 +447,11 @@ export default function NarratorDashboardClient({
       {/* ========================================== */}
       {isSettingsModalOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div 
+          <div
             className="w-full max-w-lg bg-bg-card border border-blood-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(200,36,52,0.15)] max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
+            <button
               onClick={() => setIsSettingsModalOpen(false)}
               className="absolute top-4 right-4 text-text-muted hover:text-white text-lg font-data focus:outline-none cursor-pointer"
             >
@@ -450,7 +469,7 @@ export default function NarratorDashboardClient({
             )}
 
             <form onSubmit={handleSaveSettings} className="space-y-4 font-data text-xs">
-              
+
               {/* Status da Campanha */}
               <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-widest text-text-muted block">Status da Crônica</label>
@@ -468,17 +487,32 @@ export default function NarratorDashboardClient({
               </div>
 
               {/* Nível de Poder V5 */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-widest text-text-muted block">Nível de Poder (Criação)</label>
-                <select
-                  value={campaignPowerLevel}
-                  onChange={(e) => setCampaignPowerLevel(e.target.value as any)}
-                  className="w-full bg-bg-input border border-white/10 rounded-sm p-2 text-sm font-reading text-text-primary focus:border-blood-red outline-none transition-colors cursor-pointer"
-                >
-                  <option value="FLEDGLING" className="bg-bg-card text-text-primary">FLEDGLING (0 XP INICIAL)</option>
-                  <option value="NEONATE" className="bg-bg-card text-text-primary">NEONATE (15 XP INICIAL)</option>
-                  <option value="ANCILLAE" className="bg-bg-card text-text-primary">ANCILLAE (35 XP INICIAL)</option>
-                </select>
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-widest text-text-muted block">Níveis de Poder Permitidos (Criação)</label>
+                <div className="flex flex-wrap gap-4 bg-bg-main/50 p-3 border border-white/5 rounded-sm">
+                  {[
+                    { val: "FLEDGLING", label: "Cria (0 XP)" },
+                    { val: "NEONATE", label: "Neófito (15 XP)" },
+                    { val: "ANCILLAE", label: "Ancila (35 XP)" },
+                  ].map(lvl => (
+                    <label key={lvl.val} className="flex items-center space-x-2 cursor-pointer py-1 font-sans text-xs">
+                      <input
+                        type="checkbox"
+                        checked={campaignPowerLevels.includes(lvl.val)}
+                        onChange={() => {
+                          setCampaignPowerLevels(prev => {
+                            const next = prev.includes(lvl.val)
+                              ? prev.filter(v => v !== lvl.val)
+                              : [...prev, lvl.val];
+                            return next.length > 0 ? next : prev;
+                          });
+                        }}
+                        className="accent-blood-red rounded-xs border-white/10"
+                      />
+                      <span className="text-text-primary font-medium">{lvl.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {/* XP Adicional */}
@@ -583,7 +617,7 @@ export default function NarratorDashboardClient({
               {/* Efeitos de Mesa */}
               <div className="space-y-2 pt-2 border-t border-white/5">
                 <span className="text-[10px] uppercase tracking-widest text-text-muted block">Efeitos de Mesa</span>
-                
+
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase tracking-wider text-text-muted block">Modo de Efeito Audiovisual</label>
                   <select
@@ -642,7 +676,7 @@ export default function NarratorDashboardClient({
                           )}
                         </div>
                       </div>
-                      
+
                       {!isImageValid && comedyImageUrl.trim() !== "" && (
                         <div className="flex-1 text-hunger-red text-[10px] font-sans leading-relaxed self-center bg-hunger-red/10 border border-hunger-red/35 p-2.5 rounded-xs">
                           ❌ <strong>Erro de Renderização:</strong> A URL fornecida é inválida ou possui bloqueio de proteção/CORS. O botão de salvar permanecerá desativado até que uma imagem válida seja renderizada no preview.
@@ -676,6 +710,122 @@ export default function NarratorDashboardClient({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* MODAL GÓTICO: PUXAR PERSONAGENS DO COFRE */}
+      {/* ========================================== */}
+      {isPullModalOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div
+            className="w-full max-w-lg bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(255,216,77,0.1)] max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Botão de Fechar */}
+            <button
+              onClick={() => setIsPullModalOpen(false)}
+              className="absolute top-4 right-4 text-text-muted hover:text-white text-lg font-data focus:outline-none cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-2xl font-gothic tracking-widest text-gold-accent uppercase pb-2 border-b border-white/5 mb-4 shrink-0">
+              Puxar Membros do Cofre
+            </h3>
+
+            {errorMsg && (
+              <div className="bg-hunger-red/10 border border-hunger-red text-hunger-red text-xs p-3 rounded-sm mb-4 font-data uppercase tracking-wider text-center shrink-0">
+                {errorMsg}
+              </div>
+            )}
+
+            <p className="text-xs text-text-dim leading-relaxed mb-4 shrink-0">
+              Selecione personagens do seu cofre para torná-los Antagonistas/NPCs ativos desta crônica. Eles serão transferidos para esta campanha.
+            </p>
+
+            <div className="flex-1 overflow-y-auto pr-1 space-y-2 mb-4 min-h-[200px] border border-white/5 bg-black/25 p-3 rounded-sm">
+              {!vaultCharacters || vaultCharacters.length === 0 ? (
+                <p className="text-xs text-text-muted italic text-center py-8">
+                  Nenhum personagem disponível no cofre (sem crônica associada).
+                </p>
+              ) : (
+                vaultCharacters.map(char => {
+                  const clan = char.sheetData?.profile?.clan || "Sem Clã";
+                  const concept = char.sheetData?.profile?.concept || "Conceito não definido";
+                  const isChecked = selectedVaultCharIds.includes(char.id);
+
+                  return (
+                    <label
+                      key={char.id}
+                      className={`flex items-center justify-between p-3 rounded-sm border cursor-pointer transition-all duration-200 ${
+                        isChecked
+                          ? "bg-gold-accent/5 border-gold-accent/50 shadow-[0_0_10px_rgba(255,216,77,0.05)]"
+                          : "bg-bg-card border-white/5 hover:border-white/15"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {
+                            setSelectedVaultCharIds(prev =>
+                              prev.includes(char.id)
+                                ? prev.filter(id => id !== char.id)
+                                : [...prev, char.id]
+                            );
+                          }}
+                          className="accent-gold-accent rounded-xs cursor-pointer border-white/10 animate-fade-in"
+                        />
+                        <div>
+                          <span className="text-sm font-gothic tracking-wide text-text-primary block uppercase">
+                            {char.name}
+                          </span>
+                          <span className="text-[10px] text-text-dim uppercase tracking-wider font-data">
+                            Clã {clan} • Conceito: {concept}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded-xs border text-[8px] uppercase tracking-wider font-bold font-data ${char.type === "npc" ? "bg-hunger-red/10 text-hunger-red border border-hunger-red/25" : "bg-gold-accent/10 text-gold-accent border border-gold-accent/25"}`}>
+                        {char.type === "npc" ? "NPC" : "Jogador"}
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-2 shrink-0 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => setIsPullModalOpen(false)}
+                className="px-4 py-2 border border-white/10 hover:border-white text-text-muted hover:text-white text-xs uppercase tracking-widest font-data transition-colors rounded-sm cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (selectedVaultCharIds.length === 0) return;
+                  setPullLoading(true);
+                  setErrorMsg(null);
+                  const { pullCharactersToCampaignAsNpcAction } = await import("@/app/actions/characterActions");
+                  const response = await pullCharactersToCampaignAsNpcAction(selectedVaultCharIds, campaign.id);
+                  if (response.success) {
+                    setIsPullModalOpen(false);
+                    window.location.reload();
+                  } else {
+                    setErrorMsg(response.error || "Erro ao importar NPCs.");
+                    setPullLoading(false);
+                  }
+                }}
+                disabled={pullLoading || selectedVaultCharIds.length === 0}
+                className="px-5 py-2 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-bold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(255,216,77,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {pullLoading ? "Importando..." : "Importar NPCs"}
+              </button>
+            </div>
           </div>
         </div>
       )}

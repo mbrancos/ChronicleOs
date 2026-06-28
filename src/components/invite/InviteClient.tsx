@@ -12,7 +12,7 @@ interface InviteClientProps {
     id: string;
     name: string;
     description: string | null;
-    powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+    powerLevel: string;
     extraXp: number;
     allowedClans: string[] | null;
     tenets?: string[];
@@ -92,7 +92,7 @@ export default function InviteClient({ campaign, narratorName, user, vaultCharac
     }
   };
 
-  const maxAllowedXp = (POWER_LEVEL_XP_MAP[campaign.powerLevel] ?? 15) + (campaign.extraXp || 0);
+
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-bg-main text-text-primary p-4 md:p-6 font-reading py-12">
@@ -181,17 +181,14 @@ export default function InviteClient({ campaign, narratorName, user, vaultCharac
               <span className="text-[9px] uppercase tracking-widest text-text-dim font-data block">
                 Nível de Geração & Poder
               </span>
-              <span className="text-sm font-gothic text-gold-accent uppercase block">
-                {POWER_LEVEL_LABEL_MAP[campaign.powerLevel]}
+              <span className="text-sm font-gothic text-gold-accent uppercase block leading-normal">
+                {campaign.powerLevel.split(",").map(lvl => lvl === "FLEDGLING" ? "Cria (0 XP)" : lvl === "NEONATE" ? "Neófito (15 XP)" : "Ancila (35 XP)").join(" / ")}
               </span>
               {campaign.extraXp > 0 && (
-                <span className="text-[10px] text-text-muted font-sans block">
+                <span className="text-[10px] text-text-muted font-sans block pt-1">
                   + {campaign.extraXp} XP extra de criação concedido.
                 </span>
               )}
-              <span className="text-[10px] font-sans text-text-dim block">
-                Total permitido: <strong>{maxAllowedXp} XP gasto</strong>.
-              </span>
             </div>
 
             {/* Clãs Permitidos */}

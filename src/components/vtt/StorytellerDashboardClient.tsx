@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import ActionFeed, { RollItem } from "./ActionFeed";
 import DirectorBoard from "./DirectorBoard";
 import DamageModal from "./DamageModal";
@@ -20,6 +21,7 @@ import {
   grantSessionXpAction 
 } from "@/app/actions/xpActions";
 import RollEffects from "./RollEffects";
+import { usePresence } from "@/hooks/usePresence";
 
 type CampaignCharacter = typeof characters.$inferSelect;
 
@@ -40,6 +42,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   const [rollsList, setRollsList] = useState<RollItem[]>([]);
   const [tokensList, setTokensList] = useState<TokenData[]>([]);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const onlineUsers = usePresence(campaign.id);
   
   // Referências para gerenciar debounces de chamadas assíncronas ao banco de dados por token/ficha
   const quickHealthDebounceRefs = useRef<{ [tokenId: string]: NodeJS.Timeout }>({});
@@ -58,6 +61,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   // Personagens da campanha (Players e NPCs completos)
   const [playersList, setPlayersList] = useState<CampaignCharacter[]>([]);
   const [npcsList, setNpcsList] = useState<CampaignCharacter[]>([]);
+  const [narratorDicePool, setNarratorDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
 
   // Estado da Gaveta de Ficha
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -72,6 +76,8 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   // Estados do Dock do Narrador
   const [narratorPool, setNarratorPool] = useState(6);
   const [narratorDifficulty, setNarratorDifficulty] = useState(3);
+  const [narratorHunger, setNarratorHunger] = useState(0);
+  const [isRouseSelected, setIsRouseSelected] = useState(false);
   const [customActionName, setCustomActionName] = useState("");
 
   // Estados de XP (Fase 25)
@@ -200,11 +206,30 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       setTokensList((prev) => prev.map((t) => ({ ...t, hasActed: false })));
     };
 
+    const handleCharacterUpdated = (data: {
+      characterId: string;
+      sheetData: any;
+      buildState: any;
+      status: string;
+      name: string;
+    }) => {
+      const updateList = (list: CampaignCharacter[]) =>
+        list.map((c) =>
+          c.id === data.characterId
+            ? { ...c, sheetData: data.sheetData, buildState: data.buildState, status: data.status as any, name: data.name }
+            : c
+        );
+
+      setPlayersList((prev) => updateList(prev));
+      setNpcsList((prev) => updateList(prev));
+    };
+
     // Registrar binds em ambos os canais (Público e Privado do Narrador)
     publicChannel.bind("token-created", handleTokenCreated);
     publicChannel.bind("token-updated", handleTokenUpdated);
     publicChannel.bind("token-deleted", handleTokenDeleted);
     publicChannel.bind("round-reset", handleRoundReset);
+    publicChannel.bind("character-updated", handleCharacterUpdated);
 
     privateChannel.bind("token-created", handleTokenCreated);
     privateChannel.bind("token-updated", handleTokenUpdated);
@@ -438,11 +463,13 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   }, []);
 
   // Ação: Sincronizar status da ficha de personagens completos no banco com Optimistic UI + Debounce
+  // Ação: Sincronizar status da ficha de personagens completos no banco com Optimistic UI + Debounce
   const handleUpdateCharacterStatus = useCallback((
     characterId: string,
     status: {
       health?: { max: number; superficial: number; aggravated: number };
       willpower?: { max: number; superficial: number; aggravated: number };
+      hunger?: number;
     }
   ) => {
     // 1. Encontrar o personagem nas listas e clonar seu sheetData
@@ -458,6 +485,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
         ...sheet.status,
         health: status.health ? { ...sheet.status.health, ...status.health } : sheet.status.health,
         willpower: status.willpower ? { ...sheet.status.willpower, ...status.willpower } : sheet.status.willpower,
+        hunger: typeof status.hunger === "number" ? status.hunger : sheet.status?.hunger ?? 2,
       },
     };
 
@@ -492,10 +520,37 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     }, 800);
   }, [playersList, npcsList]);
 
+  // Lógica de clique nos traits da ficha pelo Narrador (para rolagens)
+  const handleNarratorTraitClick = (trait: { id: string, label: string, value: number }) => {
+    setNarratorDicePool(prev => {
+      let newPool = [];
+      if (prev.some(p => p.id === trait.id)) {
+        newPool = prev.filter(p => p.id !== trait.id);
+      } else if (prev.length < 2) {
+        newPool = [...prev, trait];
+      } else {
+        newPool = [...prev];
+        newPool[1] = trait;
+      }
+      
+      const sum = newPool.reduce((acc, curr) => acc + curr.value, 0);
+      setNarratorPool(sum);
+      setCustomActionName(newPool.map(p => p.label).join(" + "));
+      
+      return newPool;
+    });
+  };
+
   // Ação: Rolar Dados pelo Dock do Narrador
   const handleNarratorRoll = async (isSecret: boolean) => {
-    // O Narrador rola sem Fome (Fome = 0)
-    const result = rollV5(narratorPool, 0, narratorDifficulty);
+    // Se houver personagem selecionado na gaveta e traits na pool do Narrador, usar a Fome daquele personagem
+    const selectedChar = [...playersList, ...npcsList].find((c) => c.id === selectedCharacterId);
+    const sheetData = selectedChar?.sheetData as any;
+    const hungerLevel = (selectedChar && narratorDicePool.length > 0)
+      ? (sheetData?.status?.hunger ?? 0)
+      : narratorHunger;
+
+    const result = rollV5(narratorPool, hungerLevel, narratorDifficulty);
     const label = customActionName.trim() || "Rolagem do Narrador";
 
     try {
@@ -510,10 +565,22 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
       if (res.success) {
         setCustomActionName("");
+        setNarratorDicePool([]);
+        setNarratorPool(6);
+        setNarratorHunger(0);
         await fetchRecentRolls();
       }
     } catch (err) {
       console.error("Erro ao realizar rolagem do Narrador:", err);
+    }
+  };
+
+  const handleRollClick = (isSecret: boolean) => {
+    if (isRouseSelected) {
+      handleNarratorRouseCheck(isSecret);
+      setIsRouseSelected(false);
+    } else {
+      handleNarratorRoll(isSecret);
     }
   };
 
@@ -560,6 +627,16 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
       {/* 2. MESA CENTRAL COM TABULEIRO 2D (DirectorBoard) */}
       <div className="flex-1 h-full relative flex items-center justify-center p-4 min-w-0">
+        {/* Botão de Retorno ao Painel */}
+        <Link
+          href={`/campanhas/${campaign.id}/narrador`}
+          className="absolute top-4 right-4 z-20 px-3 py-1.5 bg-black/60 hover:bg-black/80 border border-white/10 hover:border-blood-red text-text-dim hover:text-white text-[10px] font-data uppercase tracking-widest rounded-xs transition-all duration-200 cursor-pointer shadow-md flex items-center gap-1.5"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Painel do Narrador
+        </Link>
         {/* Título de Contexto no topo central */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-center select-none">
           <h1 className="text-xl font-gothic text-blood-red tracking-widest uppercase">
@@ -583,6 +660,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
         <DirectorBoard
           tokens={tokensList}
           isStoryteller={true}
+          campaignId={campaign.id}
           getCharacterSheetData={getCharacterSheetData}
           onDoubleClickToken={handleDoubleClickToken}
           onQuickRollToken={handleQuickRollToken}
@@ -593,18 +671,33 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           onResetRound={handleResetRound}
           onOpenDamageModal={handleOpenDamageModal}
           sceneBackground={sceneBackground}
+          onChangeSceneBackground={setSceneBackground}
         />
 
         {/* 3. DOCK DO NARRADOR — slim, largura total da mesa central */}
         <div className="absolute bottom-0 left-0 right-0 flex justify-center z-40 pointer-events-none">
           <div className="pointer-events-auto w-full bg-bg-card-dark/98 backdrop-blur-md border-t border-white/8 py-1.5 px-6 shadow-2xl flex items-center justify-center gap-5 select-none">
 
-            {/* Pool de Dados */}
+            {/* Dados (Pool) */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Pool</span>
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Dados</span>
               <button onClick={() => setNarratorPool(Math.max(1, narratorPool - 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">-</button>
               <span className="w-5 text-center text-sm font-bold font-mono text-gold-accent">{narratorPool}</span>
               <button onClick={() => setNarratorPool(Math.min(20, narratorPool + 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">+</button>
+              {narratorDicePool.length > 0 && (
+                <button
+                  onClick={() => {
+                    setNarratorDicePool([]);
+                    setNarratorPool(6);
+                    setNarratorHunger(0);
+                    setCustomActionName("");
+                  }}
+                  className="ml-1 text-[8px] uppercase tracking-widest text-hunger-red hover:text-white font-data font-bold border border-hunger-red/35 hover:border-white px-1.5 py-0.5 rounded-xs bg-hunger-red/5 cursor-pointer transition-colors"
+                  title="Limpar seleção da ficha"
+                >
+                  Limpar
+                </button>
+              )}
             </div>
 
             <div className="h-6 w-px bg-white/10 shrink-0" />
@@ -615,6 +708,16 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
               <button onClick={() => setNarratorDifficulty(Math.max(0, narratorDifficulty - 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">-</button>
               <span className="w-5 text-center text-sm font-bold font-mono text-gold-accent">{narratorDifficulty}</span>
               <button onClick={() => setNarratorDifficulty(Math.min(10, narratorDifficulty + 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">+</button>
+            </div>
+
+            <div className="h-6 w-px bg-white/10 shrink-0" />
+
+            {/* Fome */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Fome</span>
+              <button onClick={() => setNarratorHunger(Math.max(0, narratorHunger - 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">-</button>
+              <span className="w-5 text-center text-sm font-bold font-mono text-hunger-red">{narratorHunger}</span>
+              <button onClick={() => setNarratorHunger(Math.min(5, narratorHunger + 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">+</button>
             </div>
 
             <div className="h-6 w-px bg-white/10 shrink-0" />
@@ -635,16 +738,24 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
             {/* Botões de Rolagem */}
             <div className="flex items-center gap-1.5">
-              <button onClick={() => handleNarratorRoll(false)} className="h-7 px-3 bg-linear-to-r from-red-700 to-burgundy hover:from-red-600 hover:to-red-700 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">Público</button>
-              <button onClick={() => handleNarratorRoll(true)} className="h-7 px-3 bg-willpower-blue hover:bg-blue-600 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">Secreto</button>
+              <button onClick={() => handleRollClick(false)} className="h-7 px-3 bg-linear-to-r from-red-700 to-burgundy hover:from-red-600 hover:to-red-700 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">Público</button>
+              <button onClick={() => handleRollClick(true)} className="h-7 px-3 bg-willpower-blue hover:bg-blue-600 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">Secreto</button>
             </div>
 
             <div className="h-6 w-px bg-white/10 shrink-0" />
 
-            {/* Despertar */}
+            {/* Despertar toggle */}
             <div className="flex items-center gap-1.5">
-              <button onClick={() => handleNarratorRouseCheck(false)} className="h-7 px-2.5 bg-white/5 hover:bg-white/15 text-text-primary font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-white/10">Desp. Púb.</button>
-              <button onClick={() => handleNarratorRouseCheck(true)} className="h-7 px-2.5 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-willpower-blue font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border border-willpower-blue/20">Desp. Sec.</button>
+              <button
+                onClick={() => setIsRouseSelected(!isRouseSelected)}
+                className={`h-7 px-2.5 font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border ${
+                  isRouseSelected
+                    ? "bg-gold-accent border-gold-accent text-bg-main shadow-[0_0_8px_rgba(212,175,55,0.4)]"
+                    : "bg-white/5 border-white/10 hover:border-white/25 text-text-primary"
+                }`}
+              >
+                Despertar 🩸
+              </button>
             </div>
 
           </div>
@@ -674,9 +785,20 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             ) : (
               playersList.map((p) => {
                 const isOnBoard = tokensList.some((t) => t.characterId === p.id);
+                const isOnline = p.userId && onlineUsers.includes(p.userId);
                 return (
                   <div key={p.id} className="flex justify-between items-center bg-black/35 p-1.5 rounded-sm border border-white/5">
-                    <span className="text-xs font-semibold truncate max-w-[85px]" title={p.name}>{p.name}</span>
+                    <div className="flex items-center space-x-1.5 min-w-0 flex-1">
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          isOnline
+                            ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)] animate-pulse"
+                            : "bg-zinc-600"
+                        }`}
+                        title={isOnline ? "Online" : "Offline"}
+                      />
+                      <span className="text-xs font-semibold truncate max-w-[70px]" title={p.name}>{p.name}</span>
+                    </div>
                     <div className="flex items-center space-x-1.5">
                       <button onClick={() => handleDoubleClickToken(p.id)} className="text-[9px] text-text-muted hover:text-white uppercase font-bold cursor-pointer">Ficha</button>
                       <button disabled={isOnBoard} onClick={() => handleAddCharacterToBoard(p)} className="text-[9px] text-gold-accent hover:text-amber-300 disabled:text-text-dim/40 uppercase font-bold cursor-pointer">
@@ -749,116 +871,6 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           </form>
         </div>
 
-        {/* GRUPO 3: Imagens (Imagem de Cena + Cenário) */}
-        <div className="flex flex-col space-y-2 pt-2 border-t border-white/10">
-          <span className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-bold">
-            Imagens
-          </span>
-
-          {/* Imagem de Cena — mostrar para jogadores */}
-          <div className="flex flex-col space-y-1.5">
-            <span className="text-[9px] text-text-muted font-bold uppercase">Imagem de Cena</span>
-            <input
-              type="text"
-              value={narratorImageInput}
-              onChange={(e) => setNarratorImageInput(e.target.value)}
-              placeholder="URL da imagem de item/cena"
-              className="px-2 py-1 text-[10px] border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary"
-            />
-            <button
-              onClick={async () => {
-                const url = narratorImageInput.trim();
-                if (!url) return;
-                const res = await showSceneImageAction(campaign.id, url);
-                if (res.success) {
-                  setCurrentSceneImage(url);
-                  setIsShowingSceneImage(true);
-                  showSuccess("Imagem exibida para os jogadores!", "Imagem de Cena");
-                } else {
-                  showError("Erro ao exibir imagem.", "Imagem de Cena");
-                }
-              }}
-              disabled={!narratorImageInput.trim()}
-              className="w-full py-1 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Mostrar para Jogadores
-            </button>
-            {isShowingSceneImage && (
-              <button
-                onClick={async () => {
-                  const res = await showSceneImageAction(campaign.id, null);
-                  if (res.success) {
-                    setCurrentSceneImage(null);
-                    setIsShowingSceneImage(false);
-                    setNarratorImageInput("");
-                    showSuccess("Imagem removida dos jogadores.", "Imagem de Cena");
-                  }
-                }}
-                className="w-full py-1 bg-hunger-red/15 hover:bg-hunger-red/25 border border-hunger-red/30 text-hunger-red font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer"
-              >
-                Remover Imagem ✕
-              </button>
-            )}
-            {currentSceneImage && (
-              <div className="relative w-full h-14 overflow-hidden rounded-xs border border-white/10">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={currentSceneImage ?? ""} alt="Preview" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/20" />
-              </div>
-            )}
-          </div>
-
-          {/* Cenário — fundo do tabuleiro */}
-          <div className="flex flex-col space-y-1.5 pt-1.5 border-t border-white/5">
-            <span className="text-[9px] text-text-muted font-bold uppercase">Cenário</span>
-            <div className="flex items-center space-x-1">
-              <input
-                type="text"
-                value={sceneBackgroundInput}
-                onChange={(e) => setSceneBackgroundInput(e.target.value)}
-                placeholder="URL da imagem de fundo..."
-                className="flex-1 px-2 py-1 text-[10px] border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary min-w-0"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && sceneBackgroundInput.trim()) {
-                    const url = sceneBackgroundInput.trim();
-                    setSceneBackground(url);
-                    updateSceneBackground(campaign.id, url);
-                  }
-                }}
-              />
-              <button
-                onClick={() => {
-                  const url = sceneBackgroundInput.trim();
-                  if (url) {
-                    setSceneBackground(url);
-                    updateSceneBackground(campaign.id, url);
-                  }
-                }}
-                title="Aplicar cenário"
-                className="w-7 h-7 bg-gold-accent/20 hover:bg-gold-accent/40 border border-gold-accent/30 rounded-xs flex items-center justify-center text-gold-accent text-xs cursor-pointer transition-all shrink-0"
-              >
-                ✓
-              </button>
-              {sceneBackground && (
-                <button
-                  onClick={() => {
-                    setSceneBackground(null);
-                    setSceneBackgroundInput("");
-                    updateSceneBackground(campaign.id, null);
-                  }}
-                  title="Remover cenário"
-                  className="w-7 h-7 bg-hunger-red/15 hover:bg-hunger-red/30 border border-hunger-red/30 rounded-xs flex items-center justify-center text-hunger-red text-xs cursor-pointer transition-all shrink-0"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            {sceneBackground && (
-              <span className="text-[8px] text-gold-accent/60">Cenário ativo ●</span>
-            )}
-          </div>
-        </div>
-
         {/* GRUPO 4: Distribuir XP — sempre por último */}
         <div className="flex-1 flex flex-col justify-end pt-2">
           <div className="border-t border-white/10 pt-3">
@@ -889,10 +901,11 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             campaignId={campaign.id}
             initialData={selectedChar!.sheetData as CharacterSheetData}
             initialName={selectedChar!.name}
-            dicePool={[]} // Narrador não usa pool de dados persistida na ficha
-            onTraitClick={() => {}} // Narrador não acumula pool de traits
+            dicePool={narratorDicePool}
+            onTraitClick={handleNarratorTraitClick}
             initialStatus={selectedChar!.status as "DRAFT" | "READY" | "IN_PLAY" || "DRAFT"}
             initialBuildState={selectedChar!.buildState}
+            characterType={selectedChar!.type}
             onDataChange={async (newData) => {
               // Atualizar estado de personagens localmente de imediato
               const updateLocalList = (list: CampaignCharacter[]) =>

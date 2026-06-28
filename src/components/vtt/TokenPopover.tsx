@@ -16,6 +16,7 @@ interface TokenPopoverProps {
     status: {
       health?: { max: number; superficial: number; aggravated: number };
       willpower?: { max: number; superficial: number; aggravated: number };
+      hunger?: number;
     }
   ) => void;
   onOpenDamageModal?: (characterId: string, characterName: string) => void;
@@ -218,6 +219,38 @@ export default function TokenPopover({
                     }
                   }}
                 />
+              </div>
+
+              {/* Fome (Hunger) */}
+              <div className="border-t border-white/5 pt-2 flex flex-col space-y-1">
+                <span className="text-[9px] uppercase tracking-wider text-text-muted font-bold block">FOME</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex space-x-1">
+                    {[1, 2, 3, 4, 5].map((val) => {
+                      const currentHunger = characterSheetData.status?.hunger ?? 0;
+                      const active = val <= currentHunger;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => {
+                            if (onUpdateCharacterStatus && token.characterId) {
+                              onUpdateCharacterStatus(token.characterId, {
+                                hunger: currentHunger === val ? val - 1 : val,
+                              });
+                            }
+                          }}
+                          className={`w-3 h-3 rounded-full border transition-all cursor-pointer ${
+                            active
+                              ? "bg-hunger-red border-hunger-red shadow-[0_0_6px_rgba(200,36,52,0.5)] animate-pulse"
+                              : "bg-transparent border-white/20 hover:border-hunger-red/50"
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="font-mono font-bold text-hunger-red text-xs">{characterSheetData.status?.hunger ?? 0}</span>
+                </div>
               </div>
             </>
           ) : token.characterId ? (

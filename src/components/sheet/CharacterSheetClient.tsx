@@ -431,6 +431,7 @@ interface CharacterSheetClientProps {
   onTraitClick?: (trait: { id: string, label: string, value: number }) => void;
   initialStatus?: "DRAFT" | "READY" | "IN_PLAY";
   initialBuildState?: any;
+  characterType?: "jogador" | "npc" | "coterie";
 }
 
 export default function CharacterSheetClient({
@@ -442,7 +443,8 @@ export default function CharacterSheetClient({
   dicePool = [],
   onTraitClick,
   initialStatus = "DRAFT",
-  initialBuildState = {}
+  initialBuildState = {},
+  characterType = "jogador"
 }: CharacterSheetClientProps) {
   const { showSuccess, showWarning, showError } = useToast();
   
@@ -480,8 +482,6 @@ export default function CharacterSheetClient({
   const [evolutionJustification, setEvolutionJustification] = useState("");
   const [evolutionError, setEvolutionError] = useState<string | null>(null);
   const [evolutionLoading, setEvolutionLoading] = useState(false);
-
-  const [activeTab, setActiveTab] = useState<"nucleo" | "sangue" | "vantagens" | "sistema" | "xp_diary">("nucleo");
 
   const [prevWillpower, setPrevWillpower] = useState(initialData?.status?.willpower);
 
@@ -1270,7 +1270,12 @@ export default function CharacterSheetClient({
         <div className="bg-bg-card border border-white/5 p-4 rounded-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center space-x-3">
             <span className="text-xs uppercase tracking-widest text-text-muted font-data font-bold">Estado da Ficha:</span>
-            {status === "IN_PLAY" ? (
+            {characterType === "npc" ? (
+              <span className="px-2.5 py-1 bg-gold-accent/15 border border-gold-accent/40 text-gold-accent text-xs font-bold font-data uppercase tracking-wider rounded-xs flex items-center gap-1.5 shadow-[0_0_8px_rgba(255,216,77,0.15)]">
+                <span className="w-2 h-2 rounded-full bg-gold-accent animate-pulse" />
+                Antagonista / NPC (Edição Livre) 🛡️
+              </span>
+            ) : status === "IN_PLAY" ? (
               <span className="px-2.5 py-1 bg-burgundy/40 border border-blood-red text-hunger-red text-xs font-bold font-data uppercase tracking-wider rounded-xs shadow-[0_0_8px_rgba(200,36,52,0.3)] flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-hunger-red animate-pulse" />
                 Em Jogo (Ficha Trancada) 🩸
@@ -1288,7 +1293,7 @@ export default function CharacterSheetClient({
             )}
           </div>
           
-          {status === "DRAFT" && (
+          {status === "DRAFT" && characterType !== "npc" && (
             <div className="flex flex-wrap items-center gap-4 text-xs font-data uppercase">
               {alloc.attributesRemaining === 0 && alloc.skillsRemaining === 0 && alloc.disciplinesRemaining === 0 && alloc.advantagesRemaining === 0 ? (
                 <span className="text-emerald-400">Tudo Distribuído! ✓</span>
@@ -1318,10 +1323,31 @@ export default function CharacterSheetClient({
               )}
             </div>
           )}
-          {status === "READY" && (
-            <div className="flex items-center space-x-2 text-xs font-data uppercase">
-              <span className="text-text-muted">XP Consumido em Compras:</span>
-              <span className="text-gold-accent font-bold text-sm tracking-wider">{alloc.totalSpentXp} XP</span>
+           {status === "READY" && (
+            <div className="flex items-center gap-4 text-xs font-data uppercase">
+              <div className="flex items-center space-x-2">
+                <span className="text-text-muted">XP Consumido em Compras:</span>
+                <span className="text-gold-accent font-bold text-sm tracking-wider">{alloc.totalSpentXp} XP</span>
+              </div>
+              {campaignId && campaignId !== "cofre" && characterType === "jogador" && (
+                <button
+                  onClick={async () => {
+                    setStatus("IN_PLAY");
+                    const response = await updateCharacterSheet(characterId, character, buildStateRef.current, "IN_PLAY");
+                    if (response.success) {
+                      showSuccess("Ficha concluída e trancada para a crônica!", "Pronto para Jogar");
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 1000);
+                    } else {
+                      showError("Erro ao trancar ficha: " + response.error);
+                    }
+                  }}
+                  className="px-3 py-1 bg-blood-red hover:bg-burgundy text-white text-[10px] font-bold font-data uppercase tracking-wider rounded-xs cursor-pointer shadow-md transition-colors"
+                >
+                  Confirmar Alterações & Voltar ao Jogo 🔒
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1461,554 +1487,608 @@ export default function CharacterSheetClient({
         </section>
 
         {/* ======================================================== */}
-        {/* NAVEGAÇÃO DE ABAS (TABS) */}
+        {/* MENU DE NAVEGAÇÃO FIXO (STICKY HEADER) */}
         {/* ======================================================== */}
-        <div className="flex space-x-2 border-b border-white/10 pb-px flex-wrap gap-y-1">
-          {(["nucleo", "sangue", "vantagens", "sistema", "xp_diary"] as const).map(tab => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  setRollResult(null);
-                }}
-                className={`py-3 px-6 text-xs uppercase tracking-widest font-data font-bold transition-all duration-150 border-t-2 border-x border-b border-transparent rounded-t cursor-pointer -mb-px ${
-                  isActive 
-                    ? "bg-bg-card border-x-white/10 border-t-gold-accent border-b-bg-card text-gold-accent" 
-                    : "text-text-muted hover:text-text-primary hover:bg-white/5"
-                }`}
-              >
-                {tab === "nucleo" && "Núcleo (Ficha)"}
-                {tab === "sangue" && "Sangue (Disciplinas)"}
-                {tab === "vantagens" && "Vantagens"}
-                {tab === "sistema" && "Sistema & Macros"}
-                {tab === "xp_diary" && "Diário de XP 📜"}
-              </button>
-            );
-          })}
+        <div className="sticky top-[0px] z-30 bg-bg-main/95 backdrop-blur-md border-b border-white/10 py-3 flex space-x-1.5 flex-wrap gap-y-1.5 select-none pl-1 shadow-md">
+          {(
+            [
+              { id: "atributos", label: "Atributos" },
+              { id: "habilidades", label: "Habilidades" },
+              { id: "especializacoes", label: "Especializações" },
+              { id: "disciplinas", label: "Disciplinas" },
+              { id: "conviccoes", label: "Convicções" },
+              { id: "vantagens", label: "Vantagens" },
+              { id: "inventario", label: "Inventário" },
+              { id: "macros", label: "Macros & Notas" },
+              { id: "xp_diary", label: "Diário de XP 📜" },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setRollResult(null);
+                const el = document.getElementById(item.id);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }}
+              className="py-1.5 px-4 text-[10px] uppercase tracking-widest font-data font-bold border border-white/10 hover:border-gold-accent hover:text-gold-accent text-text-muted bg-black/45 rounded-sm transition-all duration-150 cursor-pointer focus:outline-none"
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
         {/* ======================================================== */}
-        {/* CONTEÚDO DAS ABAS */}
+        {/* CONTEÚDO DA FICHA (SINGLE PAGE) */}
         {/* ======================================================== */}
-        <section className="bg-bg-card border border-white/10 rounded-b p-6 min-h-[400px]">
+        <div className="space-y-8 pb-16">
           
-          {/* TAB 1: NÚCLEO */}
-          {activeTab === "nucleo" && (
-            <div className="space-y-8">
-              {/* PAINEL DE CONVICÇÕES E PILARES (ÂNCORAS MORAIS) */}
-              <ConvictionsPanel
-                items={character.convictions}
-                onChange={(newConvictions) => setCharacter(prev => ({ ...prev, convictions: newConvictions }))}
-              />
-              
-              {/* GRADE DE ATRIBUTOS */}
-              <div>
-                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase flex items-center justify-between">
-                  <span>Atributos</span>
-                  {status === "DRAFT" && alloc.attributesRemaining > 0 && (
-                    <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
-                      Atributos: {alloc.attributesRemaining} {alloc.attributesRemaining === 1 ? "ponto restante" : "pontos restantes"}
-                    </span>
-                  )}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  
-                  {/* FÍSICOS */}
-                  <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Físicos</h4>
-                    {Object.entries(character.attributes.physical).map(([key, val]) => (
-                      <DotSlider 
-                        key={key}
-                        label={TECHNICAL_NAMES[key] || key}
-                        value={val}
-                        onChange={(newVal) => handleAttributeChange("physical", key, newVal)}
-                        isSelected={dicePool.some(p => p.id === key)}
-                        onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
-                        baseValue={alloc.attributesBase[key]}
-                        showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY" && !isEvolvingMode}
-                      />
-                    ))}
-                  </div>
-
-                  {/* SOCIAIS */}
-                  <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Sociais</h4>
-                    {Object.entries(character.attributes.social).map(([key, val]) => (
-                      <DotSlider 
-                        key={key}
-                        label={TECHNICAL_NAMES[key] || key}
-                        value={val}
-                        onChange={(newVal) => handleAttributeChange("social", key, newVal)}
-                        isSelected={dicePool.some(p => p.id === key)}
-                        onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
-                        baseValue={alloc.attributesBase[key]}
-                        showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY" && !isEvolvingMode}
-                      />
-                    ))}
-                  </div>
-
-                  {/* MENTAIS */}
-                  <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Mentais</h4>
-                    {Object.entries(character.attributes.mental).map(([key, val]) => (
-                      <DotSlider 
-                        key={key}
-                        label={TECHNICAL_NAMES[key] || key}
-                        value={val}
-                        onChange={(newVal) => handleAttributeChange("mental", key, newVal)}
-                        isSelected={dicePool.some(p => p.id === key)}
-                        onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
-                        baseValue={alloc.attributesBase[key]}
-                        showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY" && !isEvolvingMode}
-                      />
-                    ))}
-                  </div>
-
-                </div>
+          {/* SEÇÃO 1: ATRIBUTOS */}
+          <section id="atributos" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
+            <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex items-center justify-between">
+              <span>Atributos</span>
+              {status === "DRAFT" && characterType !== "npc" && alloc.attributesRemaining > 0 && (
+                <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
+                  Atributos: {alloc.attributesRemaining} {alloc.attributesRemaining === 1 ? "ponto restante" : "pontos restantes"}
+                </span>
+              )}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* FÍSICOS */}
+              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
+                <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Físicos</h4>
+                {Object.entries(character.attributes.physical).map(([key, val]) => (
+                  <DotSlider 
+                    key={key}
+                    label={TECHNICAL_NAMES[key] || key}
+                    value={val}
+                    onChange={(newVal) => handleAttributeChange("physical", key, newVal)}
+                    isSelected={dicePool.some(p => p.id === key)}
+                    onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
+                    baseValue={alloc.attributesBase[key]}
+                    showXpDistinction={status !== "IN_PLAY"}
+                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                  />
+                ))}
               </div>
 
-              {/* GRADE DE HABILIDADES */}
-              <div>
-                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase flex items-center justify-between">
-                  <span>Habilidades & Especializações</span>
-                  {status === "DRAFT" && alloc.skillsRemaining > 0 && (
-                    <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
-                      Habilidades: {alloc.skillsRemaining} {alloc.skillsRemaining === 1 ? "ponto restante" : "pontos restantes"}
-                    </span>
-                  )}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  
-                  {/* HABILIDADES FÍSICAS */}
-                  <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Físicas</h4>
-                    {(["athletics", "brawl", "craft", "drive", "firearms", "melee", "larceny", "stealth", "survival"] as const).map(skill => (
-                      <DotSlider 
-                        key={skill}
-                        label={TECHNICAL_NAMES[skill] || skill}
-                        value={character.skills[skill]}
-                        onChange={(newVal) => handleSkillChange(skill, newVal)}
-                        specialties={character.specialties.filter(s => s.skill === skill)}
-                        allowZero
-                        isSelected={dicePool.some(p => p.id === skill)}
-                        onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
-                        baseValue={alloc.skillsBase[skill]}
-                        showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY" && !isEvolvingMode}
-                      />
-                    ))}
-                  </div>
-
-                  {/* HABILIDADES SOCIAIS */}
-                  <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Sociais</h4>
-                    {(["animal_ken", "etiquette", "insight", "intimidation", "leadership", "performance", "persuasion", "streetwise", "subterfuge"] as const).map(skill => (
-                      <DotSlider 
-                        key={skill}
-                        label={TECHNICAL_NAMES[skill] || skill}
-                        value={character.skills[skill]}
-                        onChange={(newVal) => handleSkillChange(skill, newVal)}
-                        specialties={character.specialties.filter(s => s.skill === skill)}
-                        allowZero
-                        isSelected={dicePool.some(p => p.id === skill)}
-                        onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
-                        baseValue={alloc.skillsBase[skill]}
-                        showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY" && !isEvolvingMode}
-                      />
-                    ))}
-                  </div>
-
-                  {/* HABILIDADES MENTAIS */}
-                  <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Mentais</h4>
-                    {(["academics", "awareness", "finance", "investigation", "medicine", "occult", "politics", "science", "technology"] as const).map(skill => (
-                      <DotSlider 
-                        key={skill}
-                        label={TECHNICAL_NAMES[skill] || skill}
-                        value={character.skills[skill]}
-                        onChange={(newVal) => handleSkillChange(skill, newVal)}
-                        specialties={character.specialties.filter(s => s.skill === skill)}
-                        allowZero
-                        isSelected={dicePool.some(p => p.id === skill)}
-                        onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
-                        baseValue={alloc.skillsBase[skill]}
-                        showXpDistinction={status !== "IN_PLAY"}
-                        disabled={status === "IN_PLAY" && !isEvolvingMode}
-                      />
-                    ))}
-                  </div>
-
-                </div>
+              {/* SOCIAIS */}
+              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
+                <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Sociais</h4>
+                {Object.entries(character.attributes.social).map(([key, val]) => (
+                  <DotSlider 
+                    key={key}
+                    label={TECHNICAL_NAMES[key] || key}
+                    value={val}
+                    onChange={(newVal) => handleAttributeChange("social", key, newVal)}
+                    isSelected={dicePool.some(p => p.id === key)}
+                    onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
+                    baseValue={alloc.attributesBase[key]}
+                    showXpDistinction={status !== "IN_PLAY"}
+                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                  />
+                ))}
               </div>
 
-              {/* SEÇÃO DE ESPECIALIZAÇÕES */}
-              <div className="mt-8 pt-6 border-t border-white/10 space-y-4 shadow-none">
-                <div>
-                  <h3 className="text-lg font-gothic tracking-wider text-gold-accent uppercase">
-                    Especializações de Habilidades
-                  </h3>
-                  <p className="text-xs text-text-muted font-reading">
-                    Defina especializações para obter dados de bônus em testes específicos vinculados a Habilidades.
-                  </p>
-                </div>
+              {/* MENTAIS */}
+              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
+                <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Mentais</h4>
+                {Object.entries(character.attributes.mental).map(([key, val]) => (
+                  <DotSlider 
+                    key={key}
+                    label={TECHNICAL_NAMES[key] || key}
+                    value={val}
+                    onChange={(newVal) => handleAttributeChange("mental", key, newVal)}
+                    isSelected={dicePool.some(p => p.id === key)}
+                    onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
+                    baseValue={alloc.attributesBase[key]}
+                    showXpDistinction={status !== "IN_PLAY"}
+                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
 
-                {/* LISTAGEM DE BADGES */}
-                <div className="flex flex-wrap gap-2">
-                  {character.specialties && character.specialties.map(spec => (
-                    <span 
-                      key={spec.id} 
-                      className="bg-bg-main/60 border border-gold-accent/30 text-gold-accent text-xs px-3 py-1 rounded-sm flex items-center space-x-2 font-data uppercase tracking-wider shadow-none"
+          {/* SEÇÃO 2: HABILIDADES */}
+          <section id="habilidades" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
+            <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex items-center justify-between">
+              <span>Habilidades</span>
+              {status === "DRAFT" && characterType !== "npc" && alloc.skillsRemaining > 0 && (
+                <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
+                  Habilidades: {alloc.skillsRemaining} {alloc.skillsRemaining === 1 ? "ponto restante" : "pontos restantes"}
+                </span>
+              )}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* HABILIDADES FÍSICAS */}
+              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
+                <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Físicas</h4>
+                {(["athletics", "brawl", "craft", "drive", "firearms", "melee", "larceny", "stealth", "survival"] as const).map(skill => (
+                  <DotSlider 
+                    key={skill}
+                    label={TECHNICAL_NAMES[skill] || skill}
+                    value={character.skills[skill]}
+                    onChange={(newVal) => handleSkillChange(skill, newVal)}
+                    specialties={character.specialties.filter(s => s.skill === skill)}
+                    allowZero
+                    isSelected={dicePool.some(p => p.id === skill)}
+                    onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
+                    baseValue={alloc.skillsBase[skill]}
+                    showXpDistinction={status !== "IN_PLAY"}
+                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                  />
+                ))}
+              </div>
+
+              {/* HABILIDADES SOCIAIS */}
+              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
+                <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Sociais</h4>
+                {(["animal_ken", "etiquette", "insight", "intimidation", "leadership", "performance", "persuasion", "streetwise", "subterfuge"] as const).map(skill => (
+                  <DotSlider 
+                    key={skill}
+                    label={TECHNICAL_NAMES[skill] || skill}
+                    value={character.skills[skill]}
+                    onChange={(newVal) => handleSkillChange(skill, newVal)}
+                    specialties={character.specialties.filter(s => s.skill === skill)}
+                    allowZero
+                    isSelected={dicePool.some(p => p.id === skill)}
+                    onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
+                    baseValue={alloc.skillsBase[skill]}
+                    showXpDistinction={status !== "IN_PLAY"}
+                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                  />
+                ))}
+              </div>
+
+              {/* HABILIDADES MENTAIS */}
+              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
+                <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Mentais</h4>
+                {(["academics", "awareness", "finance", "investigation", "medicine", "occult", "politics", "science", "technology"] as const).map(skill => (
+                  <DotSlider 
+                    key={skill}
+                    label={TECHNICAL_NAMES[skill] || skill}
+                    value={character.skills[skill]}
+                    onChange={(newVal) => handleSkillChange(skill, newVal)}
+                    specialties={character.specialties.filter(s => s.skill === skill)}
+                    allowZero
+                    isSelected={dicePool.some(p => p.id === skill)}
+                    onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
+                    baseValue={alloc.skillsBase[skill]}
+                    showXpDistinction={status !== "IN_PLAY"}
+                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* SEÇÃO 3: ESPECIALIZAÇÕES */}
+          <section id="especializacoes" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
+            <div>
+              <h3 className="text-lg font-gothic tracking-wider text-gold-accent uppercase">
+                Especializações de Habilidades
+              </h3>
+              <p className="text-xs text-text-muted font-reading">
+                Defina especializações para obter dados de bônus em testes específicos vinculados a Habilidades.
+              </p>
+            </div>
+
+            {/* LISTAGEM DE BADGES */}
+            <div className="flex flex-wrap gap-2">
+              {character.specialties && character.specialties.map(spec => (
+                <span 
+                  key={spec.id} 
+                  className="bg-bg-main/60 border border-gold-accent/30 text-gold-accent text-xs px-3 py-1 rounded-sm flex items-center space-x-2 font-data uppercase tracking-wider shadow-none"
+                >
+                  <span>
+                    <strong className="text-text-primary mr-1">{TECHNICAL_NAMES[spec.skill] || spec.skill}:</strong> 
+                    {spec.name}
+                  </span>
+                  {status !== "IN_PLAY" && (
+                    <button
+                      onClick={() => handleDeleteSpecialty(spec.id)}
+                      className="text-hunger-red hover:text-white cursor-pointer select-none text-[10px] font-bold"
+                      title="Excluir Especialização"
                     >
-                      <span>
-                        <strong className="text-text-primary mr-1">{TECHNICAL_NAMES[spec.skill] || spec.skill}:</strong> 
-                        {spec.name}
-                      </span>
-                      {status !== "IN_PLAY" && (
-                        <button
-                          onClick={() => handleDeleteSpecialty(spec.id)}
-                          className="text-hunger-red hover:text-white cursor-pointer select-none text-[10px] font-bold"
-                          title="Excluir Especialização"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </span>
-                  ))}
-                  {(!character.specialties || character.specialties.length === 0) && (
-                    <span className="text-xs text-text-muted/60 italic font-reading">Nenhuma especialização cadastrada.</span>
+                      ✕
+                    </button>
                   )}
+                </span>
+              ))}
+              {(!character.specialties || character.specialties.length === 0) && (
+                <span className="text-xs text-text-muted/60 italic font-reading">Nenhuma especialização cadastrada.</span>
+              )}
+            </div>
+
+            {/* MINI-FORMULÁRIO DE CADASTRO */}
+            {status !== "IN_PLAY" && (
+              <div className="flex flex-wrap items-center gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-2xl shadow-none">
+                <div className="flex flex-col space-y-1">
+                  <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Habilidade Base</label>
+                  <select
+                    value={selectedSkill}
+                    onChange={(e) => setSelectedSkill(e.target.value as keyof CharacterSkills | "")}
+                    className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9"
+                  >
+                    <option value="" className="bg-bg-card">Selecione...</option>
+                    {Object.entries(TECHNICAL_NAMES)
+                      .filter(([key]) => ![
+                        "strength", "dexterity", "stamina",
+                        "charisma", "manipulation", "composure",
+                        "intelligence", "wits", "resolve"
+                      ].includes(key))
+                      .map(([key, label]) => (
+                        <option key={key} value={key} className="bg-bg-card">{label}</option>
+                      ))
+                    }
+                  </select>
                 </div>
 
-                {/* MINI-FORMULÁRIO DE CADASTRO */}
+                <div className="flex flex-col space-y-1 flex-1 min-w-[200px]">
+                  <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nome da Especialização</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Briga de Rua, Machados..."
+                    value={newSpecialtyName}
+                    onChange={(e) => setNewSpecialtyName(e.target.value)}
+                    className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 font-reading"
+                  />
+                </div>
+
+                <div className="flex flex-col space-y-1 pt-5">
+                  <button
+                    onClick={handleAddSpecialty}
+                    disabled={!selectedSkill || !newSpecialtyName.trim()}
+                    className="bg-burgundy border border-blood-red hover:bg-blood-red text-text-primary disabled:opacity-40 disabled:hover:bg-burgundy text-xs px-4 rounded-sm transition-colors cursor-pointer disabled:cursor-not-allowed font-data uppercase font-bold h-9 flex items-center justify-center select-none"
+                  >
+                    + Adicionar
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* SEÇÃO 4: DISCIPLINAS */}
+          <section id="disciplinas" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
+            <div className="flex justify-between items-center flex-wrap gap-4 border-b border-white/5 pb-2">
+              <div className="flex items-center space-x-4">
+                <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase flex items-center space-x-2">
+                  <span>Disciplinas Vampíricas (Poderes do Sangue)</span>
+                  {status === "DRAFT" && characterType !== "npc" && alloc.disciplinesRemaining > 0 && (
+                    <span className="text-xs font-data text-yellow-400 normal-case tracking-normal ml-3 bg-yellow-400/10 border border-yellow-400/20 px-2 py-0.5 rounded-sm">
+                      Disciplinas: {alloc.disciplinesRemaining} {alloc.disciplinesRemaining === 1 ? "ponto restante" : "pontos restantes"}
+                    </span>
+                  )}
+                </h3>
                 {status !== "IN_PLAY" && (
-                  <div className="flex flex-wrap items-center gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-2xl shadow-none">
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Habilidade Base</label>
-                      <select
-                        value={selectedSkill}
-                        onChange={(e) => setSelectedSkill(e.target.value as keyof CharacterSkills)}
-                        className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9"
-                      >
-                        <option value="" className="bg-bg-card">Selecione...</option>
-                        {Object.entries(TECHNICAL_NAMES)
-                          .filter(([key]) => ![
-                            "strength", "dexterity", "stamina",
-                            "charisma", "manipulation", "composure",
-                            "intelligence", "wits", "resolve"
-                          ].includes(key))
-                          .map(([key, label]) => (
-                            <option key={key} value={key} className="bg-bg-card">{label}</option>
-                          ))
-                        }
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col space-y-1 flex-1 min-w-[200px]">
-                      <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nome da Especialização</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Briga de Rua, Machados..."
-                        value={newSpecialtyName}
-                        onChange={(e) => setNewSpecialtyName(e.target.value)}
-                        className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 font-reading"
-                      />
-                    </div>
-
-                    <div className="flex flex-col space-y-1 pt-5">
-                      <button
-                        onClick={handleAddSpecialty}
-                        disabled={!selectedSkill || !newSpecialtyName.trim()}
-                        className="bg-burgundy border border-blood-red hover:bg-blood-red text-text-primary disabled:opacity-40 disabled:hover:bg-burgundy text-xs px-4 rounded-sm transition-colors cursor-pointer disabled:cursor-not-allowed font-data uppercase font-bold h-9 flex items-center justify-center select-none"
-                      >
-                        + Adicionar
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    onClick={handleAddDiscipline}
+                    className="text-xs uppercase tracking-wider font-bold text-gold-accent bg-burgundy/40 hover:bg-burgundy px-3 py-1 border border-blood-red/30 hover:border-blood-red rounded-sm transition-all duration-150 cursor-pointer shadow-none opacity-80 hover:opacity-100"
+                  >
+                    + Adicionar Disciplina
+                  </button>
                 )}
               </div>
-              {/* SEÇÃO DE INVENTÁRIO (PERTENCES) */}
-              <div className="mt-8 pt-6 border-t border-white/10">
-                <InventoryManager
-                  items={character.inventory}
-                  onChange={(newInventory) => setCharacter(prev => ({ ...prev, inventory: newInventory }))}
+              <div className="w-56 bg-bg-main/30 px-3 py-0.5 rounded border border-white/5">
+                <DotSlider
+                  label="Potência do Sangue"
+                  value={character.status.blood_potency}
+                  onChange={handleBloodPotencyChange}
+                  allowZero={rules.bloodPotency === 0}
+                  baseValue={rules.bloodPotency}
+                  showXpDistinction={status !== "IN_PLAY"}
+                  disabled={status === "IN_PLAY" && !isEvolvingMode}
+                  variant="gold"
                 />
               </div>
             </div>
-          )}
 
-          {/* TAB 2: SANGUE */}
-          {activeTab === "sangue" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center flex-wrap gap-4 border-b border-white/5 pb-2 mb-4">
-                <div className="flex items-center space-x-4">
-                  <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase flex items-center space-x-2">
-                    <span>Disciplinas Vampíricas (Poderes do Sangue)</span>
-                    {status === "DRAFT" && alloc.disciplinesRemaining > 0 && (
-                      <span className="text-xs font-data text-yellow-400 normal-case tracking-normal ml-3 bg-yellow-400/10 border border-yellow-400/20 px-2 py-0.5 rounded-sm">
-                        Disciplinas: {alloc.disciplinesRemaining} {alloc.disciplinesRemaining === 1 ? "ponto restante" : "pontos restantes"}
+            {/* PAINEL DE FISIOLOGIA DO SANGUE (RESSONÂNCIA & DISCRASI) */}
+            <BloodPanel
+              value={character.bloodState}
+              onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {character.disciplines.map(disc => (
+                <div key={disc.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-3 relative group">
+                  {/* BOTÃO EXCLUIR DISCIPLINA */}
+                  {status !== "IN_PLAY" && (
+                    <button
+                      onClick={() => handleDeleteDiscipline(disc.id)}
+                      className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                      title="Excluir Disciplina"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+
+                  <div className="flex justify-between items-center pr-6">
+                    <div className="flex items-center space-x-2">
+                      {onTraitClick && (
+                        <button
+                          onClick={() => onTraitClick({ id: disc.id, label: disc.name, value: disc.level })}
+                          className={`cursor-pointer select-none text-base transition-all duration-150 hover:scale-125 hover:text-hunger-red ${
+                            dicePool.some(p => p.id === disc.id)
+                              ? "text-hunger-red font-bold scale-115 animate-pulse"
+                              : "text-text-muted hover:text-text-primary"
+                          }`}
+                          title="Selecionar para o Carrinho de Dados"
+                        >
+                          🎲
+                        </button>
+                      )}
+                      <InlineEdit
+                        value={disc.name}
+                        onChange={(val) => handleDisciplineNameChange(disc.id, val)}
+                        placeholder="Nova Disciplina"
+                        type="select"
+                        options={DISCIPLINE_OPTIONS}
+                        disabled={status === "IN_PLAY"}
+                        className="font-gothic text-xl text-text-primary tracking-wide hover:bg-white/5 cursor-pointer"
+                      />
+                    </div>
+                    
+                    <div className="flex space-x-1 items-center h-6">
+                      {Array.from({ length: 5 }).map((_, idx) => {
+                        const isActive = idx < disc.level;
+                        const isBase = idx < (alloc.disciplinesBase[disc.id] || 0);
+                        
+                        let activeClass = "";
+                        if (isActive) {
+                          if (status === "IN_PLAY") {
+                            activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
+                          } else if (isBase) {
+                            activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_6px_rgba(200,36,52,0.6)]";
+                          } else {
+                            activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
+                          }
+                        } else {
+                          activeClass = "bg-bg-input border border-text-dim/80 hover:border-blood-red";
+                        }
+                        
+                        return (
+                          <button
+                            key={idx}
+                            disabled={status === "IN_PLAY" && !isEvolvingMode}
+                            onClick={() => handleDisciplineLevelChange(disc.id, idx + 1)}
+                            className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                            title={`Nível ${idx + 1}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 pt-2 border-t border-white/5">
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-text-muted block">Poderes Adquiridos:</span>
+                    
+                    <div className="space-y-1.5">
+                      {disc.powers.map((pow, pIdx) => (
+                        <div 
+                          key={pIdx} 
+                          className="flex items-center justify-between text-sm text-text-primary font-reading pl-2 py-0.5 border-l border-blood-red/40 bg-white/5 rounded-r-sm group/power"
+                        >
+                          <div className="flex items-center space-x-2 flex-1 mr-2">
+                            <span className="text-blood-red font-bold select-none">•</span>
+                            <InlineEdit
+                              value={pow}
+                              onChange={(val) => handlePowerChange(disc.id, pIdx, val)}
+                              placeholder="Novo Poder"
+                              disabled={status === "IN_PLAY"}
+                              className="text-sm font-reading text-text-primary flex-1"
+                            />
+                          </div>
+                          {status !== "IN_PLAY" && (
+                            <button
+                              onClick={() => handleDeletePower(disc.id, pIdx)}
+                              className="text-text-muted/40 hover:text-hunger-red opacity-0 group-hover/power:opacity-100 transition-opacity duration-150 cursor-pointer pr-1 select-none text-[10px] font-bold"
+                              title="Remover Poder"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {status !== "IN_PLAY" && (
+                      <button
+                        onClick={() => handleAddPower(disc.id)}
+                        className="text-[10px] uppercase tracking-wider font-bold text-gold-accent/40 hover:text-gold-accent transition-colors duration-150 cursor-pointer pt-1.5 flex items-center space-x-1 select-none"
+                      >
+                        <span>+ Adicionar Poder</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* SEÇÃO 5: CONVICÇÕES E PILARES */}
+          <section id="conviccoes" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
+            <ConvictionsPanel
+              items={character.convictions}
+              onChange={(newConvictions) => setCharacter(prev => ({ ...prev, convictions: newConvictions }))}
+            />
+          </section>
+
+          {/* SEÇÃO 6: VANTAGENS E DEFEITOS */}
+          <section id="vantagens" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
+            {(() => {
+              const meritsAndBackgrounds = character.advantages.filter(a => a.type === "background" || a.type === "merit");
+              const flawsAndLoresheets = character.advantages.filter(a => a.type === "flaw" || a.type === "loresheet");
+
+              // Pré-calcular somas acumuladas de vantagens positivas da Coluna 1
+              const meritsWithSum = meritsAndBackgrounds.map((adv, idx) => {
+                const sumBefore = meritsAndBackgrounds.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
+                return { ...adv, sumBefore };
+              });
+
+              // Soma total da coluna 1
+              const totalMeritsSum = meritsAndBackgrounds.reduce((acc, curr) => acc + curr.level, 0);
+
+              // Pré-calcular a soma das loresheets para a Coluna 2
+              const loresheets = flawsAndLoresheets.filter(a => a.type === "loresheet");
+              
+              // Lista unificada para a Coluna 2 com a soma acumulada de loresheets
+              const flawsAndLoresheetsWithSum = flawsAndLoresheets.map(adv => {
+                if (adv.type === "loresheet") {
+                  const idx = loresheets.findIndex(l => l.id === adv.id);
+                  const sumBefore = totalMeritsSum + loresheets.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
+                  return { ...adv, sumBefore };
+                }
+                return { ...adv, sumBefore: 0 };
+              });
+
+              return (
+                <>
+                  <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex items-center justify-between">
+                    <span>Vantagens, Qualidades, Defeitos & Fichas de Saber</span>
+                    {status === "DRAFT" && characterType !== "npc" && alloc.advantagesRemaining > 0 && (
+                      <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
+                        Vantagens: {alloc.advantagesRemaining} {alloc.advantagesRemaining === 1 ? "ponto restante" : "pontos restantes"}
                       </span>
                     )}
                   </h3>
-                  {status !== "IN_PLAY" && (
-                    <button
-                      onClick={handleAddDiscipline}
-                      className="text-xs uppercase tracking-wider font-bold text-gold-accent bg-burgundy/40 hover:bg-burgundy px-3 py-1 border border-blood-red/30 hover:border-blood-red rounded-sm transition-all duration-150 cursor-pointer shadow-none opacity-80 hover:opacity-100"
-                    >
-                      + Adicionar Disciplina
-                    </button>
-                  )}
-                </div>
-                <div className="w-56 bg-bg-main/30 px-3 py-0.5 rounded border border-white/5">
-                  <DotSlider
-                    label="Potência do Sangue"
-                    value={character.status.blood_potency}
-                    onChange={handleBloodPotencyChange}
-                    allowZero={rules.bloodPotency === 0}
-                    baseValue={rules.bloodPotency}
-                    showXpDistinction={status !== "IN_PLAY"}
-                    disabled={status === "IN_PLAY" && !isEvolvingMode}
-                    variant="gold"
-                  />
-                </div>
-              </div>
 
-              {/* PAINEL DE FISIOLOGIA DO SANGUE (RESSONÂNCIA & DISCRASI) */}
-              <BloodPanel
-                value={character.bloodState}
-                onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {character.disciplines.map(disc => (
-                  <div key={disc.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-3 relative group">
-                    {/* BOTÃO EXCLUIR DISCIPLINA */}
-                    {status !== "IN_PLAY" && (
-                      <button
-                        onClick={() => handleDeleteDiscipline(disc.id)}
-                        className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
-                        title="Excluir Disciplina"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    )}
-
-                    <div className="flex justify-between items-center pr-6">
-                      <div className="flex items-center space-x-2">
-                        {onTraitClick && (
-                          <button
-                            onClick={() => onTraitClick({ id: disc.id, label: disc.name, value: disc.level })}
-                            className={`cursor-pointer select-none text-base transition-all duration-150 hover:scale-125 hover:text-hunger-red ${
-                              dicePool.some(p => p.id === disc.id)
-                                ? "text-hunger-red font-bold scale-115 animate-pulse"
-                                : "text-text-muted hover:text-text-primary"
-                            }`}
-                            title="Selecionar para o Carrinho de Dados"
-                          >
-                            🎲
-                          </button>
-                        )}
-                        <InlineEdit
-                          value={disc.name}
-                          onChange={(val) => handleDisciplineNameChange(disc.id, val)}
-                          placeholder="Nova Disciplina"
-                          type="select"
-                          options={DISCIPLINE_OPTIONS}
-                          disabled={status === "IN_PLAY"}
-                          className="font-gothic text-xl text-text-primary tracking-wide hover:bg-white/5 cursor-pointer"
-                        />
-                      </div>
-                      
-                      <div className="flex space-x-1 items-center h-6">
-                        {Array.from({ length: 5 }).map((_, idx) => {
-                          const isActive = idx < disc.level;
-                          const isBase = idx < (alloc.disciplinesBase[disc.id] || 0);
-                          
-                          let activeClass = "";
-                          if (isActive) {
-                            if (status === "IN_PLAY") {
-                              activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
-                            } else if (isBase) {
-                              activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_6px_rgba(200,36,52,0.6)]";
-                            } else {
-                              activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
-                            }
-                          } else {
-                            activeClass = "bg-bg-input border border-text-dim/80 hover:border-blood-red";
-                          }
-                          
-                          return (
-                            <button
-                              key={idx}
-                              disabled={status === "IN_PLAY" && !isEvolvingMode}
-                              onClick={() => handleDisciplineLevelChange(disc.id, idx + 1)}
-                              className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
-                              title={`Nível ${idx + 1}`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5 pt-2 border-t border-white/5">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-text-muted block">Poderes Adquiridos:</span>
-                      
-                      <div className="space-y-1.5">
-                        {disc.powers.map((pow, pIdx) => (
-                          <div 
-                            key={pIdx} 
-                            className="flex items-center justify-between text-sm text-text-primary font-reading pl-2 py-0.5 border-l border-blood-red/40 bg-white/5 rounded-r-sm group/power"
-                          >
-                            <div className="flex items-center space-x-2 flex-1 mr-2">
-                              <span className="text-blood-red font-bold select-none">•</span>
-                              <InlineEdit
-                                value={pow}
-                                onChange={(val) => handlePowerChange(disc.id, pIdx, val)}
-                                placeholder="Novo Poder"
-                                disabled={status === "IN_PLAY"}
-                                className="text-sm font-reading text-text-primary flex-1"
-                              />
-                            </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* COLUNA 1: QUALIDADES & ANTECEDENTES */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Qualidades & Antecedentes</h4>
+                      <div className="space-y-3">
+                        {meritsWithSum.map(adv => (
+                          <div key={adv.id} className="bg-bg-main/30 p-3.5 border border-white/5 rounded-sm relative group">
+                            {/* BOTÃO EXCLUIR */}
                             {status !== "IN_PLAY" && (
                               <button
-                                onClick={() => handleDeletePower(disc.id, pIdx)}
-                                className="text-text-muted/40 hover:text-hunger-red opacity-0 group-hover/power:opacity-100 transition-opacity duration-150 cursor-pointer pr-1 select-none text-[10px] font-bold"
-                                title="Remover Poder"
+                                onClick={() => handleDeleteAdvantage(adv.id)}
+                                className="absolute top-3.5 right-3.5 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                                title="Excluir"
                               >
                                 ✕
                               </button>
                             )}
+
+                            <div className="flex justify-between items-center mb-1.5 pr-6">
+                              <div className="flex flex-col space-y-0.5">
+                                <InlineEdit
+                                  value={adv.name}
+                                  onChange={(val) => handleAdvantageNameChange(adv.id, val)}
+                                  placeholder="Nova Vantagem"
+                                  disabled={status === "IN_PLAY"}
+                                  className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-[200px]"
+                                />
+                                <span className="text-[9px] uppercase tracking-wider text-text-muted">
+                                  {adv.type === "merit" ? "Qualidade" : "Antecedente"}
+                                </span>
+                              </div>
+
+                              <div className="flex space-x-1 items-center h-6">
+                                {Array.from({ length: 5 }).map((_, idx) => {
+                                  const isActive = idx < adv.level;
+                                  const isBase = idx < adv.sumBefore;
+                                  
+                                  let activeClass = "";
+                                  if (isActive) {
+                                    if (status === "IN_PLAY") {
+                                      activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
+                                    } else if (isBase) {
+                                      activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_6px_rgba(200,36,52,0.6)]";
+                                    } else {
+                                      activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
+                                    }
+                                  } else {
+                                    activeClass = "bg-bg-input border border-text-dim/80 hover:border-blood-red";
+                                  }
+
+                                  return (
+                                    <button
+                                      key={idx}
+                                      disabled={status === "IN_PLAY" && !isEvolvingMode}
+                                      onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
+                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                                      title={`Nível ${idx + 1}`}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            
+                            <InlineEdit
+                              value={adv.description || ""}
+                              onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
+                              placeholder="Adicionar descrição..."
+                              disabled={status === "IN_PLAY"}
+                              className="text-xs text-text-muted font-reading leading-relaxed w-full block"
+                            />
                           </div>
                         ))}
                       </div>
 
                       {status !== "IN_PLAY" && (
                         <button
-                          onClick={() => handleAddPower(disc.id)}
-                          className="text-[10px] uppercase tracking-wider font-bold text-gold-accent/40 hover:text-gold-accent transition-colors duration-150 cursor-pointer pt-1.5 flex items-center space-x-1 select-none"
+                          onClick={() => handleAddAdvantage("merit")}
+                          className="text-xs uppercase tracking-wider font-bold text-gold-accent bg-burgundy/40 hover:bg-burgundy px-3 py-2 rounded-sm border border-blood-red/30 hover:border-blood-red transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
                         >
-                          <span>+ Adicionar Poder</span>
+                          + Adicionar Qualidade / Antecedente
                         </button>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* TAB 3: VANTAGENS */}
-          {activeTab === "vantagens" && (() => {
-            const meritsAndBackgrounds = character.advantages.filter(a => a.type === "background" || a.type === "merit");
-            const flawsAndLoresheets = character.advantages.filter(a => a.type === "flaw" || a.type === "loresheet");
-
-            // Pré-calcular somas acumuladas de vantagens positivas da Coluna 1
-            const meritsWithSum = meritsAndBackgrounds.map((adv, idx) => {
-              const sumBefore = meritsAndBackgrounds.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
-              return { ...adv, sumBefore };
-            });
-
-            // Soma total da coluna 1
-            const totalMeritsSum = meritsAndBackgrounds.reduce((acc, curr) => acc + curr.level, 0);
-
-            // Pré-calcular a soma das loresheets para a Coluna 2
-            const loresheets = flawsAndLoresheets.filter(a => a.type === "loresheet");
-            
-            // Lista unificada para a Coluna 2 com a soma acumulada de loresheets
-            const flawsAndLoresheetsWithSum = flawsAndLoresheets.map(adv => {
-              if (adv.type === "loresheet") {
-                const idx = loresheets.findIndex(l => l.id === adv.id);
-                const sumBefore = totalMeritsSum + loresheets.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
-                return { ...adv, sumBefore };
-              }
-              return { ...adv, sumBefore: 0 };
-            });
-
-            return (
-              <div className="space-y-6">
-                <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 mb-4 uppercase flex items-center justify-between">
-                  <span>Vantagens, Qualidades, Defeitos & Fichas de Saber</span>
-                  {status === "DRAFT" && alloc.advantagesRemaining > 0 && (
-                    <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
-                      Vantagens: {alloc.advantagesRemaining} {alloc.advantagesRemaining === 1 ? "ponto restante" : "pontos restantes"}
-                    </span>
-                  )}
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
-                  {/* COLUNA 1: QUALIDADES & ANTECEDENTES */}
-                  <div className="space-y-4">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Qualidades & Antecedentes</h4>
-                    <div className="space-y-3">
-                      {meritsWithSum.map(adv => {
-                        return (
-                          <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5 relative group">
-                            {/* BOTÃO EXCLUIR VANTAGEM */}
+                    {/* COLUNA 2: DEFEITOS & FICHAS DE SABER */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Defeitos & Fichas de Saber</h4>
+                      <div className="space-y-3">
+                        {flawsAndLoresheetsWithSum.map(adv => (
+                          <div key={adv.id} className="bg-bg-main/30 p-3.5 border border-white/5 rounded-sm relative group">
+                            {/* BOTÃO EXCLUIR */}
                             {status !== "IN_PLAY" && (
                               <button
                                 onClick={() => handleDeleteAdvantage(adv.id)}
-                                className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
-                                title="Excluir Vantagem"
+                                className="absolute top-3.5 right-3.5 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                                title="Excluir"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
+                                ✕
                               </button>
                             )}
 
-                            <div className="flex justify-between items-center pr-6 flex-wrap gap-2">
-                              <div className="flex items-center space-x-1.5 flex-wrap">
+                            <div className="flex justify-between items-center mb-1.5 pr-6">
+                              <div className="flex flex-col space-y-0.5">
                                 <InlineEdit
                                   value={adv.name}
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
-                                  placeholder="Nome da Vantagem"
+                                  placeholder="Novo Defeito"
                                   disabled={status === "IN_PLAY"}
-                                  className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide"
+                                  className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-[200px]"
                                 />
-                                <span className="text-[10px] text-gold-accent font-normal italic">
-                                  (
-                                  <InlineEdit
-                                    value={adv.type}
-                                    onChange={(val) => handleAdvantageTypeChange(adv.id, val as "background" | "merit" | "flaw" | "loresheet")}
-                                    type="select"
-                                    options={["background", "merit"]}
-                                    disabled={status === "IN_PLAY"}
-                                    className="hover:bg-white/5 text-[10px] text-gold-accent italic border-none py-0 px-0.5"
-                                  />
-                                  )
+                                <span className="text-[9px] uppercase tracking-wider text-text-muted">
+                                  {adv.type === "flaw" ? "Defeito" : "Ficha de Saber"}
                                 </span>
                               </div>
-                              
-                              <div className="flex space-x-1">
+
+                              <div className="flex space-x-1 items-center h-6">
                                 {Array.from({ length: 5 }).map((_, idx) => {
                                   const isActive = idx < adv.level;
+                                  const isBase = idx < adv.sumBefore;
                                   
-                                  // Contabilidade acumulada de pontos base vs XP
-                                  let isBasePoint = true;
-                                  if (isActive) {
-                                    const pointGlobalIndex = adv.sumBefore + idx + 1;
-                                    isBasePoint = pointGlobalIndex <= 7;
-                                  }
-
                                   let activeClass = "";
                                   if (isActive) {
                                     if (status === "IN_PLAY") {
                                       activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
-                                    } else if (isBasePoint) {
-                                      activeClass = "bg-gold-accent ring-1 ring-gold-accent/40 shadow-[0_0_8px_rgba(255,216,77,0.5)]";
+                                    } else if (isBase) {
+                                      activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_66px_rgba(200,36,52,0.6)]";
                                     } else {
                                       activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
                                     }
                                   } else {
-                                    activeClass = "bg-bg-input border border-text-dim hover:border-gold-accent";
+                                    activeClass = "bg-bg-input border border-text-dim/80 hover:border-blood-red";
                                   }
 
                                   return (
@@ -2032,131 +2112,35 @@ export default function CharacterSheetClient({
                               className="text-xs text-text-muted font-reading leading-relaxed w-full block"
                             />
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
+
+                      {status !== "IN_PLAY" && (
+                        <button
+                          onClick={() => handleAddAdvantage("flaw")}
+                          className="text-xs uppercase tracking-wider font-bold text-blood-red/60 hover:text-blood-red bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
+                        >
+                          + Adicionar Defeito / Ficha de Saber
+                        </button>
+                      )}
                     </div>
 
-                    {status !== "IN_PLAY" && (
-                      <button
-                        onClick={() => handleAddAdvantage("background")}
-                        className="text-xs uppercase tracking-wider font-bold text-gold-accent/60 hover:text-gold-accent bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
-                      >
-                        + Adicionar Qualidade / Antecedente
-                      </button>
-                    )}
                   </div>
+                </>
+              );
+            })()}
+          </section>
 
-                  {/* COLUNA 2: DEFEITOS & FICHAS DE SABER */}
-                  <div className="space-y-4">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold">Defeitos & Fichas de Saber</h4>
-                    <div className="space-y-3">
-                      {flawsAndLoresheetsWithSum.map(adv => {
-                        const isLoresheet = adv.type === "loresheet";
-                        return (
-                          <div key={adv.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-1.5 relative group">
-                            {/* BOTÃO EXCLUIR VANTAGEM */}
-                            {status !== "IN_PLAY" && (
-                              <button
-                                onClick={() => handleDeleteAdvantage(adv.id)}
-                                className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
-                                title="Excluir Vantagem"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            )}
+          {/* SEÇÃO 7: INVENTÁRIO */}
+          <section id="inventario" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 scroll-mt-24">
+            <InventoryManager
+              items={character.inventory}
+              onChange={(newInventory) => setCharacter(prev => ({ ...prev, inventory: newInventory }))}
+            />
+          </section>
 
-                            <div className="flex justify-between items-center pr-6 flex-wrap gap-2">
-                              <div className="flex items-center space-x-1.5 flex-wrap">
-                                <InlineEdit
-                                  value={adv.name}
-                                  onChange={(val) => handleAdvantageNameChange(adv.id, val)}
-                                  placeholder="Nome da Vantagem"
-                                  disabled={status === "IN_PLAY"}
-                                  className="font-data font-semibold text-sm text-text-primary uppercase tracking-wide"
-                                />
-                                <span className={`text-[10px] font-normal italic ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}>
-                                  (
-                                  <InlineEdit
-                                    value={adv.type}
-                                    onChange={(val) => handleAdvantageTypeChange(adv.id, val as "background" | "merit" | "flaw" | "loresheet")}
-                                    type="select"
-                                    options={["flaw", "loresheet"]}
-                                    disabled={status === "IN_PLAY"}
-                                    className={`hover:bg-white/5 text-[10px] italic border-none py-0 px-0.5 ${isLoresheet ? "text-gold-accent" : "text-hunger-red"}`}
-                                  />
-                                  )
-                                </span>
-                              </div>
-                              
-                              <div className="flex space-x-1">
-                                {Array.from({ length: 5 }).map((_, idx) => {
-                                  const isActive = idx < adv.level;
-                                  
-                                  let activeClass = "";
-                                  if (isActive) {
-                                    if (status === "IN_PLAY") {
-                                      activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
-                                    } else if (isLoresheet) {
-                                      const pointGlobalIndex = adv.sumBefore + idx + 1;
-                                      const isBasePoint = pointGlobalIndex <= 7;
-                                      
-                                      if (isBasePoint) {
-                                        activeClass = "bg-gold-accent ring-1 ring-gold-accent/40 shadow-[0_0_8px_rgba(255,216,77,0.5)]";
-                                      } else {
-                                        activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
-                                      }
-                                    } else {
-                                      // Defeito (Flaw)
-                                      activeClass = "bg-hunger-red shadow-[0_0_4px_rgba(255,92,92,0.4)]";
-                                    }
-                                  } else {
-                                    activeClass = "bg-bg-input border border-text-dim";
-                                  }
-
-                                  return (
-                                    <button
-                                      key={idx}
-                                      disabled={status === "IN_PLAY" && !isEvolvingMode}
-                                      onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
-                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
-                                      title={`Nível ${idx + 1}`}
-                                    />
-                                  );
-                                })}
-                              </div>
-                            </div>
-                            
-                            <InlineEdit
-                              value={adv.description || ""}
-                              onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
-                              placeholder="Adicionar descrição..."
-                              disabled={status === "IN_PLAY"}
-                              className="text-xs text-text-muted font-reading leading-relaxed w-full block"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {status !== "IN_PLAY" && (
-                      <button
-                        onClick={() => handleAddAdvantage("flaw")}
-                        className="text-xs uppercase tracking-wider font-bold text-blood-red/60 hover:text-blood-red bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
-                      >
-                        + Adicionar Defeito / Ficha de Saber
-                      </button>
-                    )}
-                  </div>
-
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* TAB 4: SISTEMA */}
-          {activeTab === "sistema" && (
+          {/* SEÇÃO 8: SISTEMA E MACROS */}
+          <section id="macros" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 scroll-mt-24 space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
               <div className="lg:col-span-6 space-y-4">
@@ -2345,67 +2329,64 @@ export default function CharacterSheetClient({
               </div>
 
             </div>
-          )}
+          </section>
 
-          {/* TAB 5: DIÁRIO DE XP */}
-          {activeTab === "xp_diary" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
-                  Livro-Razão de Auditoria de Experiência (XP)
-                </h3>
-                <p className="text-xs text-text-muted font-reading">
-                  Registro histórico completo de todos os gastos, devoluções e transações financeiras de pontos de XP deste personagem na crônica.
-                </p>
-              </div>
-              
-              {isLoadingLedger ? (
-                <div className="text-center py-12 text-text-muted animate-pulse font-data uppercase tracking-wider text-xs">
-                  Carregando diário de XP...
-                </div>
-              ) : xpLedger.length === 0 ? (
-                <div className="text-center py-12 border border-white/5 bg-bg-main/20 rounded-sm text-text-dim/60 italic text-sm font-reading">
-                  Nenhum lançamento de XP registrado neste personagem até o momento.
-                </div>
-              ) : (
-                <div className="overflow-x-auto border border-white/10 rounded-sm bg-bg-main/30">
-                  <table className="w-full text-left border-collapse font-data text-xs uppercase">
-                    <thead>
-                      <tr className="border-b border-white/10 bg-bg-card-dark text-text-muted">
-                        <th className="p-3 tracking-wider font-bold">Data / Hora</th>
-                        <th className="p-3 tracking-wider font-bold">Descrição da Alteração</th>
-                        <th className="p-3 tracking-wider font-bold text-right">Lançamento (XP)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {xpLedger.map((item) => {
-                        const dateFormatted = new Date(item.createdAt).toLocaleString("pt-BR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit"
-                        });
-                        const isNegative = item.xpChange < 0;
-                        return (
-                          <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                            <td className="p-3 text-text-muted whitespace-nowrap">{dateFormatted}</td>
-                            <td className="p-3 text-text-primary font-reading normal-case">{item.description}</td>
-                            <td className={`p-3 font-bold text-right text-sm ${isNegative ? "text-hunger-red" : "text-emerald-400"}`}>
-                              {isNegative ? "" : "+"}{item.xpChange} XP
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+          {/* SEÇÃO 9: DIÁRIO DE XP */}
+          <section id="xp_diary" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 scroll-mt-24 space-y-6">
+            <div>
+              <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
+                Livro-Razão de Auditoria de Experiência (XP)
+              </h3>
+              <p className="text-xs text-text-muted font-reading">
+                Registro histórico completo de todos os gastos, devoluções e transações financeiras de pontos de XP deste personagem na crônica.
+              </p>
             </div>
-          )}
+            
+            {isLoadingLedger ? (
+              <div className="text-center py-12 text-text-muted animate-pulse font-data uppercase tracking-wider text-xs">
+                Carregando diário de XP...
+              </div>
+            ) : xpLedger.length === 0 ? (
+              <div className="text-center py-12 border border-white/5 bg-bg-main/20 rounded-sm text-text-dim/60 italic text-sm font-reading">
+                Nenhum lançamento de XP registrado neste personagem até o momento.
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-white/10 rounded-sm bg-bg-main/30">
+                <table className="w-full text-left border-collapse font-data text-xs uppercase">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-bg-card-dark text-text-muted">
+                      <th className="p-3 tracking-wider font-bold">Data / Hora</th>
+                      <th className="p-3 tracking-wider font-bold">Descrição da Alteração</th>
+                      <th className="p-3 tracking-wider font-bold text-right">Lançamento (XP)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {xpLedger.map((item) => {
+                      const dateFormatted = new Date(item.createdAt).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      });
+                      const isNegative = item.xpChange < 0;
+                      return (
+                        <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="p-3 text-text-muted whitespace-nowrap">{dateFormatted}</td>
+                          <td className="p-3 text-text-primary font-reading normal-case">{item.description}</td>
+                          <td className={`p-3 font-bold text-right text-sm ${isNegative ? "text-hunger-red" : "text-emerald-400"}`}>
+                            {isNegative ? "" : "+"}{item.xpChange} XP
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
 
-        </section>
-
+        </div>
       </div>
 
       {/* MODAL GÓTICO DE CONFIRMAÇÃO DE EVOLUÇÃO POR XP */}

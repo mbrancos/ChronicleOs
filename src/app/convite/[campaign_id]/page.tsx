@@ -90,7 +90,8 @@ export default async function InvitePage({ params }: PageProps) {
     .where(
       and(
         eq(characters.userId, session.user.id),
-        isNull(characters.campaignId)
+        isNull(characters.campaignId),
+        eq(characters.type, "jogador")
       )
     );
 

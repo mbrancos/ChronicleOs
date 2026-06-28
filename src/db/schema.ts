@@ -15,7 +15,7 @@ export const campaigns = pgTable("campaigns", {
     .notNull(),
   description: text("description"),
   status: text("status").$type<"DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED">().default("DRAFT").notNull(),
-  powerLevel: text("power_level").$type<"FLEDGLING" | "NEONATE" | "ANCILLAE">().default("NEONATE").notNull(),
+  powerLevel: text("power_level").$type<string>().default("FLEDGLING,NEONATE,ANCILLAE").notNull(),
   extraXp: integer("extra_xp").default(0).notNull(),
   allowedClans: jsonb("allowed_clans").$type<string[]>(), // Nulo significa todos permitidos
   tenets: jsonb("tenets").$type<string[]>().default([]).notNull(),

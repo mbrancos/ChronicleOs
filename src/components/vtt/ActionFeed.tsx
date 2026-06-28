@@ -148,7 +148,6 @@ export default function ActionFeed({
     publicChannel.bind("new-roll", handleNewRoll);
     publicChannel.bind("update-roll", handleUpdateRoll);
     publicChannel.bind("xp-granted", handleXpGranted);
-    publicChannel.bind("damage-applied", handleDamageApplied);
 
     // 2. Se for Narrador, assinar canal privado
     let privateChannel: Channel | null = null;
@@ -157,7 +156,6 @@ export default function ActionFeed({
       privateChannel = pusher.subscribe(privateChannelName);
       privateChannel.bind("new-roll", handleNewRoll);
       privateChannel.bind("update-roll", handleUpdateRoll);
-      privateChannel.bind("damage-applied", handleDamageApplied);
     }
 
     return () => {

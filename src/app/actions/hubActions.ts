@@ -102,7 +102,7 @@ export async function createCampaignAction(name: string, description?: string) {
       description: description?.trim() || null,
       narratorId: session.user.id,
       status: "RECRUITING", // Começa aberta para recrutamento por padrão
-      powerLevel: "NEONATE",
+      powerLevel: "FLEDGLING,NEONATE,ANCILLAE",
       extraXp: 0,
       allowedClans: DEFAULT_ALLOWED_CLANS,
     });
@@ -139,11 +139,26 @@ export async function createCharacterAction(name: string, campaignId?: string | 
 
     const newChar = await db.insert(characters).values({
       campaignId: targetCampaignId,
-      userId: type === "jogador" ? session.user.id : null,
+      userId: session.user.id,
       name: trimmedName,
       type,
       sheetData: DEFAULT_CHARACTER_DATA,
     }).returning({ id: characters.id });
+
+    // Se for NPC criado dentro de uma campanha, criar também uma cópia no cofre (sem campaignId)
+    if (type === "npc" && targetCampaignId) {
+      try {
+        await db.insert(characters).values({
+          campaignId: null,
+          userId: session.user.id,
+          name: trimmedName,
+          type: "npc",
+          sheetData: DEFAULT_CHARACTER_DATA,
+        });
+      } catch (err) {
+        console.error("Falha ao criar cópia do NPC no cofre:", err);
+      }
+    }
 
     revalidatePath("/hub");
     if (targetCampaignId) {
@@ -264,7 +279,7 @@ export async function updateCampaignSettingsAction(
   campaignId: string,
   settings: {
     status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
-    powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+    powerLevel: string;
     extraXp: number;
     allowedClans: string[];
     tenets?: string[];

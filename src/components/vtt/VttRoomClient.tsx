@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import PlayerDock from "./PlayerDock";
 import DamageModal from "./DamageModal";
 import SheetDrawer from "./SheetDrawer";
@@ -178,12 +179,31 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
       }
     };
 
+    const handleCharacterUpdatedEvent = (data: {
+      characterId: string;
+      sheetData: any;
+      buildState: any;
+      status: string;
+      name: string;
+    }) => {
+      if (data.characterId === localCharacter.id) {
+        setLocalCharacter((prev) => ({
+          ...prev,
+          sheetData: data.sheetData,
+          buildState: data.buildState,
+          status: data.status as any,
+          name: data.name,
+        }));
+      }
+    };
+
     // Registrar binds no canal público do jogador
     publicChannel.bind("token-created", handleTokenCreated);
     publicChannel.bind("token-updated", handleTokenUpdated);
     publicChannel.bind("token-deleted", handleTokenDeleted);
     publicChannel.bind("round-reset", handleRoundReset);
     publicChannel.bind("damage-applied", handleDamageAppliedEvent);
+    publicChannel.bind("character-updated", handleCharacterUpdatedEvent);
 
     // Escutar eventos de Fundo e Imagem de Cena (Issues 3 e 4)
     publicChannel.bind("scene-background-changed", (data: { imageUrl: string | null }) => {
@@ -361,7 +381,17 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
       )}
       
       {/* AREA DE JOGO SUPERIOR (Sidebar + Mesa) — 80px = h-20 do PlayerDock fixo */}
-      <div className="flex flex-row h-[calc(100vh-80px)] w-full overflow-hidden">
+      <div className="flex flex-row h-[calc(100vh-80px)] w-full overflow-hidden relative">
+        {/* Botão de Retorno ao Painel */}
+        <Link
+          href={`/campanhas/${character.campaignId}/jogador`}
+          className="absolute top-4 right-4 z-20 px-3 py-1.5 bg-black/60 hover:bg-black/80 border border-white/10 hover:border-blood-red text-text-dim hover:text-white text-[10px] font-data uppercase tracking-widest rounded-xs transition-all duration-200 cursor-pointer shadow-md flex items-center gap-1.5"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Lobby da Campanha
+        </Link>
         {/* FEED DE ROLAGENS MULTIPLAYER (Sidebar Esquerdo) */}
         <ActionFeed 
           rolls={rollsList} 
@@ -477,7 +507,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
       {/* OVERLAY DE IMAGEM DE CENA (enviada pelo Narrador via Pusher) */}
       {sceneImage && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 backdrop-blur-md"
           onClick={() => setSceneImage(null)}
         >
           <div

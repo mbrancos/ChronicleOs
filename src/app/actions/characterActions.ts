@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { characters, campaigns, users, xpLedgers } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull, inArray } from "drizzle-orm";
 import { CharacterSheetData } from "@/types/character";
 import { auth } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
@@ -22,7 +22,8 @@ export async function getCharacterSheet(characterId: string) {
         sheetData: characters.sheetData,
         name: characters.name,
         status: characters.status,
-        buildState: characters.buildState
+        buildState: characters.buildState,
+        type: characters.type,
       })
       .from(characters)
       .where(eq(characters.id, characterId))
@@ -37,7 +38,8 @@ export async function getCharacterSheet(characterId: string) {
       data: result[0].sheetData as CharacterSheetData | null,
       name: result[0].name,
       status: result[0].status,
-      buildState: result[0].buildState
+      buildState: result[0].buildState,
+      type: result[0].type,
     };
   } catch (error: any) {
     console.error("Erro em getCharacterSheet:", error);
@@ -64,6 +66,7 @@ export async function updateCharacterSheet(
         status: characters.status,
         buildState: characters.buildState,
         campaignId: characters.campaignId,
+        name: characters.name,
       })
       .from(characters)
       .where(eq(characters.id, characterId))
@@ -118,6 +121,18 @@ export async function updateCharacterSheet(
     revalidatePath("/hub");
     if (oldChar.campaignId) {
       revalidatePath(`/campanhas/${oldChar.campaignId}/narrador`);
+      try {
+        const { pusherServer } = await import("@/lib/pusher");
+        await pusherServer.trigger(`public-campaign-${oldChar.campaignId}`, "character-updated", {
+          characterId,
+          sheetData,
+          buildState: buildState !== undefined ? buildState : oldBuildState,
+          status: status !== undefined ? status : oldStatus,
+          name: updatePayload.name || oldChar.name
+        });
+      } catch (err) {
+        console.error("Falha ao notificar Pusher da atualização da ficha:", err);
+      }
     }
 
     return { success: true };
@@ -344,7 +359,8 @@ export async function joinCampaignWithCharacterAction(characterId: string, campa
         campaignId: characters.campaignId,
         status: characters.status,
         buildState: characters.buildState,
-        sheetData: characters.sheetData
+        sheetData: characters.sheetData,
+        type: characters.type
       })
       .from(characters)
       .where(eq(characters.id, characterId))
@@ -355,6 +371,11 @@ export async function joinCampaignWithCharacterAction(characterId: string, campa
     }
 
     const char = charResult[0];
+
+    // Segurança: o personagem precisa ser do tipo jogador
+    if (char.type !== "jogador") {
+      return { success: false, error: "Apenas personagens do tipo jogador podem ingressar em crônicas." };
+    }
 
     // Segurança: o usuário atual deve ser o dono do personagem
     if (char.userId !== session.user.id) {
@@ -381,18 +402,31 @@ export async function joinCampaignWithCharacterAction(characterId: string, campa
     }
 
     // B. Validação de Limites de XP
+    const conceptToPowerLevel = (concept: string): "FLEDGLING" | "NEONATE" | "ANCILLAE" => {
+      const normalized = String(concept).toLowerCase().trim();
+      if (normalized === "cria" || normalized === "fledgling") return "FLEDGLING";
+      if (normalized === "ancila" || normalized === "ancillae") return "ANCILLAE";
+      return "NEONATE";
+    };
+
+    const charPowerLevel = conceptToPowerLevel(sheetData?.profile?.concept || "Neófito");
+    const allowedPowerLevels = (campaign.powerLevel || "NEONATE").split(",");
+    if (!allowedPowerLevels.includes(charPowerLevel)) {
+      return { success: false, error: `O nível de poder '${charPowerLevel}' (baseado no conceito '${sheetData?.profile?.concept || "Neófito"}') não é permitido nesta crônica.` };
+    }
+
     const spentXp = calculateSpentXp(clan, char.buildState);
     const powerLevelXpMap = {
       FLEDGLING: 0,
       NEONATE: 15,
       ANCILLAE: 35,
     };
-    const maxAllowedXp = (powerLevelXpMap[campaign.powerLevel] ?? 15) + (campaign.extraXp || 0);
+    const maxAllowedXp = (powerLevelXpMap[charPowerLevel] ?? 15) + (campaign.extraXp || 0);
 
     if (spentXp > maxAllowedXp) {
       return { 
         success: false, 
-        error: `O personagem gastou ${spentXp} XP, mas o limite autorizado da crônica é ${maxAllowedXp} XP (${campaign.powerLevel} = ${powerLevelXpMap[campaign.powerLevel] ?? 15} XP + ${campaign.extraXp} XP extra). Reduza os pontos em excesso no seu Cofre antes de ingressar.`
+        error: `O personagem gastou ${spentXp} XP, mas o limite autorizado para a categoria ${charPowerLevel} nesta crônica é ${maxAllowedXp} XP. Reduza os pontos em excesso no seu Cofre antes de ingressar.`
       };
     }
 
@@ -476,12 +510,38 @@ export async function anistiaCharacterAction(characterId: string) {
       .set({ status: "READY" })
       .where(eq(characters.id, characterId));
 
+    try {
+      const { pusherServer } = await import("@/lib/pusher");
+      // Buscar a ficha completa para enviar os dados sincronizados
+      const fullChar = await db
+        .select({
+          sheetData: characters.sheetData,
+          buildState: characters.buildState,
+          name: characters.name
+        })
+        .from(characters)
+        .where(eq(characters.id, characterId))
+        .limit(1);
+
+      if (fullChar.length > 0) {
+        await pusherServer.trigger(`public-campaign-${char.campaignId}`, "character-updated", {
+          characterId,
+          sheetData: fullChar[0].sheetData,
+          buildState: fullChar[0].buildState,
+          status: "READY",
+          name: fullChar[0].name
+        });
+      }
+    } catch (err) {
+      console.error("Erro Pusher anistia:", err);
+    }
+
     revalidatePath("/hub");
     revalidatePath(`/campanhas/${char.campaignId}/narrador`);
     return { success: true };
   } catch (err: any) {
     console.error("Erro em anistiaCharacterAction:", err);
-    return { success: false, error: err?.message || "Falha ao destravar edição do personagem." };
+    return { success: false, error: err?.message || "Falha ao destravar edição del personagem." };
   }
 }
 
@@ -689,6 +749,126 @@ async function auditXpChanges(characterId: string, oldBuildState: any, newBuildS
         xpChange: c.xpChange,
       }))
     );
+  }
+}
+
+// Action para o narrador puxar personagens de seu cofre para a crônica como NPCs
+export async function pullCharactersToCampaignAsNpcAction(characterIds: string[], campaignId: string) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(campaignId) || characterIds.some(id => !uuidRegex.test(id))) {
+      return { success: false, error: "IDs fornecidos são inválidos." };
+    }
+
+    // 1. Validar se a campanha existe e o usuário atual é o narrador
+    const campaignResult = await db
+      .select({ narratorId: campaigns.narratorId })
+      .from(campaigns)
+      .where(eq(campaigns.id, campaignId))
+      .limit(1);
+
+    if (campaignResult.length === 0) {
+      return { success: false, error: "Crônica não encontrada." };
+    }
+
+    if (campaignResult[0].narratorId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Apenas o Narrador da crônica pode puxar NPCs." };
+    }
+
+    // 2. Atualizar personagens para a campanha atual como NPCs e redefinir para DRAFT (edição livre)
+    await db
+      .update(characters)
+      .set({
+        campaignId,
+        type: "npc",
+        status: "DRAFT"
+      })
+      .where(
+        and(
+          inArray(characters.id, characterIds),
+          eq(characters.userId, session.user.id)
+        )
+      );
+
+    revalidatePath("/hub");
+    revalidatePath(`/campanhas/${campaignId}/narrador`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em pullCharactersToCampaignAsNpcAction:", err);
+    return { success: false, error: err?.message || "Erro ao puxar personagens do cofre." };
+  }
+}
+
+// Action para desvincular/retirar personagem da campanha (só se não estiver em andamento)
+export async function leaveCampaignAction(characterId: string) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    // 1. Buscar o personagem e a campanha associada
+    const charResult = await db
+      .select({ 
+        id: characters.id,
+        userId: characters.userId,
+        campaignId: characters.campaignId,
+      })
+      .from(characters)
+      .where(eq(characters.id, characterId))
+      .limit(1);
+
+    if (charResult.length === 0) {
+      return { success: false, error: "Personagem não encontrado." };
+    }
+
+    const char = charResult[0];
+
+    if (char.userId !== session.user.id) {
+      return { success: false, error: "Acesso negado: Você não é o proprietário deste personagem." };
+    }
+
+    if (!char.campaignId) {
+      return { success: false, error: "Este personagem não está associado a nenhuma crônica." };
+    }
+
+    const campaignResult = await db
+      .select({ status: campaigns.status })
+      .from(campaigns)
+      .where(eq(campaigns.id, char.campaignId))
+      .limit(1);
+
+    if (campaignResult.length === 0) {
+      return { success: false, error: "Crônica não encontrada." };
+    }
+
+    const campaign = campaignResult[0];
+
+    // Restrição: Não pode desvincular se a crônica já estiver em andamento (IN_PROGRESS)
+    if (campaign.status === "IN_PROGRESS") {
+      return { success: false, error: "Não é possível desvincular o personagem de uma crônica em andamento." };
+    }
+
+    // 2. Desvincular: campaignId = null, status = "READY"
+    await db
+      .update(characters)
+      .set({
+        campaignId: null,
+        status: "READY"
+      })
+      .where(eq(characters.id, characterId));
+
+    revalidatePath("/hub");
+    revalidatePath(`/campanhas/${char.campaignId}/narrador`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em leaveCampaignAction:", err);
+    return { success: false, error: err?.message || "Erro ao desvincular personagem." };
   }
 }
 

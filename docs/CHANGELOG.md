@@ -2,6 +2,35 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.22.0] - 2026-06-28
+
+### Adicionado
+- **Ficha em Página Única (Single Page):**
+  - Remoção do layout por abas e renderização completa de todas as seções da ficha de personagem em fluxo contínuo.
+  - Implementação de menu de ancoragem suave (`scrollIntoView` suave) fixado no topo da ficha (`sticky top-[0px] z-30 bg-bg-main/95 backdrop-blur-md`).
+- **Feed de Rolagens Dividido e Ordenado:**
+  - Separação visual de dados normais (DN) e dados de Fome (DF) no feed de rolagens.
+  - Ordenação decrescente dos dados em cada categoria para facilitar leitura.
+  - Renomeação do rótulo `/ Alvo` para `/ Dificuldade` na visualização dos logs.
+- **Dock de Rolagem do Narrador Aprimorado:**
+  - Renomeação de "Pool" para "Dados" no dock inferior de rolagem do Narrador.
+  - Inclusão do modificador de **Fome avulsa** (`fome -+`) no dock do Narrador, permitindo que faça rolagens avulsas aplicando dados de fome.
+  - Quando traits da ficha aberta são clicados pelo Narrador, a Fome real daquele personagem é capturada automaticamente.
+  - Unificação das rolagens de despertar em um único botão toggle **"Despertar 🩸"** integrado aos disparos de rolagem pública/secreta.
+- **Ferramentas de Imagem de Cena e Cenário no Topo:**
+  - Migração completa das ferramentas de "Cenário" e "Imagem de Cena" da barra lateral direita do Narrador para o topo do tabuleiro VTT (`absolute top-[68px] left-[100px]`), alinhadas com o botão "Nova Rodada" do lado de fora do Palco da Cena.
+- **Persistência de Logs de Dano e Cura:**
+  - Salvamento de logs de alteração de vitalidade e força de vontade (dano e cura) diretamente no Neon Database (tabela `rolls` como `damage_log`).
+  - Transmissão via canal de rolagem em tempo real (`new-roll`) para que persistem permanentemente no feed mesmo após reloads.
+
+### Corrigido
+- **Prevenção de Erros de Tipagem no VTT:**
+  - Conversão de tipo de `sheetData` de `unknown` para `any` no dashboard do Narrador para resolver quebras de compilação em rolagens de traits de personagens offline.
+- **Posicionamento do botão "Nova Rodada":**
+  - Botão reposicionado no canto superior direito do Stage Area para manter alinhamento ideal com o tabuleiro e escala de zoom.
+
+---
+
 ## [0.21.0] - 2026-06-20
 
 ### Adicionado

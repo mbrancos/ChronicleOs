@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { characters } from "@/db/schema";
+import { characters, rolls } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { CharacterSheetData, getMaxHealth, getMaxWillpower } from "@/types/character";
 import { pusherServer } from "@/lib/pusher";
@@ -121,29 +121,65 @@ export async function applyDamageAction(
     if (campaignId) {
       try {
         const eventData = {
-          characterId: character.id,
-          characterName: character.name,
+          type: "damage_log",
           trackType,
           amount,
           damageType,
           newSuperficial: superficial,
           newAggravated: aggravated,
           isCritical,
-          createdAt: new Date(),
         };
 
-        // Disparar no canal público da campanha
+        // Salvar no banco de dados para persistir permanentemente no feed!
+        const insertedRoll = await db
+          .insert(rolls)
+          .values({
+            campaignId,
+            characterId: character.id,
+            characterName: character.name,
+            poolName: "Registro de Dano",
+            resultData: eventData,
+            hungerDice: 0,
+            isSecret: false,
+          })
+          .returning({ id: rolls.id });
+
+        const insertedId = insertedRoll[0].id;
+        const serializedRoll = {
+          id: insertedId,
+          campaignId,
+          characterId: character.id,
+          characterName: character.name,
+          poolName: "Registro de Dano",
+          resultData: eventData,
+          hungerDice: 0,
+          isRerolled: false,
+          isSecret: false,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Disparar new-roll no Pusher para atualizar o feed em tempo real de todos
+        await pusherServer.trigger(
+          `public-campaign-${campaignId}`,
+          "new-roll",
+          serializedRoll
+        );
+
+        // Disparar damage-applied para atualizar os status das fichas e tokens dos jogadores
         await pusherServer.trigger(
           `public-campaign-${campaignId}`,
           "damage-applied",
-          eventData
-        );
-
-        // Disparar no canal privado do Narrador
-        await pusherServer.trigger(
-          `private-gm-${campaignId}`,
-          "damage-applied",
-          eventData
+          {
+            characterId: character.id,
+            characterName: character.name,
+            trackType,
+            amount,
+            damageType,
+            newSuperficial: superficial,
+            newAggravated: aggravated,
+            isCritical,
+            createdAt: new Date(),
+          }
         );
       } catch (pushErr) {
         console.error("Erro ao notificar Pusher (damage-applied):", pushErr);
@@ -240,6 +276,52 @@ export async function setTrackerDamageAction(
     const campaignId = character.campaignId;
     if (campaignId) {
       try {
+        const eventData = {
+          type: "damage_log",
+          trackType,
+          amount: 0,
+          damageType: "override",
+          newSuperficial: finalSup,
+          newAggravated: finalAgg,
+          isCritical,
+        };
+
+        // Salvar no banco de dados para persistir permanentemente no feed!
+        const insertedRoll = await db
+          .insert(rolls)
+          .values({
+            campaignId,
+            characterId: character.id,
+            characterName: character.name,
+            poolName: "Registro de Dano",
+            resultData: eventData,
+            hungerDice: 0,
+            isSecret: false,
+          })
+          .returning({ id: rolls.id });
+
+        const insertedId = insertedRoll[0].id;
+        const serializedRoll = {
+          id: insertedId,
+          campaignId,
+          characterId: character.id,
+          characterName: character.name,
+          poolName: "Registro de Dano",
+          resultData: eventData,
+          hungerDice: 0,
+          isRerolled: false,
+          isSecret: false,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Disparar new-roll no Pusher para atualizar o feed em tempo real de todos
+        await pusherServer.trigger(
+          `public-campaign-${campaignId}`,
+          "new-roll",
+          serializedRoll
+        );
+
+        // Disparar damage-applied para atualizar os status das fichas e tokens dos jogadores
         await pusherServer.trigger(
           `public-campaign-${campaignId}`,
           "damage-applied",
@@ -247,7 +329,7 @@ export async function setTrackerDamageAction(
             characterId: character.id,
             characterName: character.name,
             trackType,
-            amount: 0, // 0 indica ajuste manual (override)
+            amount: 0,
             damageType: "override",
             newSuperficial: finalSup,
             newAggravated: finalAgg,

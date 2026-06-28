@@ -4,17 +4,17 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { 
-  createCampaignAction, 
-  createCharacterAction, 
-  signOutAction, 
-  updateCampaignAction, 
-  deleteCampaignAction 
+import {
+  createCampaignAction,
+  createCharacterAction,
+  signOutAction,
+  updateCampaignAction,
+  deleteCampaignAction
 } from "@/app/actions/hubActions";
-import { 
-  deleteCharacterAction, 
-  duplicateCharacterAction, 
-  transferCharacterAction 
+import {
+  deleteCharacterAction,
+  duplicateCharacterAction,
+  transferCharacterAction
 } from "@/app/actions/characterActions";
 
 interface NarratorCampaign {
@@ -29,7 +29,7 @@ interface PlayerCampaign {
   name: string;
   description: string | null;
   status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
-  powerLevel: "FLEDGLING" | "NEONATE" | "ANCILLAE";
+  powerLevel: string;
   narratorName: string;
   characterName: string;
   characterId: string;
@@ -55,11 +55,11 @@ interface HubClientProps {
   characters: Character[];
 }
 
-export default function HubClient({ 
-  user, 
-  narratorCampaigns, 
-  playerCampaigns, 
-  characters 
+export default function HubClient({
+  user,
+  narratorCampaigns,
+  playerCampaigns,
+  characters
 }: HubClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -74,7 +74,7 @@ export default function HubClient({
   // Estados dos formulários de criação
   const [campaignName, setCampaignName] = useState("");
   const [campaignDesc, setCampaignDesc] = useState("");
-  
+
   // Estado para feedback de cópia de convite
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -119,7 +119,7 @@ export default function HubClient({
   useEffect(() => {
     if (errorParam === "acesso_negado") {
       showToast("Acesso Negado: Você não faz parte desta crônica ou não possui personagem nela! 🩸", "error");
-      
+
       // Limpa os parâmetros da URL de forma segura no Next.js sem quebrar o histórico de navegação
       router.replace("/hub", { scroll: false });
     }
@@ -177,7 +177,7 @@ export default function HubClient({
     setLoading(true);
     const response = await duplicateCharacterAction(charId);
     if (response.success) {
-      showToast("Vampiro duplicado com sucesso no seu Cofre! 🩸");
+      showToast("Personagem duplicado com sucesso no seu Cofre! 🩸");
     } else {
       showToast(response.error || "Erro ao duplicar personagem.", "error");
     }
@@ -202,7 +202,7 @@ export default function HubClient({
     if (response.success) {
       setIsTransferModalOpen(false);
       setCharacterToTransfer(null);
-      showToast(`Vampiro transferido com sucesso para ${transferEmail}! 🩸`);
+      showToast(`Personagem transferido com sucesso para ${transferEmail}! 🩸`);
     } else {
       setErrorMsg(response.error || "Erro ao transferir personagem.");
     }
@@ -307,27 +307,27 @@ export default function HubClient({
   return (
     <main className="min-h-screen bg-bg-main text-text-primary p-4 md:p-8 font-reading flex flex-col items-center">
       <div className="w-full max-w-6xl space-y-8">
-        
+
         {/* CABEÇALHO SUPERIOR TEMÁTICO */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-white/10 gap-4">
           <div>
             <h1 className="text-4xl font-gothic tracking-widest text-blood-red">CHRONICLEOS</h1>
             <p className="text-xs uppercase tracking-widest text-text-muted font-data pt-1">
-              Bem-vindo ao templo, <span className="text-gold-accent font-semibold">{user.name}</span>
+              Bem-vindo, <span className="text-gold-accent font-semibold">{user.name}</span>
             </p>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <span className="text-xs font-data uppercase tracking-wider text-text-dim">
               Sessão: {user.email}
             </span>
-            <button 
+            <button
               onClick={async () => {
                 await signOutAction();
               }}
               className="px-3 py-1 border border-white/10 hover:border-blood-red hover:text-hunger-red text-xs uppercase tracking-widest font-data transition-colors rounded-sm bg-bg-card/40 cursor-pointer"
             >
-              Sair da Névoa
+              Sair
             </button>
           </div>
         </header>
@@ -344,21 +344,19 @@ export default function HubClient({
               <div className="flex space-x-1 font-data text-xs uppercase tracking-wider">
                 <button
                   onClick={() => setActiveCampaignTab("narrator")}
-                  className={`px-4 py-2 rounded-xs font-bold transition-all duration-200 cursor-pointer ${
-                    activeCampaignTab === "narrator"
-                      ? "bg-blood-red/10 text-blood-red border border-blood-red/25 shadow-[0_0_10px_rgba(200,36,52,0.15)]"
-                      : "text-text-dim hover:text-text-primary hover:bg-white/2"
-                  }`}
+                  className={`px-4 py-2 rounded-xs font-bold transition-all duration-200 cursor-pointer ${activeCampaignTab === "narrator"
+                    ? "bg-blood-red/10 text-blood-red border border-blood-red/25 shadow-[0_0_10px_rgba(200,36,52,0.15)]"
+                    : "text-text-dim hover:text-text-primary hover:bg-white/2"
+                    }`}
                 >
                   Crônicas que Narro ({narratorCampaigns.length})
                 </button>
                 <button
                   onClick={() => setActiveCampaignTab("player")}
-                  className={`px-4 py-2 rounded-xs font-bold transition-all duration-200 cursor-pointer ${
-                    activeCampaignTab === "player"
-                      ? "bg-gold-accent/10 text-gold-accent border border-gold-accent/25 shadow-[0_0_10px_rgba(255,216,77,0.1)]"
-                      : "text-text-dim hover:text-text-primary hover:bg-white/2"
-                  }`}
+                  className={`px-4 py-2 rounded-xs font-bold transition-all duration-200 cursor-pointer ${activeCampaignTab === "player"
+                    ? "bg-gold-accent/10 text-gold-accent border border-gold-accent/25 shadow-[0_0_10px_rgba(255,216,77,0.1)]"
+                    : "text-text-dim hover:text-text-primary hover:bg-white/2"
+                    }`}
                 >
                   Crônicas que Jogo ({playerCampaigns.length})
                 </button>
@@ -380,7 +378,7 @@ export default function HubClient({
             {/* ABA DO NARRADOR */}
             {activeCampaignTab === "narrator" && (
               narratorCampaigns.length === 0 ? (
-                <div 
+                <div
                   onClick={() => {
                     setErrorMsg(null);
                     setIsCampaignModalOpen(true);
@@ -398,8 +396,8 @@ export default function HubClient({
               ) : (
                 <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-1">
                   {narratorCampaigns.map(camp => (
-                    <div 
-                      key={camp.id} 
+                    <div
+                      key={camp.id}
                       className="bg-bg-card border border-white/10 hover:border-blood-red/50 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(139,0,0,0.12)] p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative pr-8"
                     >
                       <div>
@@ -435,7 +433,7 @@ export default function HubClient({
                           ⋮
                         </button>
                         {activeMenuId === camp.id && typeof document !== "undefined" && createPortal(
-                          <div 
+                          <div
                             className="bg-bg-card border border-white/15 rounded-sm shadow-2xl z-50 py-1 font-data text-[10px] uppercase tracking-wider text-left"
                             style={{
                               position: "absolute",
@@ -507,7 +505,7 @@ export default function HubClient({
             {/* ABA DO JOGADOR */}
             {activeCampaignTab === "player" && (
               playerCampaigns.length === 0 ? (
-                <div 
+                <div
                   className="border border-dashed border-gold-accent/20 bg-bg-card/10 rounded-sm p-8 flex flex-col items-center justify-center text-center h-64"
                 >
                   <svg className="w-12 h-12 text-gold-accent/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -531,8 +529,8 @@ export default function HubClient({
                     const statusInfo = statusLabels[camp.status] || { label: camp.status, class: "bg-white/5 border-white/10" };
 
                     return (
-                      <div 
-                        key={camp.id} 
+                      <div
+                        key={camp.id}
                         className="bg-bg-card border border-white/10 hover:border-gold-accent/50 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(212,175,55,0.08)] p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-3 group relative"
                       >
                         <div className="flex justify-between items-start">
@@ -544,7 +542,7 @@ export default function HubClient({
                               Narrador: <span className="text-gold-accent font-semibold">{camp.narratorName}</span>
                             </p>
                           </div>
-                          
+
                           <span className={`px-2 py-0.5 rounded-xs border text-[8px] uppercase font-bold tracking-wider font-data ${statusInfo.class}`}>
                             {statusInfo.label}
                           </span>
@@ -556,7 +554,7 @@ export default function HubClient({
                             <span className="text-text-primary font-medium">{camp.characterName.toUpperCase()}</span>
                           </div>
                           <span className="text-[8px] uppercase font-bold font-data text-gold-accent bg-gold-accent/10 border border-gold-accent/20 px-2 py-0.5 rounded-xs">
-                            {camp.powerLevel === "FLEDGLING" ? "Cria" : camp.powerLevel === "NEONATE" ? "Neófito" : "Ancila"}
+                            {camp.powerLevel.split(",").map(lvl => lvl === "FLEDGLING" ? "Cria" : lvl === "NEONATE" ? "Neófito" : "Ancila").join(" / ")}
                           </span>
                         </div>
 
@@ -590,7 +588,7 @@ export default function HubClient({
                   {characters.length}
                 </span>
               </h2>
-              
+
               <div className="relative group">
                 <button
                   onClick={handleQuickCreateCharacter}
@@ -603,7 +601,7 @@ export default function HubClient({
             </div>
 
             {characters.length === 0 ? (
-              <div 
+              <div
                 onClick={handleQuickCreateCharacter}
                 className="border border-dashed border-gold-accent/30 hover:border-gold-accent/60 bg-bg-card/20 rounded-sm p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 h-64 group"
               >
@@ -620,10 +618,10 @@ export default function HubClient({
                 {characters.map(char => {
                   const clan = char.sheetData?.profile?.clan || "Vampiro";
                   const concept = char.sheetData?.profile?.concept || "Neófito";
-                  
+
                   return (
-                    <div 
-                      key={char.id} 
+                    <div
+                      key={char.id}
                       className="bg-bg-card border border-white/10 hover:border-gold-accent/50 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(212,175,55,0.08)] p-5 rounded-sm flex items-center justify-between transition-all duration-200 group gap-4 relative pr-10"
                     >
                       <div className="flex items-center space-x-4">
@@ -637,8 +635,11 @@ export default function HubClient({
                           <h3 className="text-xl font-gothic tracking-wide text-text-primary group-hover:text-gold-accent transition-colors">
                             {char.name.toUpperCase()}
                           </h3>
-                          <p className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-semibold">
-                            Clã {clan} • {concept}
+                           <p className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-semibold flex items-center gap-2">
+                            <span className={`px-1.5 py-0.5 rounded-xs text-[8px] uppercase tracking-wider font-bold ${char.type === "npc" ? "bg-hunger-red/10 text-hunger-red border border-hunger-red/25" : "bg-gold-accent/10 text-gold-accent border border-gold-accent/25"}`}>
+                              {char.type === "npc" ? "Antagonista" : "Jogador"}
+                            </span>
+                            <span>Clã {clan} • {concept}</span>
                           </p>
                         </div>
                       </div>
@@ -665,7 +666,7 @@ export default function HubClient({
                           ⋮
                         </button>
                         {activeMenuId === char.id && typeof document !== "undefined" && createPortal(
-                          <div 
+                          <div
                             className="bg-bg-card border border-white/15 rounded-sm shadow-2xl z-50 py-1 font-data text-[10px] uppercase tracking-wider text-left"
                             style={{
                               position: "absolute",
@@ -743,12 +744,12 @@ export default function HubClient({
       {/* ========================================== */}
       {isCampaignModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div 
+          <div
             className="w-full max-w-md bg-bg-card border border-blood-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(200,36,52,0.15)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Botão de Fechar */}
-            <button 
+            <button
               onClick={() => setIsCampaignModalOpen(false)}
               className="absolute top-4 right-4 text-text-muted hover:text-white text-lg font-data focus:outline-none cursor-pointer"
             >
@@ -816,7 +817,7 @@ export default function HubClient({
       {/* ========================================== */}
       {isDeleteModalOpen && characterToDelete && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div 
+          <div
             className="w-full max-w-md bg-bg-card border border-hunger-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(230,36,36,0.15)]"
             onClick={(e) => e.stopPropagation()}
           >
@@ -864,11 +865,11 @@ export default function HubClient({
       {/* ========================================== */}
       {isTransferModalOpen && characterToTransfer && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div 
+          <div
             className="w-full max-w-md bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(255,216,77,0.1)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
+            <button
               onClick={() => {
                 setIsTransferModalOpen(false);
                 setCharacterToTransfer(null);
@@ -934,11 +935,11 @@ export default function HubClient({
       {/* ========================================== */}
       {isEditCampaignModalOpen && campaignToEdit && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div 
+          <div
             className="w-full max-w-md bg-bg-card border border-blood-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(200,36,52,0.15)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
+            <button
               onClick={() => setIsEditCampaignModalOpen(false)}
               className="absolute top-4 right-4 text-text-muted hover:text-white text-lg font-data focus:outline-none cursor-pointer"
             >
@@ -1004,7 +1005,7 @@ export default function HubClient({
       {/* ========================================== */}
       {isDeleteCampaignModalOpen && campaignToDelete && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div 
+          <div
             className="w-full max-w-md bg-bg-card border border-hunger-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(230,36,36,0.15)]"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1057,11 +1058,10 @@ export default function HubClient({
 
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 p-4 border rounded-sm shadow-xl font-data text-xs uppercase tracking-wider animate-slide-in ${
-          toast.type === "success" 
-            ? "bg-bg-card border-gold-accent text-gold-accent shadow-[0_0_12px_rgba(255,216,77,0.2)]" 
-            : "bg-bg-card border-hunger-red text-hunger-red shadow-[0_0_12px_rgba(230,36,36,0.2)]"
-        }`}>
+        <div className={`fixed top-4 right-4 z-50 p-4 border rounded-sm shadow-xl font-data text-xs uppercase tracking-wider animate-slide-in ${toast.type === "success"
+          ? "bg-bg-card border-gold-accent text-gold-accent shadow-[0_0_12px_rgba(255,216,77,0.2)]"
+          : "bg-bg-card border-hunger-red text-hunger-red shadow-[0_0_12px_rgba(230,36,36,0.2)]"
+          }`}>
           {toast.message}
         </div>
       )}

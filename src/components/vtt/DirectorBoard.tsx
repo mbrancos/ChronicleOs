@@ -2,13 +2,15 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import Token, { TokenData } from "./Token";
-import { updateTokenPosition } from "@/app/actions/sceneActions";
+import { updateTokenPosition, showSceneImageAction, updateSceneBackground } from "@/app/actions/sceneActions";
 import { CharacterSheetData } from "@/types/character";
+import { useToast } from "@/context/ToastContext";
 
 interface DirectorBoardProps {
   tokens: TokenData[];
   isStoryteller: boolean;
   sceneBackground?: string | null;
+  campaignId?: string;
   getCharacterSheetData?: (characterId: string) => CharacterSheetData | null;
   onTokensChange?: (updatedTokens: TokenData[]) => void;
   onDoubleClickToken?: (characterId: string) => void;
@@ -21,16 +23,19 @@ interface DirectorBoardProps {
     status: {
       health?: { max: number; superficial: number; aggravated: number };
       willpower?: { max: number; superficial: number; aggravated: number };
+      hunger?: number;
     }
   ) => void;
   onResetRound?: () => void;
   onOpenDamageModal?: (characterId: string, characterName: string) => void;
+  onChangeSceneBackground?: (url: string | null) => void;
 }
 
 export default function DirectorBoard({
   tokens,
   isStoryteller,
   sceneBackground,
+  campaignId,
   getCharacterSheetData,
   onTokensChange,
   onDoubleClickToken,
@@ -41,6 +46,7 @@ export default function DirectorBoard({
   onUpdateCharacterStatus,
   onResetRound,
   onOpenDamageModal,
+  onChangeSceneBackground,
 }: DirectorBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,6 +55,20 @@ export default function DirectorBoard({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [prevTokens, setPrevTokens] = useState<TokenData[]>(tokens);
   const [localTokens, setLocalTokens] = useState<TokenData[]>(tokens);
+
+  const { showSuccess, showError } = useToast();
+  const [narratorImageInput, setNarratorImageInput] = useState("");
+  const [currentSceneImage, setCurrentSceneImage] = useState<string | null>(null);
+  const [isShowingSceneImage, setIsShowingSceneImage] = useState(false);
+  const [sceneBackgroundInput, setSceneBackgroundInput] = useState(sceneBackground || "");
+
+  useEffect(() => {
+    if (sceneBackground) {
+      setSceneBackgroundInput(sceneBackground);
+    } else {
+      setSceneBackgroundInput("");
+    }
+  }, [sceneBackground]);
 
   // Efeito para calcular escala de forma responsiva monitorando a área disponível da mesa central
   useEffect(() => {
@@ -168,19 +188,6 @@ export default function DirectorBoard({
       ref={containerRef}
       className="w-full h-full flex items-center justify-center bg-bg-main overflow-hidden p-4 scrollbar-none select-none relative"
     >
-      {/* Botão de Nova Rodada — fora do canvas, canto superior direito da área da mesa */}
-      {isStoryteller && onResetRound && (
-        <button
-          onClick={() => {
-            if (confirm("Reiniciar as ações de todos os personagens no tabuleiro?")) {
-              onResetRound();
-            }
-          }}
-          className="absolute top-2 right-2 z-40 py-1 px-2.5 bg-bg-card-dark/90 hover:bg-black border border-gold-accent/30 hover:border-gold-accent text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all duration-300 shadow-md cursor-pointer select-none"
-        >
-          ↺ Nova Rodada
-        </button>
-      )}
       {/* Wrapper para limitar o tamanho de layout ao tamanho escalado do tabuleiro */}
       <div
         style={{
@@ -212,6 +219,121 @@ export default function DirectorBoard({
             backgroundPosition: sceneBackground ? "0 0, center center" : "0 0",
           }}
         >
+          {/* Botão de Nova Rodada — dentro do canvas, canto superior direito da área do palco (em bastidores) */}
+          {isStoryteller && onResetRound && (
+            <button
+              onClick={() => {
+                if (confirm("Reiniciar as ações de todos os personagens no tabuleiro?")) {
+                  onResetRound();
+                }
+              }}
+              className="absolute top-[68px] right-[100px] z-40 py-1 px-2.5 bg-bg-card-dark/90 hover:bg-black border border-gold-accent/30 hover:border-gold-accent text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all duration-300 shadow-md cursor-pointer select-none"
+            >
+              ↺ Nova Rodada
+            </button>
+          )}
+
+          {/* Controles de Imagem de Cena e Cenário no topo, fora do palco, na direção de Nova Rodada */}
+          {isStoryteller && campaignId && (
+            <div className="absolute top-[68px] left-[100px] z-40 flex items-center gap-3">
+              {/* Imagem de Cena */}
+              <div className="flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
+                <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold px-1 shrink-0">Cena</span>
+                <input
+                  type="text"
+                  value={narratorImageInput}
+                  onChange={(e) => setNarratorImageInput(e.target.value)}
+                  placeholder="URL da imagem..."
+                  className="w-28 px-1.5 py-0.5 text-[9px] border border-white/5 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-reading"
+                />
+                <button
+                  onClick={async () => {
+                    const url = narratorImageInput.trim();
+                    if (!url) return;
+                    const res = await showSceneImageAction(campaignId, url);
+                    if (res.success) {
+                      setCurrentSceneImage(url);
+                      setIsShowingSceneImage(true);
+                      showSuccess("Imagem exibida!", "Cena");
+                    } else {
+                      showError("Erro ao exibir imagem.", "Cena");
+                    }
+                  }}
+                  disabled={!narratorImageInput.trim()}
+                  className="px-2 py-0.5 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                >
+                  Exibir
+                </button>
+                {isShowingSceneImage && (
+                  <button
+                    onClick={async () => {
+                      const res = await showSceneImageAction(campaignId, null);
+                      if (res.success) {
+                        setCurrentSceneImage(null);
+                        setIsShowingSceneImage(false);
+                        setNarratorImageInput("");
+                        showSuccess("Imagem removida.", "Cena");
+                      }
+                    }}
+                    className="px-1.5 py-0.5 bg-hunger-red/15 hover:bg-hunger-red/25 border border-hunger-red/30 text-hunger-red font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
+                    title="Remover Imagem"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Cenário */}
+              <div className="flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
+                <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold px-1 shrink-0">Cenário</span>
+                <input
+                  type="text"
+                  value={sceneBackgroundInput}
+                  onChange={(e) => setSceneBackgroundInput(e.target.value)}
+                  placeholder="URL do cenário..."
+                  className="w-28 px-1.5 py-0.5 text-[9px] border border-white/5 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-reading"
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter" && sceneBackgroundInput.trim()) {
+                      const url = sceneBackgroundInput.trim();
+                      if (onChangeSceneBackground) {
+                        onChangeSceneBackground(url);
+                      }
+                      await updateSceneBackground(campaignId, url);
+                    }
+                  }}
+                />
+                <button
+                  onClick={async () => {
+                    const url = sceneBackgroundInput.trim();
+                    if (url) {
+                      if (onChangeSceneBackground) {
+                        onChangeSceneBackground(url);
+                      }
+                      await updateSceneBackground(campaignId, url);
+                    }
+                  }}
+                  className="px-2 py-0.5 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
+                >
+                  ✓
+                </button>
+                {sceneBackground && (
+                  <button
+                    onClick={async () => {
+                      if (onChangeSceneBackground) {
+                        onChangeSceneBackground(null);
+                      }
+                      setSceneBackgroundInput("");
+                      await updateSceneBackground(campaignId, null);
+                    }}
+                    className="px-1.5 py-0.5 bg-hunger-red/15 hover:bg-hunger-red/25 border border-hunger-red/30 text-hunger-red font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
+                    title="Remover Cenário"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         {/* RETÂNGULO DO PALCO (800x400px no centro, left: 100px, top: 100px) */}
         <div
           style={{
