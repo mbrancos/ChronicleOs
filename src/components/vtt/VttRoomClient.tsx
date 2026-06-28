@@ -111,6 +111,9 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
     const publicChannelName = `public-campaign-${character.campaignId}`;
     const publicChannel = pusher.subscribe(publicChannelName);
 
+    const presenceChannelName = `presence-campaign-${character.campaignId}`;
+    const presenceChannel = pusher.subscribe(presenceChannelName);
+
     // Handlers de atualização dos Tokens
     const handleTokenCreated = (token: TokenData) => {
       // Jogador comum só renderiza se estiver no Palco (isVisible === true)
@@ -203,7 +206,9 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
     publicChannel.bind("token-deleted", handleTokenDeleted);
     publicChannel.bind("round-reset", handleRoundReset);
     publicChannel.bind("damage-applied", handleDamageAppliedEvent);
-    publicChannel.bind("character-updated", handleCharacterUpdatedEvent);
+
+    // Registrar binds no canal seguro de presença
+    presenceChannel.bind("character-updated", handleCharacterUpdatedEvent);
 
     // Escutar eventos de Fundo e Imagem de Cena (Issues 3 e 4)
     publicChannel.bind("scene-background-changed", (data: { imageUrl: string | null }) => {
@@ -235,6 +240,8 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
     return () => {
       publicChannel.unbind_all();
       pusher.unsubscribe(publicChannelName);
+      presenceChannel.unbind_all();
+      pusher.unsubscribe(presenceChannelName);
       pusher.disconnect();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };

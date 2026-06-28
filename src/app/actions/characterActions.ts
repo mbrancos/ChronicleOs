@@ -872,4 +872,113 @@ export async function leaveCampaignAction(characterId: string) {
   }
 }
 
+// Server Action para que o Narrador edite a ficha do jogador ignorando limites de XP e validações estritas (Edição Divina)
+export async function narratorOverrideSheetAction(
+  characterId: string,
+  sheetData: CharacterSheetData,
+  buildState: any,
+  status?: "DRAFT" | "READY" | "IN_PLAY",
+  auditDescription?: string
+) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session || !session.user) {
+      return { success: false, error: "Você precisa estar autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(characterId)) {
+      return { success: false, error: "ID de personagem inválido." };
+    }
+
+    // 1. Buscar o personagem e a campanha vinculada para verificar se o usuário é o Narrador
+    const charResult = await db
+      .select({
+        id: characters.id,
+        campaignId: characters.campaignId,
+        status: characters.status,
+        name: characters.name,
+      })
+      .from(characters)
+      .where(eq(characters.id, characterId))
+      .limit(1);
+
+    if (charResult.length === 0) {
+      return { success: false, error: "Personagem não encontrado." };
+    }
+
+    const char = charResult[0];
+
+    if (!char.campaignId) {
+      return { success: false, error: "Este personagem não está associado a nenhuma campanha ativa para sofrer override." };
+    }
+
+    // 2. Verificar se o usuário logado é o Narrador da campanha
+    const campaignResult = await db
+      .select({
+        id: campaigns.id,
+        narratorId: campaigns.narratorId,
+      })
+      .from(campaigns)
+      .where(eq(campaigns.id, char.campaignId))
+      .limit(1);
+
+    if (campaignResult.length === 0) {
+      return { success: false, error: "Campanha associada não encontrada." };
+    }
+
+    const campaign = campaignResult[0];
+    if (campaign.narratorId !== session.user.id) {
+      return { success: false, error: "Apenas o Narrador da campanha possui privilégios de Edição Divina." };
+    }
+
+    // 3. Executar a atualização direta da ficha e do buildState no banco (ignorando auditoria de custos)
+    const updatePayload: any = { sheetData, buildState };
+    if (sheetData.profile?.name) {
+      updatePayload.name = sheetData.profile.name.trim();
+    }
+    if (status) {
+      updatePayload.status = status;
+    }
+
+    await db
+      .update(characters)
+      .set(updatePayload)
+      .where(eq(characters.id, characterId));
+
+    // 4. Inserir um registro no diário de XP indicando bônus de 0 XP e justificativa narrativa
+    const finalDesc = auditDescription?.trim() || "Ajuste Divino (Override do Narrador)";
+    await db.insert(xpLedgers).values({
+      characterId,
+      description: finalDesc,
+      xpChange: 0,
+    });
+
+    // 5. Notificar clientes em tempo real via Pusher no canal seguro de presença (presence-campaign-)
+    try {
+      const { pusherServer } = await import("@/lib/pusher");
+      await pusherServer.trigger(`presence-campaign-${char.campaignId}`, "character-updated", {
+        characterId,
+        sheetData,
+        buildState,
+        status: status || char.status,
+        name: updatePayload.name || char.name,
+      });
+    } catch (pushErr) {
+      console.error("Falha ao notificar Pusher do Override do Narrador:", pushErr);
+    }
+
+    // 6. Revalidar rotas no Next.js
+    revalidatePath("/hub");
+    revalidatePath(`/campanhas/${char.campaignId}/narrador`);
+    revalidatePath(`/campanhas/${char.campaignId}/mesa`);
+    revalidatePath(`/campanhas/${char.campaignId}/jogador`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Erro em narratorOverrideSheetAction:", error);
+    return { success: false, error: error?.message || "Erro interno ao aplicar Edição Divina." };
+  }
+}
+
 

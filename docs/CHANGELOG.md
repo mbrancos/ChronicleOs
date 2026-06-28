@@ -2,6 +2,17 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.23.0] - 2026-06-28
+
+### Adicionado
+- **Edição Divina (Narrator Override):**
+  - Botão de alternância dourado **`[ Edição Divina ⚡ ]`** no menu superior fixo da ficha de personagem (exclusivo para o Narrador ao visualizar fichas pela gaveta lateral no VTT).
+  - Server Action dedicada e segura `narratorOverrideSheetAction` no backend, ignorando as restrições estritas de criação e os custos de XP para o Narrador aplicar ajustes livres e regras da casa (*homebrews*).
+  - Salvamento automático de log de `0 XP` no Diário de XP da ficha com descrição explicativa ("Edição Divina: Alteração efetuada pelo Narrador").
+  - Acoplamento do evento reativo do Pusher no canal seguro de presença (`presence-campaign-[id]`) para atualizar instantaneamente a ficha do jogador se estiver aberta na tela dele, mantendo total privacidade contra acessos externos.
+
+---
+
 ## [0.22.0] - 2026-06-28
 
 ### Adicionado

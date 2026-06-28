@@ -17,7 +17,7 @@ import DotSlider from "@/components/sheet/DotSlider";
 import DamageTracker from "@/components/sheet/DamageTracker";
 import HumanityTracker from "@/components/sheet/HumanityTracker";
 import { useAutosave } from "@/hooks/useAutosave";
-import { updateCharacterSheet, getCharacterXpLedger } from "@/app/actions/characterActions";
+import { updateCharacterSheet, getCharacterXpLedger, narratorOverrideSheetAction } from "@/app/actions/characterActions";
 import { spendCharacterXpAction } from "@/app/actions/xpActions";
 import InlineEdit from "@/components/sheet/InlineEdit";
 import BloodPanel from "@/components/sheet/BloodPanel";
@@ -432,6 +432,7 @@ interface CharacterSheetClientProps {
   initialStatus?: "DRAFT" | "READY" | "IN_PLAY";
   initialBuildState?: any;
   characterType?: "jogador" | "npc" | "coterie";
+  isStoryteller?: boolean;
 }
 
 export default function CharacterSheetClient({
@@ -444,7 +445,8 @@ export default function CharacterSheetClient({
   onTraitClick,
   initialStatus = "DRAFT",
   initialBuildState = {},
-  characterType = "jogador"
+  characterType = "jogador",
+  isStoryteller = false
 }: CharacterSheetClientProps) {
   const { showSuccess, showWarning, showError } = useToast();
   
@@ -471,6 +473,10 @@ export default function CharacterSheetClient({
 
   // Estados de Evolução de XP (Fase 25)
   const [isEvolvingMode, setIsEvolvingMode] = useState(false);
+  const [isOverrideActive, setIsOverrideActive] = useState(false);
+
+  const isReadOnly = status === "IN_PLAY" && !isOverrideActive;
+  const isSheetDisabled = isReadOnly && !isEvolvingMode;
   const [isEvolutionModalOpen, setIsEvolutionModalOpen] = useState(false);
   const [evolutionTarget, setEvolutionTarget] = useState<{
     traitName: string;
@@ -664,7 +670,15 @@ export default function CharacterSheetClient({
     
     setSyncStatus("saving");
     
-    const response = await updateCharacterSheet(characterId, dataToSave, buildStateRef.current, statusRef.current);
+    const response = isOverrideActive
+      ? await narratorOverrideSheetAction(
+          characterId,
+          dataToSave,
+          buildStateRef.current,
+          statusRef.current,
+          "Edição Divina: Alteração efetuada pelo Narrador"
+        )
+      : await updateCharacterSheet(characterId, dataToSave, buildStateRef.current, statusRef.current);
     
     if (response.success) {
       setSyncStatus("saved");
@@ -675,7 +689,7 @@ export default function CharacterSheetClient({
     } else {
       setSyncStatus("error");
     }
-  }, [characterId]);
+  }, [characterId, isOverrideActive]);
 
   // INVOCAR O HOOK DE AUTOSAVE DEBOUNCED (1000ms de delay)
   useAutosave(character, 1000, triggerSave);
@@ -705,7 +719,7 @@ export default function CharacterSheetClient({
 
   // Alterações de Atributos com interceptação de XP
   const handleAttributeChange = (category: "physical" | "social" | "mental", attrName: string, value: number) => {
-    if (status === "IN_PLAY" && isEvolvingMode) {
+    if (status === "IN_PLAY" && isEvolvingMode && !isOverrideActive) {
       const currentVal = Number((character.attributes[category] as any)[attrName]) || 1;
       if (value <= currentVal) {
         showWarning("No Modo de Evolução, você apenas pode aumentar características por XP.", "Modo de Evolução");
@@ -729,7 +743,7 @@ export default function CharacterSheetClient({
 
   // Alterações de Habilidades com interceptação de XP
   const handleSkillChange = (skillName: keyof CharacterSkills, value: number) => {
-    if (status === "IN_PLAY" && isEvolvingMode) {
+    if (status === "IN_PLAY" && isEvolvingMode && !isOverrideActive) {
       const currentVal = Number(character.skills[skillName]) || 0;
       if (value <= currentVal) {
         showWarning("No Modo de Evolução, você apenas pode aumentar características por XP.", "Modo de Evolução");
@@ -750,7 +764,7 @@ export default function CharacterSheetClient({
 
   // Alterações específicas para Evolução por XP (Fase 25)
   const handleBloodPotencyChange = (val: number) => {
-    if (status === "IN_PLAY") {
+    if (status === "IN_PLAY" && !isOverrideActive) {
       if (isEvolvingMode) {
         const currentVal = character.status.blood_potency || 1;
         if (val <= currentVal) {
@@ -769,7 +783,7 @@ export default function CharacterSheetClient({
   };
 
   const handleHumanityChange = (val: number) => {
-    if (status === "IN_PLAY") {
+    if (status === "IN_PLAY" && !isOverrideActive) {
       if (isEvolvingMode) {
         const currentVal = character.status.humanity || 7;
         if (val <= currentVal) {
@@ -1013,7 +1027,7 @@ export default function CharacterSheetClient({
   };
 
   const handleDisciplineLevelChange = (id: string, level: number) => {
-    if (status === "IN_PLAY" && isEvolvingMode) {
+    if (status === "IN_PLAY" && isEvolvingMode && !isOverrideActive) {
       const disc = character.disciplines.find(d => d.id === id);
       if (disc) {
         if (level <= disc.level) {
@@ -1115,7 +1129,7 @@ export default function CharacterSheetClient({
   };
 
   const handleAdvantageLevelChange = (id: string, level: number) => {
-    if (status === "IN_PLAY" && isEvolvingMode) {
+    if (status === "IN_PLAY" && isEvolvingMode && !isOverrideActive) {
       const adv = character.advantages.find(a => a.id === id);
       if (adv) {
         if (level <= adv.level) {
@@ -1377,7 +1391,7 @@ export default function CharacterSheetClient({
               <InlineEdit
                 value={character.profile.name || "Novo Vampiro"}
                 onChange={(val) => handleProfileChange("name", val)}
-                disabled={status === "IN_PLAY"}
+                disabled={isReadOnly}
                 className="text-4xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase"
               />
             </h1>
@@ -1388,7 +1402,7 @@ export default function CharacterSheetClient({
                 onChange={(val) => handleProfileChange("clan", val)}
                 type="select"
                 options={CLAN_OPTIONS}
-                disabled={status === "IN_PLAY"}
+                disabled={isReadOnly}
                 className="text-gold-accent hover:bg-white/5 font-bold"
               />
               <span className="text-text-dim">•</span>
@@ -1397,7 +1411,7 @@ export default function CharacterSheetClient({
                 onChange={(val) => handleProfileChange("concept", val)}
                 type="select"
                 options={POWER_LEVEL_OPTIONS}
-                disabled={status === "IN_PLAY"}
+                disabled={isReadOnly}
                 className="text-text-primary hover:bg-white/5 font-bold"
               />
             </div>
@@ -1408,7 +1422,7 @@ export default function CharacterSheetClient({
                   value={String(character.profile.generation)}
                   onChange={(val) => handleProfileChange("generation", Number(val) || 11)}
                   type="number"
-                  disabled={status === "IN_PLAY"}
+                  disabled={isReadOnly}
                   className="text-text-primary hover:bg-white/5 font-bold"
                 />
                 <span>ª</span>
@@ -1420,7 +1434,7 @@ export default function CharacterSheetClient({
                   onChange={(val) => handleProfileChange("predator_type", val)}
                   type="select"
                   options={PREDATOR_OPTIONS}
-                  disabled={status === "IN_PLAY"}
+                  disabled={isReadOnly}
                   className="text-text-primary hover:bg-white/5 font-bold"
                 />
               </div>
@@ -1429,7 +1443,7 @@ export default function CharacterSheetClient({
                 <InlineEdit
                   value={character.profile.sire}
                   onChange={(val) => handleProfileChange("sire", val)}
-                  disabled={status === "IN_PLAY"}
+                  disabled={isReadOnly}
                   className="text-text-primary hover:bg-white/5 font-bold"
                 />
               </div>
@@ -1473,7 +1487,7 @@ export default function CharacterSheetClient({
               stains={character.status.stains}
               onHumanityChange={handleHumanityChange}
               onStainsChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, stains: val } }))}
-              disabled={status === "IN_PLAY" && !isEvolvingMode}
+              disabled={isSheetDisabled}
             />
 
           </div>
@@ -1489,7 +1503,7 @@ export default function CharacterSheetClient({
         {/* ======================================================== */}
         {/* MENU DE NAVEGAÇÃO FIXO (STICKY HEADER) */}
         {/* ======================================================== */}
-        <div className="sticky top-[0px] z-30 bg-bg-main/95 backdrop-blur-md border-b border-white/10 py-3 flex space-x-1.5 flex-wrap gap-y-1.5 select-none pl-1 shadow-md">
+        <div className="sticky top-[0px] z-30 bg-bg-main/95 backdrop-blur-md border-b border-white/10 py-3 flex space-x-1.5 flex-wrap gap-y-1.5 items-center select-none pl-1 shadow-md pr-4">
           {(
             [
               { id: "atributos", label: "Atributos" },
@@ -1517,6 +1531,28 @@ export default function CharacterSheetClient({
               {item.label}
             </button>
           ))}
+          {isStoryteller && (
+            <button
+              onClick={() => {
+                setIsOverrideActive(prev => {
+                  const newVal = !prev;
+                  if (newVal) {
+                    showSuccess("Edição Divina Ativada! Modificações de bolinhas, disciplinas e vantagens salvarão imediatamente de graça.");
+                  } else {
+                    showWarning("Edição Divina Desativada. A ficha voltou ao comportamento padrão.");
+                  }
+                  return newVal;
+                });
+              }}
+              className={`py-1.5 px-4 text-[10px] uppercase tracking-widest font-data font-bold border rounded-sm transition-all duration-150 cursor-pointer focus:outline-none md:ml-auto ${
+                isOverrideActive
+                  ? "bg-gold-accent text-bg-main border-gold-accent shadow-[0_0_8px_rgba(212,175,55,0.4)]"
+                  : "bg-black/45 border-white/10 hover:border-gold-accent hover:text-gold-accent text-text-muted"
+              }`}
+            >
+              Edição Divina ⚡ {isOverrideActive ? "Ativa" : "Inativa"}
+            </button>
+          )}
         </div>
 
         {/* ======================================================== */}
@@ -1548,7 +1584,7 @@ export default function CharacterSheetClient({
                     onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                     baseValue={alloc.attributesBase[key]}
                     showXpDistinction={status !== "IN_PLAY"}
-                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                    disabled={isSheetDisabled}
                   />
                 ))}
               </div>
@@ -1566,7 +1602,7 @@ export default function CharacterSheetClient({
                     onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                     baseValue={alloc.attributesBase[key]}
                     showXpDistinction={status !== "IN_PLAY"}
-                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                    disabled={isSheetDisabled}
                   />
                 ))}
               </div>
@@ -1584,7 +1620,7 @@ export default function CharacterSheetClient({
                     onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
                     baseValue={alloc.attributesBase[key]}
                     showXpDistinction={status !== "IN_PLAY"}
-                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                    disabled={isSheetDisabled}
                   />
                 ))}
               </div>
@@ -1617,7 +1653,7 @@ export default function CharacterSheetClient({
                     onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                     baseValue={alloc.skillsBase[skill]}
                     showXpDistinction={status !== "IN_PLAY"}
-                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                    disabled={isSheetDisabled}
                   />
                 ))}
               </div>
@@ -1637,7 +1673,7 @@ export default function CharacterSheetClient({
                     onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                     baseValue={alloc.skillsBase[skill]}
                     showXpDistinction={status !== "IN_PLAY"}
-                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                    disabled={isSheetDisabled}
                   />
                 ))}
               </div>
@@ -1657,7 +1693,7 @@ export default function CharacterSheetClient({
                     onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
                     baseValue={alloc.skillsBase[skill]}
                     showXpDistinction={status !== "IN_PLAY"}
-                    disabled={status === "IN_PLAY" && !isEvolvingMode}
+                    disabled={isSheetDisabled}
                   />
                 ))}
               </div>
@@ -1686,7 +1722,7 @@ export default function CharacterSheetClient({
                     <strong className="text-text-primary mr-1">{TECHNICAL_NAMES[spec.skill] || spec.skill}:</strong> 
                     {spec.name}
                   </span>
-                  {status !== "IN_PLAY" && (
+                  {(status !== "IN_PLAY" || isOverrideActive) && (
                     <button
                       onClick={() => handleDeleteSpecialty(spec.id)}
                       className="text-hunger-red hover:text-white cursor-pointer select-none text-[10px] font-bold"
@@ -1703,7 +1739,7 @@ export default function CharacterSheetClient({
             </div>
 
             {/* MINI-FORMULÁRIO DE CADASTRO */}
-            {status !== "IN_PLAY" && (
+            {(status !== "IN_PLAY" || isOverrideActive) && (
               <div className="flex flex-wrap items-center gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-2xl shadow-none">
                 <div className="flex flex-col space-y-1">
                   <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Habilidade Base</label>
@@ -1762,7 +1798,7 @@ export default function CharacterSheetClient({
                     </span>
                   )}
                 </h3>
-                {status !== "IN_PLAY" && (
+                {(status !== "IN_PLAY" || isOverrideActive) && (
                   <button
                     onClick={handleAddDiscipline}
                     className="text-xs uppercase tracking-wider font-bold text-gold-accent bg-burgundy/40 hover:bg-burgundy px-3 py-1 border border-blood-red/30 hover:border-blood-red rounded-sm transition-all duration-150 cursor-pointer shadow-none opacity-80 hover:opacity-100"
@@ -1779,7 +1815,7 @@ export default function CharacterSheetClient({
                   allowZero={rules.bloodPotency === 0}
                   baseValue={rules.bloodPotency}
                   showXpDistinction={status !== "IN_PLAY"}
-                  disabled={status === "IN_PLAY" && !isEvolvingMode}
+                  disabled={isSheetDisabled}
                   variant="gold"
                 />
               </div>
@@ -1795,7 +1831,7 @@ export default function CharacterSheetClient({
               {character.disciplines.map(disc => (
                 <div key={disc.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-3 relative group">
                   {/* BOTÃO EXCLUIR DISCIPLINA */}
-                  {status !== "IN_PLAY" && (
+                  {(status !== "IN_PLAY" || isOverrideActive) && (
                     <button
                       onClick={() => handleDeleteDiscipline(disc.id)}
                       className="absolute top-4 right-4 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
@@ -1828,7 +1864,7 @@ export default function CharacterSheetClient({
                         placeholder="Nova Disciplina"
                         type="select"
                         options={DISCIPLINE_OPTIONS}
-                        disabled={status === "IN_PLAY"}
+                        disabled={isReadOnly}
                         className="font-gothic text-xl text-text-primary tracking-wide hover:bg-white/5 cursor-pointer"
                       />
                     </div>
@@ -1840,7 +1876,7 @@ export default function CharacterSheetClient({
                         
                         let activeClass = "";
                         if (isActive) {
-                          if (status === "IN_PLAY") {
+                          if (isReadOnly) {
                             activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
                           } else if (isBase) {
                             activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_6px_rgba(200,36,52,0.6)]";
@@ -1854,9 +1890,9 @@ export default function CharacterSheetClient({
                         return (
                           <button
                             key={idx}
-                            disabled={status === "IN_PLAY" && !isEvolvingMode}
+                            disabled={isSheetDisabled}
                             onClick={() => handleDisciplineLevelChange(disc.id, idx + 1)}
-                            className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                            className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${isSheetDisabled ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
                             title={`Nível ${idx + 1}`}
                           />
                         );
@@ -1879,11 +1915,11 @@ export default function CharacterSheetClient({
                               value={pow}
                               onChange={(val) => handlePowerChange(disc.id, pIdx, val)}
                               placeholder="Novo Poder"
-                              disabled={status === "IN_PLAY"}
+                              disabled={isReadOnly}
                               className="text-sm font-reading text-text-primary flex-1"
                             />
                           </div>
-                          {status !== "IN_PLAY" && (
+                          {(status !== "IN_PLAY" || isOverrideActive) && (
                             <button
                               onClick={() => handleDeletePower(disc.id, pIdx)}
                               className="text-text-muted/40 hover:text-hunger-red opacity-0 group-hover/power:opacity-100 transition-opacity duration-150 cursor-pointer pr-1 select-none text-[10px] font-bold"
@@ -1896,7 +1932,7 @@ export default function CharacterSheetClient({
                       ))}
                     </div>
 
-                    {status !== "IN_PLAY" && (
+                    {(status !== "IN_PLAY" || isOverrideActive) && (
                       <button
                         onClick={() => handleAddPower(disc.id)}
                         className="text-[10px] uppercase tracking-wider font-bold text-gold-accent/40 hover:text-gold-accent transition-colors duration-150 cursor-pointer pt-1.5 flex items-center space-x-1 select-none"
@@ -1966,7 +2002,7 @@ export default function CharacterSheetClient({
                         {meritsWithSum.map(adv => (
                           <div key={adv.id} className="bg-bg-main/30 p-3.5 border border-white/5 rounded-sm relative group">
                             {/* BOTÃO EXCLUIR */}
-                            {status !== "IN_PLAY" && (
+                            {(status !== "IN_PLAY" || isOverrideActive) && (
                               <button
                                 onClick={() => handleDeleteAdvantage(adv.id)}
                                 className="absolute top-3.5 right-3.5 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
@@ -1982,7 +2018,7 @@ export default function CharacterSheetClient({
                                   value={adv.name}
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Nova Vantagem"
-                                  disabled={status === "IN_PLAY"}
+                                  disabled={isReadOnly}
                                   className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-[200px]"
                                 />
                                 <span className="text-[9px] uppercase tracking-wider text-text-muted">
@@ -1997,7 +2033,7 @@ export default function CharacterSheetClient({
                                   
                                   let activeClass = "";
                                   if (isActive) {
-                                    if (status === "IN_PLAY") {
+                                    if (isReadOnly) {
                                       activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
                                     } else if (isBase) {
                                       activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_6px_rgba(200,36,52,0.6)]";
@@ -2011,9 +2047,9 @@ export default function CharacterSheetClient({
                                   return (
                                     <button
                                       key={idx}
-                                      disabled={status === "IN_PLAY" && !isEvolvingMode}
+                                      disabled={isSheetDisabled}
                                       onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
-                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${isSheetDisabled ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
                                       title={`Nível ${idx + 1}`}
                                     />
                                   );
@@ -2025,14 +2061,14 @@ export default function CharacterSheetClient({
                               value={adv.description || ""}
                               onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
                               placeholder="Adicionar descrição..."
-                              disabled={status === "IN_PLAY"}
+                              disabled={isReadOnly}
                               className="text-xs text-text-muted font-reading leading-relaxed w-full block"
                             />
                           </div>
                         ))}
                       </div>
 
-                      {status !== "IN_PLAY" && (
+                      {(status !== "IN_PLAY" || isOverrideActive) && (
                         <button
                           onClick={() => handleAddAdvantage("merit")}
                           className="text-xs uppercase tracking-wider font-bold text-gold-accent bg-burgundy/40 hover:bg-burgundy px-3 py-2 rounded-sm border border-blood-red/30 hover:border-blood-red transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
@@ -2049,7 +2085,7 @@ export default function CharacterSheetClient({
                         {flawsAndLoresheetsWithSum.map(adv => (
                           <div key={adv.id} className="bg-bg-main/30 p-3.5 border border-white/5 rounded-sm relative group">
                             {/* BOTÃO EXCLUIR */}
-                            {status !== "IN_PLAY" && (
+                            {(status !== "IN_PLAY" || isOverrideActive) && (
                               <button
                                 onClick={() => handleDeleteAdvantage(adv.id)}
                                 className="absolute top-3.5 right-3.5 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
@@ -2065,7 +2101,7 @@ export default function CharacterSheetClient({
                                   value={adv.name}
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Novo Defeito"
-                                  disabled={status === "IN_PLAY"}
+                                  disabled={isReadOnly}
                                   className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-[200px]"
                                 />
                                 <span className="text-[9px] uppercase tracking-wider text-text-muted">
@@ -2080,7 +2116,7 @@ export default function CharacterSheetClient({
                                   
                                   let activeClass = "";
                                   if (isActive) {
-                                    if (status === "IN_PLAY") {
+                                    if (isReadOnly) {
                                       activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
                                     } else if (isBase) {
                                       activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_66px_rgba(200,36,52,0.6)]";
@@ -2094,9 +2130,9 @@ export default function CharacterSheetClient({
                                   return (
                                     <button
                                       key={idx}
-                                      disabled={status === "IN_PLAY" && !isEvolvingMode}
+                                      disabled={isSheetDisabled}
                                       onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
-                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${(status === "IN_PLAY" && !isEvolvingMode) ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${isSheetDisabled ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
                                       title={`Nível ${idx + 1}`}
                                     />
                                   );
@@ -2108,14 +2144,14 @@ export default function CharacterSheetClient({
                               value={adv.description || ""}
                               onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
                               placeholder="Adicionar descrição..."
-                              disabled={status === "IN_PLAY"}
+                              disabled={isReadOnly}
                               className="text-xs text-text-muted font-reading leading-relaxed w-full block"
                             />
                           </div>
                         ))}
                       </div>
 
-                      {status !== "IN_PLAY" && (
+                      {(status !== "IN_PLAY" || isOverrideActive) && (
                         <button
                           onClick={() => handleAddAdvantage("flaw")}
                           className="text-xs uppercase tracking-wider font-bold text-blood-red/60 hover:text-blood-red bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
@@ -2162,7 +2198,7 @@ export default function CharacterSheetClient({
                         }
                       }))}
                       type="number"
-                      disabled={status === "IN_PLAY"}
+                      disabled={isReadOnly}
                       className="font-bold text-blood-red hover:bg-white/5 text-center w-12 border-b border-white/10"
                     />
                     <span className="text-text-muted">/</span>
@@ -2177,7 +2213,7 @@ export default function CharacterSheetClient({
                         }
                       }))}
                       type="number"
-                      disabled={status === "IN_PLAY"}
+                      disabled={isReadOnly}
                       className="font-bold text-gold-accent hover:bg-white/5 text-center w-12 border-b border-white/10"
                     />
                   </div>
@@ -2219,7 +2255,7 @@ export default function CharacterSheetClient({
                   <textarea
                     value={character.notes}
                     onChange={(e) => setCharacter(prev => ({ ...prev, notes: e.target.value }))}
-                    disabled={status === "IN_PLAY"}
+                    disabled={isReadOnly}
                     className="w-full h-32 bg-bg-main border border-white/10 rounded p-3 text-sm font-reading text-text-primary focus:border-gold-accent outline-none resize-none transition-colors duration-150 disabled:opacity-60"
                     placeholder="Histórico livre, anotações de NPCs e metas..."
                   />

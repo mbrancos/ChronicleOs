@@ -180,9 +180,11 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
     const publicChannelName = `public-campaign-${campaign.id}`;
     const privateChannelName = `private-gm-${campaign.id}`;
+    const presenceChannelName = `presence-campaign-${campaign.id}`;
 
     const publicChannel = pusher.subscribe(publicChannelName);
     const privateChannel = pusher.subscribe(privateChannelName);
+    const presenceChannel = pusher.subscribe(presenceChannelName);
 
     // Handlers de atualização dos Tokens
     const handleTokenCreated = (token: TokenData) => {
@@ -229,7 +231,9 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     publicChannel.bind("token-updated", handleTokenUpdated);
     publicChannel.bind("token-deleted", handleTokenDeleted);
     publicChannel.bind("round-reset", handleRoundReset);
-    publicChannel.bind("character-updated", handleCharacterUpdated);
+
+    // Registrar binds no canal seguro de presença
+    presenceChannel.bind("character-updated", handleCharacterUpdated);
 
     privateChannel.bind("token-created", handleTokenCreated);
     privateChannel.bind("token-updated", handleTokenUpdated);
@@ -256,8 +260,10 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     return () => {
       publicChannel.unbind_all();
       privateChannel.unbind_all();
+      presenceChannel.unbind_all();
       pusher.unsubscribe(publicChannelName);
       pusher.unsubscribe(privateChannelName);
+      pusher.unsubscribe(presenceChannelName);
       pusher.disconnect();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
@@ -906,6 +912,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             initialStatus={selectedChar!.status as "DRAFT" | "READY" | "IN_PLAY" || "DRAFT"}
             initialBuildState={selectedChar!.buildState}
             characterType={selectedChar!.type}
+            isStoryteller={true}
             onDataChange={async (newData) => {
               // Atualizar estado de personagens localmente de imediato
               const updateLocalList = (list: CampaignCharacter[]) =>
