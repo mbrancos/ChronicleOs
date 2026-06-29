@@ -107,13 +107,67 @@ Armazena as mesas criadas, servindo como contêiner obrigatório para as fichas.
 | description | text | Resumo ou sinopse da história |
 
 ### characters
-Armazena TODAS as entidades (Jogadores, NPCs e Coterie). Toda ficha pertence obrigatoriamente a uma campanha ativa.
+Armazena TODAS as entidades (Jogadores, NPCs e Coterie). Fichas de NPCs podem ser criadas diretamente no cofre (com `campaign_id` como `null`), permitindo a portabilidade entre crônicas.
 
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
 | id | uuid | Identificador único |
-| campaign_id | fk | Relacionamento obrigatório com campaigns.id (NOT NULL) |
-| user_id | fk | Relacionamento com users.id. Define o dono da ficha (NULL apenas para a Coterie). |
+| campaign_id | fk | Relacionamento opcional com campaigns.id (permite null para personagens no cofre) |
+| user_id | fk | Relacionamento com users.id. Define o dono da ficha (NULL apenas para Coterie ou NPCs controlados pelo Narrador). |
 | name | text | Nome da entidade |
 | type | text | 'jogador', 'npc' ou 'coterie' |
 | sheet_data | jsonb | Objeto contendo Atributos, Habilidades, Disciplinas, Macros, Vitalidade, Fome, Itens de Coterie e Anotações Públicas. |
+| status | text | Estado de criação da ficha: 'DRAFT', 'READY', ou 'IN_PLAY' |
+| build_state | jsonb | Memória de pontos iniciais de criação vs evolução pós-lançamento por XP |
+
+### rolls
+Histórico e registro de rolagens efetuadas na mesa, servindo também como log permanente de ações da crônica.
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | uuid | Chave primária |
+| campaign_id | fk | Relacionamento com campaigns.id (NOT NULL) |
+| character_id | fk | Relacionamento opcional com characters.id |
+| character_name| text | Nome do personagem que efetuou a jogada |
+| pool_name | text | Nome da pool de dados (ex: "Força + Esportes" ou "Dano Aplicado") |
+| result_data | jsonb | Resultados individuais de cada d10 rolado |
+| hunger_dice | integer | Quantidade de dados de fome aplicados na rolagem |
+| is_rerolled | boolean | Flag indicando se a jogada sofreu Rerrolagem de Força de Vontade |
+| is_secret | boolean | Flag indicando se a rolagem foi feita de forma oculta pelo Narrador |
+
+### scene_tokens
+Tokens de personagens inseridos ativamente na cena do VTT para controle tático de cena e turnos.
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | uuid | Chave primária |
+| campaign_id | fk | Relacionamento com campaigns.id (NOT NULL) |
+| character_id | fk | Relacionamento opcional com characters.id |
+| name | text | Nome de exibição do token |
+| type | text | 'player', 'full_npc' ou 'quick_npc' |
+| x | integer | Coordenada X no grid VTT |
+| y | integer | Coordenada Y no grid VTT |
+| is_visible | boolean | Define se o token está visível para os jogadores (dentro do Palco) |
+| has_acted | boolean | Controle de rodada/turnos de combate do token |
+| quick_stats | jsonb | Atributos simplificados e status vitais para figurantes rápidos (quick_npc) |
+
+### xp_ledgers
+Livro-razão de transações de XP de cada personagem, auditando o avanço das fichas.
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | uuid | Chave primária |
+| character_id | fk | Relacionamento com characters.id (NOT NULL) |
+| description | text | Descrição do gasto ou ganho de XP (ex: "Evolução: Força de 2 para 3") |
+| xp_change | integer | Valor de variação de XP (positivo para ganhos, negativo para compras, 0 para Edição Divina) |
+| metadata | jsonb | Metadados estruturados detalhando a evolução |
+
+---
+
+## Recursos Especiais da Mesa de Jogo (VTT)
+
+1. **Sincronização em Tempo Real via Pusher**: Comunicação bidirecional sem polling, atualizando posições de tokens, imagens de cena, fundos, logs de danos e rolagens instantaneamente.
+2. **Sistema de Presença**: Monitoramento online/offline de jogadores na mesa através de gemas de status integradas no painel do Narrador.
+3. **Controle de Turnos e Fog of War**: Narrador arrasta tokens entre o "Palco da Cena" (visível aos jogadores) e os "Bastidores" (invisível aos jogadores), e controla a escala de cinza de tokens inativos que já agiram no turno.
+4. **Ficha Única Anchor-Driven**: Layout moderno sem abas com rolagem vertical suave e barra de navegação sticky no topo da ficha.
+5. **Edição Divina (Narrator Override)**: Chave-mestra no menu superior que permite ao Narrador contornar as regras oficiais e aplicar ajustes diretos na ficha dos jogadores (com log de 0 XP e sincronia em tempo real).
