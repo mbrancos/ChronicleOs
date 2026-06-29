@@ -100,7 +100,7 @@ export async function signInAction(prevState: any, formData: FormData) {
         message: error.message,
         status: (error as any).status,
       });
-      return { error: error.message || "Credenciais inválidas. Verifique seu e-mail e senha." };
+      return { error: "Credenciais inválidas. Verifique seu e-mail e senha." };
     }
   } catch (err: any) {
     console.error("Erro inesperado no login:", err);
