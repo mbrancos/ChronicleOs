@@ -25,6 +25,7 @@ interface ActionFeedProps {
   onReroll?: (rollId: string, indices: number[]) => Promise<void>;
   isRerolling?: boolean;
   isStoryteller?: boolean;
+  className?: string;
 }
 
 export default function ActionFeed({
@@ -34,6 +35,7 @@ export default function ActionFeed({
   onReroll,
   isRerolling = false,
   isStoryteller = false,
+  className = "",
 }: ActionFeedProps) {
   const [localRolls, setLocalRolls] = useState<RollItem[]>(() => [...rolls].reverse());
   const [selectedDice, setSelectedDice] = useState<{ rollId: string; indices: number[] } | null>(null);
@@ -187,7 +189,7 @@ export default function ActionFeed({
   };
 
   return (
-    <div className="w-60 h-full min-h-0 bg-bg-card-dark/95 backdrop-blur-md border-r border-white/10 flex flex-col overflow-hidden z-30 shrink-0 p-4 select-none">
+    <div className={`w-60 h-full min-h-0 bg-bg-card-dark/95 backdrop-blur-md border-r border-white/10 flex flex-col overflow-hidden z-30 shrink-0 p-4 select-none ${className}`}>
       {/* Container de scroll do histórico estilo chat — flex-1 + min-h-0 garantem que o scroll respeite os limites do pai */}
       <div
         ref={scrollRef}

@@ -1503,7 +1503,7 @@ export default function CharacterSheetClient({
         {/* ======================================================== */}
         {/* MENU DE NAVEGAÇÃO FIXO (STICKY HEADER) */}
         {/* ======================================================== */}
-        <div className="sticky top-[0px] z-30 bg-bg-main/95 backdrop-blur-md border-b border-white/10 py-3 flex space-x-1.5 flex-wrap gap-y-1.5 items-center select-none pl-1 shadow-md pr-4">
+        <div className="sticky top-[0px] z-30 bg-bg-main/95 backdrop-blur-md border-b border-white/10 py-3 flex items-center select-none pl-2 shadow-md pr-4 overflow-x-auto md:overflow-x-visible scrollbar-none flex-row flex-nowrap md:flex-wrap space-x-1.5 gap-y-0 md:gap-y-1.5 w-full">
           {(
             [
               { id: "atributos", label: "Atributos" },
@@ -1526,7 +1526,7 @@ export default function CharacterSheetClient({
                   el.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
               }}
-              className="py-1.5 px-4 text-[10px] uppercase tracking-widest font-data font-bold border border-white/10 hover:border-gold-accent hover:text-gold-accent text-text-muted bg-black/45 rounded-sm transition-all duration-150 cursor-pointer focus:outline-none"
+              className="shrink-0 py-1.5 px-4 text-[10px] uppercase tracking-widest font-data font-bold border border-white/10 hover:border-gold-accent hover:text-gold-accent text-text-muted bg-black/45 rounded-sm transition-all duration-150 cursor-pointer focus:outline-none"
             >
               {item.label}
             </button>
@@ -1544,7 +1544,7 @@ export default function CharacterSheetClient({
                   return newVal;
                 });
               }}
-              className={`py-1.5 px-4 text-[10px] uppercase tracking-widest font-data font-bold border rounded-sm transition-all duration-150 cursor-pointer focus:outline-none md:ml-auto ${
+              className={`shrink-0 py-1.5 px-4 text-[10px] uppercase tracking-widest font-data font-bold border rounded-sm transition-all duration-150 cursor-pointer focus:outline-none md:ml-auto ${
                 isOverrideActive
                   ? "bg-gold-accent text-bg-main border-gold-accent shadow-[0_0_8px_rgba(212,175,55,0.4)]"
                   : "bg-black/45 border-white/10 hover:border-gold-accent hover:text-gold-accent text-text-muted"

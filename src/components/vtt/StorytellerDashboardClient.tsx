@@ -99,6 +99,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
   const [narratorImageInput, setNarratorImageInput] = useState("");
   const [isShowingSceneImage, setIsShowingSceneImage] = useState(false);
   const [currentSceneImage, setCurrentSceneImage] = useState<string | null>(null);
+  const [activeMobileTab, setActiveMobileTab] = useState<"board" | "feed">("board");
 
   const handleOpenDamageModal = useCallback((characterId: string, characterName: string) => {
     setDamageTargetId(characterId);
@@ -629,10 +630,39 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
         isStoryteller={true}
       />
       {/* 1. FEED DE ROLAGENS (Sidebar Esquerdo) */}
-      <ActionFeed rolls={rollsList} campaignId={campaign.id} isStoryteller={true} />
+      <ActionFeed
+        rolls={rollsList}
+        campaignId={campaign.id}
+        isStoryteller={true}
+        className={`${activeMobileTab === "feed" ? "flex w-full" : "hidden"} md:flex md:w-60`}
+      />
 
       {/* 2. MESA CENTRAL COM TABULEIRO 2D (DirectorBoard) */}
-      <div className="flex-1 h-full relative flex items-center justify-center p-4 min-w-0">
+      <div className={`flex-1 h-full relative flex items-center justify-center p-4 min-w-0 ${activeMobileTab === "board" ? "flex" : "hidden"} md:flex`}>
+        {/* Alternador de Abas Mobile */}
+        <div className="md:hidden absolute top-4 left-4 z-20 flex bg-black/60 border border-white/10 rounded-xs p-0.5 shadow-md">
+          <button
+            onClick={() => setActiveMobileTab("board")}
+            className={`px-3 py-1.5 text-[9px] font-data uppercase tracking-widest transition-all rounded-xs cursor-pointer ${
+              activeMobileTab === "board"
+                ? "bg-blood-red text-white font-bold"
+                : "text-text-dim hover:text-white"
+            }`}
+          >
+            Mesa
+          </button>
+          <button
+            onClick={() => setActiveMobileTab("feed")}
+            className={`px-3 py-1.5 text-[9px] font-data uppercase tracking-widest transition-all rounded-xs cursor-pointer ${
+              activeMobileTab === "feed"
+                ? "bg-blood-red text-white font-bold"
+                : "text-text-dim hover:text-white"
+            }`}
+          >
+            Histórico
+          </button>
+        </div>
+
         {/* Botão de Retorno ao Painel */}
         <Link
           href={`/campanhas/${campaign.id}/narrador`}
@@ -644,7 +674,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           Painel do Narrador
         </Link>
         {/* Título de Contexto no topo central */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-center select-none">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-center select-none md:block hidden">
           <h1 className="text-xl font-gothic text-blood-red tracking-widest uppercase">
             Dashboard do Narrador
           </h1>
@@ -682,11 +712,12 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
         {/* 3. DOCK DO NARRADOR — slim, largura total da mesa central */}
         <div className="absolute bottom-0 left-0 right-0 flex justify-center z-40 pointer-events-none">
-          <div className="pointer-events-auto w-full bg-bg-card-dark/98 backdrop-blur-md border-t border-white/8 py-1.5 px-6 shadow-2xl flex items-center justify-center gap-5 select-none">
+          <div className="pointer-events-auto w-full bg-bg-card-dark/98 backdrop-blur-md border-t border-white/8 py-1.5 px-3 md:px-6 shadow-2xl flex items-center justify-center gap-2 md:gap-5 select-none overflow-x-auto scrollbar-none">
 
             {/* Dados (Pool) */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Dados</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0 md:inline hidden">Dados</span>
+              <span className="text-xs md:hidden" title="Dados">🎲</span>
               <button onClick={() => setNarratorPool(Math.max(1, narratorPool - 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">-</button>
               <span className="w-5 text-center text-sm font-bold font-mono text-gold-accent">{narratorPool}</span>
               <button onClick={() => setNarratorPool(Math.min(20, narratorPool + 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">+</button>
@@ -701,7 +732,8 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                   className="ml-1 text-[8px] uppercase tracking-widest text-hunger-red hover:text-white font-data font-bold border border-hunger-red/35 hover:border-white px-1.5 py-0.5 rounded-xs bg-hunger-red/5 cursor-pointer transition-colors"
                   title="Limpar seleção da ficha"
                 >
-                  Limpar
+                  <span className="md:inline hidden">Limpar</span>
+                  <span className="md:hidden">✕</span>
                 </button>
               )}
             </div>
@@ -709,8 +741,9 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             <div className="h-6 w-px bg-white/10 shrink-0" />
 
             {/* Dificuldade */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Dif.</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0 md:inline hidden">Dif.</span>
+              <span className="text-xs md:hidden" title="Dificuldade">🎯</span>
               <button onClick={() => setNarratorDifficulty(Math.max(0, narratorDifficulty - 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">-</button>
               <span className="w-5 text-center text-sm font-bold font-mono text-gold-accent">{narratorDifficulty}</span>
               <button onClick={() => setNarratorDifficulty(Math.min(10, narratorDifficulty + 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">+</button>
@@ -719,8 +752,9 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             <div className="h-6 w-px bg-white/10 shrink-0" />
 
             {/* Fome */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Fome</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0 md:inline hidden">Fome</span>
+              <span className="text-xs md:hidden" title="Fome">🩸</span>
               <button onClick={() => setNarratorHunger(Math.max(0, narratorHunger - 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">-</button>
               <span className="w-5 text-center text-sm font-bold font-mono text-hunger-red">{narratorHunger}</span>
               <button onClick={() => setNarratorHunger(Math.min(5, narratorHunger + 1))} className="w-5 h-5 border border-white/10 hover:border-white/25 bg-white/5 rounded-xs flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer">+</button>
@@ -729,13 +763,13 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             <div className="h-6 w-px bg-white/10 shrink-0" />
 
             {/* Ação */}
-            <div className="flex items-center gap-1.5 flex-1 max-w-[220px]">
-              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0">Ação</span>
+            <div className="flex items-center gap-1.5 flex-1 max-w-[120px] md:max-w-[220px]">
+              <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0 md:inline hidden">Ação</span>
               <input
                 type="text"
                 value={customActionName}
                 onChange={(e) => setCustomActionName(e.target.value)}
-                placeholder="Ex: Ataque de Garra"
+                placeholder="Ação..."
                 className="flex-1 px-2 py-0.5 text-[11px] border border-white/10 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary min-w-0"
               />
             </div>
@@ -743,15 +777,21 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             <div className="h-6 w-px bg-white/10 shrink-0" />
 
             {/* Botões de Rolagem */}
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => handleRollClick(false)} className="h-7 px-3 bg-linear-to-r from-red-700 to-burgundy hover:from-red-600 hover:to-red-700 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">Público</button>
-              <button onClick={() => handleRollClick(true)} className="h-7 px-3 bg-willpower-blue hover:bg-blue-600 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">Secreto</button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => handleRollClick(false)} className="h-7 px-2 md:px-3 bg-linear-to-r from-red-700 to-burgundy hover:from-red-600 hover:to-red-700 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">
+                <span className="md:inline hidden">Público</span>
+                <span className="md:hidden">Púb</span>
+              </button>
+              <button onClick={() => handleRollClick(true)} className="h-7 px-2 md:px-3 bg-willpower-blue hover:bg-blue-600 text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all shadow-md cursor-pointer">
+                <span className="md:inline hidden">Secreto</span>
+                <span className="md:hidden">Sec</span>
+              </button>
             </div>
 
-            <div className="h-6 w-px bg-white/10 shrink-0" />
+            <div className="h-6 w-px bg-white/10 shrink-0 md:block hidden" />
 
             {/* Despertar toggle */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0 md:block hidden">
               <button
                 onClick={() => setIsRouseSelected(!isRouseSelected)}
                 className={`h-7 px-2.5 font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border ${
@@ -772,7 +812,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       <div 
         className={`h-full bg-bg-card-dark/95 backdrop-blur-md flex flex-col z-35 select-none shrink-0 overflow-y-auto scrollbar-none transition-all duration-300 ease-in-out ${
           isRightSidebarOpen 
-            ? "w-60 p-4 opacity-100 border-l border-white/10" 
+            ? "w-full md:w-60 p-4 opacity-100 border-l border-white/10" 
             : "w-0 p-0 opacity-0 border-l-0 border-r-0 overflow-hidden pointer-events-none"
         }`}
       >

@@ -2,6 +2,19 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.24.0] - 2026-06-29
+
+### Adicionado
+- **Otimização de Layout para Dispositivos Móveis (Mobile-First):**
+  - **Alternador de Abas do VTT (Mesa vs Histórico):** Implementado controle reativo de visualização para celular no VTT (`VttRoomClient` e `StorytellerDashboardClient`). Permite ao usuário alternar entre o Tabuleiro 2D e o Feed de Jogadas, preservando o redimensionamento ideal e a escala automática do tabuleiro.
+  - **Menu Fixo com Scroll Horizontal na Ficha:** Modificado o menu de ancoragem superior da ficha (`CharacterSheetClient`) para comportar rolagem horizontal suave no celular (`overflow-x-auto whitespace-nowrap`), evitando quebra de linhas e mantendo o design limpo.
+  - **Painel Flutuante de Rolagem (PlayerDock):** Criado contêiner flutuante dinâmico acima do dock (`bottom-20`) para ajustar modificadores/dificuldade e acionar jogadas diretamente no celular (zona de alcance dos polegares - Fitts' Law).
+  - **Ações Rápidas de Despertar:** Adicionado botão de Despertar compacto no dock para celulares quando a seleção de dados estiver vazia.
+  - **Responsividade do Painel Lateral do Narrador:** Modificada a barra lateral de controle das fichas para expandir em tela cheia (`w-full`) no celular.
+  - **Dock do Narrador Compacto:** Otimizado o rodapé do Narrador para usar ícones e texto simplificado no celular para evitar quebra de layout.
+
+---
+
 ## [0.23.0] - 2026-06-28
 
 ### Adicionado

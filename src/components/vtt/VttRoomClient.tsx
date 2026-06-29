@@ -46,6 +46,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
   const [isDamageModalOpen, setIsDamageModalOpen] = useState(false);
   const [sceneBackground, setSceneBackground] = useState<string | null>(null);
   const [sceneImage, setSceneImage] = useState<string | null>(null);
+  const [activeMobileTab, setActiveMobileTab] = useState<"board" | "feed">("board");
   const isFetching = useRef(false);
   const isFetchingTokens = useRef(false);
 
@@ -389,6 +390,30 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
       
       {/* AREA DE JOGO SUPERIOR (Sidebar + Mesa) — 80px = h-20 do PlayerDock fixo */}
       <div className="flex flex-row h-[calc(100vh-80px)] w-full overflow-hidden relative">
+        {/* Alternador de Abas Mobile */}
+        <div className="md:hidden absolute top-4 left-4 z-20 flex bg-black/60 border border-white/10 rounded-xs p-0.5 shadow-md">
+          <button
+            onClick={() => setActiveMobileTab("board")}
+            className={`px-3 py-1.5 text-[9px] font-data uppercase tracking-widest transition-all rounded-xs cursor-pointer ${
+              activeMobileTab === "board"
+                ? "bg-blood-red text-white font-bold"
+                : "text-text-dim hover:text-white"
+            }`}
+          >
+            Mesa
+          </button>
+          <button
+            onClick={() => setActiveMobileTab("feed")}
+            className={`px-3 py-1.5 text-[9px] font-data uppercase tracking-widest transition-all rounded-xs cursor-pointer ${
+              activeMobileTab === "feed"
+                ? "bg-blood-red text-white font-bold"
+                : "text-text-dim hover:text-white"
+            }`}
+          >
+            Histórico
+          </button>
+        </div>
+
         {/* Botão de Retorno ao Painel */}
         <Link
           href={`/campanhas/${character.campaignId}/jogador`}
@@ -399,6 +424,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
           </svg>
           Lobby da Campanha
         </Link>
+        
         {/* FEED DE ROLAGENS MULTIPLAYER (Sidebar Esquerdo) */}
         <ActionFeed 
           rolls={rollsList} 
@@ -406,10 +432,11 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
           localCharacterId={character.id}
           onReroll={handleWillpowerReroll}
           isRerolling={isRerolling}
+          className={`${activeMobileTab === "feed" ? "flex w-full" : "hidden"} md:flex md:w-60`}
         />
 
         {/* O TABULEIRO 2D (DirectorBoard em modo Jogador) */}
-        <div className="flex-1 h-full relative flex items-center justify-center p-4 min-w-0">
+        <div className={`flex-1 h-full relative flex items-center justify-center p-4 min-w-0 ${activeMobileTab === "board" ? "flex" : "hidden"} md:flex`}>
           <DirectorBoard
             tokens={tokensList}
             isStoryteller={false}
