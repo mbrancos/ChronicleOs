@@ -57,34 +57,34 @@ export interface CharacterAttributes {
 
 export interface CharacterSkills {
   // Físicas
+  melee: number;
+  firearms: number;
   athletics: number;
   brawl: number;
-  craft: number;
   drive: number;
-  firearms: number;
-  melee: number;
-  larceny: number;
   stealth: number;
+  larceny: number;
+  craft: number;
   survival: number;
   // Sociais
   animal_ken: number;
   etiquette: number;
-  insight: number;
   intimidation: number;
   leadership: number;
+  streetwise: number;
   performance: number;
   persuasion: number;
-  streetwise: number;
+  insight: number;
   subterfuge: number;
   // Mentais
+  science: number;
   academics: number;
-  awareness: number;
   finance: number;
   investigation: number;
   medicine: number;
   occult: number;
+  awareness: number;
   politics: number;
-  science: number;
   technology: number;
 }
 
@@ -170,9 +170,9 @@ export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
     mental: { intelligence: 1, wits: 1, resolve: 1 }
   },
   skills: {
-    athletics: 0, brawl: 0, craft: 0, drive: 0, firearms: 0, melee: 0, larceny: 0, stealth: 0, survival: 0,
-    animal_ken: 0, etiquette: 0, insight: 0, intimidation: 0, leadership: 0, performance: 0, persuasion: 0, streetwise: 0, subterfuge: 0,
-    academics: 0, awareness: 0, finance: 0, investigation: 0, medicine: 0, occult: 0, politics: 0, science: 0, technology: 0
+    melee: 0, firearms: 0, athletics: 0, brawl: 0, drive: 0, stealth: 0, larceny: 0, craft: 0, survival: 0,
+    animal_ken: 0, etiquette: 0, intimidation: 0, leadership: 0, streetwise: 0, performance: 0, persuasion: 0, insight: 0, subterfuge: 0,
+    science: 0, academics: 0, finance: 0, investigation: 0, medicine: 0, occult: 0, awareness: 0, politics: 0, technology: 0
   },
   specialties: [],
   disciplines: [],

@@ -579,13 +579,13 @@ const TECHNICAL_NAMES: Record<string, string> = {
   strength: "Força", dexterity: "Destreza", stamina: "Vigor",
   charisma: "Carisma", manipulation: "Manipulação", composure: "Autocontrole",
   intelligence: "Inteligência", wits: "Raciocínio", resolve: "Determinação",
-  athletics: "Esportes", brawl: "Briga", craft: "Ofícios", drive: "Condução",
-  firearms: "Armas de Fogo", melee: "Armas Brancas", larceny: "Subterfúgio",
+  athletics: "Atletismo", brawl: "Briga", craft: "Ofícios", drive: "Condução",
+  firearms: "Armas de Fogo", melee: "Armas Brancas", larceny: "Ladroagem",
   stealth: "Furtividade", survival: "Sobrevivência",
-  animal_ken: "Empatia com Animais", etiquette: "Etiqueta", insight: "Perspicácia",
+  animal_ken: "Empatia com Animais", etiquette: "Etiqueta", insight: "Sagacidade",
   intimidation: "Intimidação", leadership: "Liderança", performance: "Performance",
-  persuasion: "Persuasão", streetwise: "Manha", subterfuge: "Lábia",
-  academics: "Acadêmicos", awareness: "Percepção", finance: "Finanças",
+  persuasion: "Persuasão", streetwise: "Manha", subterfuge: "Subterfúgio",
+  academics: "Erudição", awareness: "Percepção", finance: "Finanças",
   investigation: "Investigação", medicine: "Medicina", occult: "Ocultismo",
   politics: "Política", science: "Ciência", technology: "Tecnologia"
 };

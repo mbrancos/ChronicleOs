@@ -101,15 +101,15 @@ const TECHNICAL_NAMES: Record<string, string> = {
   charisma: "Carisma", manipulation: "Manipulação", composure: "Autocontrole",
   intelligence: "Inteligência", wits: "Raciocínio", resolve: "Determinação",
   // Habilidades Físicas
-  athletics: "Esportes", brawl: "Briga", craft: "Ofícios", drive: "Condução",
-  firearms: "Armas de Fogo", melee: "Armas Brancas", larceny: "Subterfúgio/Furto",
+  athletics: "Atletismo", brawl: "Briga", craft: "Ofícios", drive: "Condução",
+  firearms: "Armas de Fogo", melee: "Armas Brancas", larceny: "Ladroagem",
   stealth: "Furtividade", survival: "Sobrevivência",
   // Habilidades Sociais
-  animal_ken: "Empatia com Animais", etiquette: "Etiqueta", insight: "Perspicácia",
+  animal_ken: "Empatia com Animais", etiquette: "Etiqueta", insight: "Sagacidade",
   intimidation: "Intimidação", leadership: "Liderança", performance: "Performance",
-  persuasion: "Persuasão", streetwise: "Manha", subterfuge: "Lábia",
+  persuasion: "Persuasão", streetwise: "Manha", subterfuge: "Subterfúgio",
   // Habilidades Mentais
-  academics: "Acadêmicos", awareness: "Percepção", finance: "Finanças",
+  academics: "Erudição", awareness: "Percepção", finance: "Finanças",
   investigation: "Investigação", medicine: "Medicina", occult: "Ocultismo",
   politics: "Política", science: "Ciência", technology: "Tecnologia"
 };
@@ -1641,7 +1641,7 @@ export default function CharacterSheetClient({
               {/* HABILIDADES FÍSICAS */}
               <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
                 <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Físicas</h4>
-                {(["athletics", "brawl", "craft", "drive", "firearms", "melee", "larceny", "stealth", "survival"] as const).map(skill => (
+                {(["melee", "firearms", "athletics", "brawl", "drive", "stealth", "larceny", "craft", "survival"] as const).map(skill => (
                   <DotSlider 
                     key={skill}
                     label={TECHNICAL_NAMES[skill] || skill}
@@ -1661,7 +1661,7 @@ export default function CharacterSheetClient({
               {/* HABILIDADES SOCIAIS */}
               <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
                 <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Sociais</h4>
-                {(["animal_ken", "etiquette", "insight", "intimidation", "leadership", "performance", "persuasion", "streetwise", "subterfuge"] as const).map(skill => (
+                {(["animal_ken", "etiquette", "intimidation", "leadership", "streetwise", "performance", "persuasion", "insight", "subterfuge"] as const).map(skill => (
                   <DotSlider 
                     key={skill}
                     label={TECHNICAL_NAMES[skill] || skill}
@@ -1681,7 +1681,7 @@ export default function CharacterSheetClient({
               {/* HABILIDADES MENTAIS */}
               <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
                 <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Mentais</h4>
-                {(["academics", "awareness", "finance", "investigation", "medicine", "occult", "politics", "science", "technology"] as const).map(skill => (
+                {(["science", "academics", "finance", "investigation", "medicine", "occult", "awareness", "politics", "technology"] as const).map(skill => (
                   <DotSlider 
                     key={skill}
                     label={TECHNICAL_NAMES[skill] || skill}
