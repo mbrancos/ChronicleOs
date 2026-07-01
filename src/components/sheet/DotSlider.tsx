@@ -15,6 +15,7 @@ interface DotSliderProps {
   baseValue?: number;
   showXpDistinction?: boolean;
   disabled?: boolean;
+  predatorValue?: number;
 }
 
 export default function DotSlider({
@@ -28,7 +29,8 @@ export default function DotSlider({
   isSelected = false,
   baseValue,
   showXpDistinction = false,
-  disabled = false
+  disabled = false,
+  predatorValue = 0
 }: DotSliderProps) {
   
   // A área inteira da linha tem altura física de 44px (h-11) para touch target ideal no mobile.
@@ -123,11 +125,16 @@ export default function DotSlider({
         {Array.from({ length: 5 }).map((_, idx) => {
           const isActive = idx < value;
           const isBase = baseValue !== undefined ? idx < baseValue : true;
+          
+          // Se o ponto está dentro da fatia concedida pelo predador
+          const isPredatorDot = isActive && idx >= (value - (predatorValue || 0)) && idx < value;
 
           let activeClass = "";
           if (isActive) {
             if (isRed) {
               activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
+            } else if (isPredatorDot) {
+              activeClass = "bg-purple-600 border border-purple-400 shadow-[0_0_8px_rgba(147,51,234,0.7)] animate-pulse-subtle";
             } else if (showXpDistinction && !isBase) {
               activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
             } else {

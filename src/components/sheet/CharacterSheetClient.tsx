@@ -10,7 +10,11 @@ import {
   CharacterSkills,
   DEFAULT_CHARACTER_DATA,
   getMaxHealth,
-  getMaxWillpower
+  getMaxWillpower,
+  getPredatorSlug,
+  PREDATOR_TYPES,
+  DISCIPLINE_KEY_TO_NAME,
+  PredatorSelections
 } from "@/types/character";
 import Link from "next/link";
 import DotSlider from "@/components/sheet/DotSlider";
@@ -249,6 +253,9 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
   const isCaitiffOrThin = clan === "Caitiff" || clan === "Sem Clã" || clan === "Sangue-Ralo";
   const rules = getPowerLevelRules(charData.profile?.concept || "Neófito");
 
+  const predatorSlug = getPredatorSlug(charData.profile?.predator_type || "");
+  const chosenDiscId = charData.predatorSelections?.chosenDiscipline;
+
   // --- ATRIBUTOS ---
   const allAttrs: { key: string; val: number }[] = [];
   if (charData.attributes) {
@@ -309,8 +316,21 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
   });
 
   // --- DISCIPLINAS ---
-  const disciplinesList = charData.disciplines || [];
-  const sortedDiscs = [...disciplinesList].sort((a, b) => b.level - a.level);
+  // Criar cópia rasa clonando os objetos de disciplinas
+  const disciplinesList = charData.disciplines ? charData.disciplines.map(d => ({ ...d })) : [];
+  
+  if (predatorSlug && chosenDiscId) {
+    const chosenDiscName = DISCIPLINE_KEY_TO_NAME[chosenDiscId];
+    if (chosenDiscName) {
+      const targetDisc = disciplinesList.find(d => d.name.toLowerCase() === chosenDiscName.toLowerCase());
+      if (targetDisc && targetDisc.level > 0) {
+        targetDisc.level -= 1;
+      }
+    }
+  }
+
+  const activeDiscs = disciplinesList.filter(d => d.level > 0);
+  const sortedDiscs = [...activeDiscs].sort((a, b) => b.level - a.level);
 
   const idealDiscs = [2, 1];
   const disciplinesBase: Record<string, number> = {};
@@ -339,6 +359,15 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
     }
   });
 
+  // Somamos de volta o ponto do predador no disciplinesBase para exibição como base na UI
+  if (predatorSlug && chosenDiscId) {
+    const chosenDiscName = DISCIPLINE_KEY_TO_NAME[chosenDiscId];
+    const origDisc = charData.disciplines?.find(d => d.name.toLowerCase() === chosenDiscName?.toLowerCase());
+    if (origDisc) {
+      disciplinesBase[origDisc.id] = (disciplinesBase[origDisc.id] || 0) + 1;
+    }
+  }
+
   // --- VANTAGENS ---
   const positiveAdvantages = (charData.advantages || []).filter(
     a => a.type === "background" || a.type === "merit" || a.type === "loresheet"
@@ -351,16 +380,18 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
   }
 
   // --- ESPECIALIZAÇÕES ---
+  const predatorFreeSpec = predatorSlug ? 1 : 0;
+  const freeSpecs = 1 + predatorFreeSpec;
   const totalSpecsCount = charData.specialties ? charData.specialties.length : 0;
   let specialtiesXpSpent = 0;
-  if (totalSpecsCount > 1) {
-    specialtiesXpSpent = (totalSpecsCount - 1) * 3;
+  if (totalSpecsCount > freeSpecs) {
+    specialtiesXpSpent = (totalSpecsCount - freeSpecs) * 3;
   }
 
   const specialtiesBase: Record<string, boolean> = {};
   if (charData.specialties) {
     charData.specialties.forEach((spec, idx) => {
-      specialtiesBase[spec.id] = idx === 0;
+      specialtiesBase[spec.id] = idx < freeSpecs;
     });
   }
 
@@ -991,14 +1022,82 @@ export default function CharacterSheetClient({
         }
       }
 
+      // Se mudar o predator_type, limpa as seleções anteriores do predador
+      let newPredatorSelections = prev.predatorSelections || {};
+      if (field === "predator_type") {
+        newPredatorSelections = {};
+        
+        // Remove 1 ponto da disciplina que estava selecionada pelo predador anterior
+        const prevPredatorSlug = getPredatorSlug(prev.profile.predator_type);
+        const prevChosenDiscId = prev.predatorSelections?.chosenDiscipline;
+        if (prevPredatorSlug && prevChosenDiscId) {
+          const prevDiscName = DISCIPLINE_KEY_TO_NAME[prevChosenDiscId];
+          if (prevDiscName) {
+            updatedDisciplines = updatedDisciplines.map(d => {
+              if (d.name.toLowerCase() === prevDiscName.toLowerCase()) {
+                return { ...d, level: Math.max(0, d.level - 1) };
+              }
+              return d;
+            }).filter(d => d.level > 0);
+          }
+        }
+      }
+
       return {
         ...prev,
         profile: updatedProfile,
         disciplines: updatedDisciplines,
+        predatorSelections: newPredatorSelections,
         status: {
           ...prev.status,
           blood_potency: updatedBloodPotency
         }
+      };
+    });
+  };
+
+  const handleSelectPredatorDiscipline = (discId: string) => {
+    setCharacter(prev => {
+      const prevDiscId = prev.predatorSelections?.chosenDiscipline;
+      const selections = prev.predatorSelections || {};
+      const newSelections = { ...selections, chosenDiscipline: discId };
+      
+      let updatedDisciplines = prev.disciplines.map(d => ({ ...d }));
+
+      // 1. Remover o ponto da disciplina anterior se ela existir
+      if (prevDiscId) {
+        const prevDiscName = DISCIPLINE_KEY_TO_NAME[prevDiscId];
+        if (prevDiscName) {
+          const target = updatedDisciplines.find(d => d.name.toLowerCase() === prevDiscName.toLowerCase());
+          if (target) {
+            target.level = Math.max(0, target.level - 1);
+          }
+        }
+      }
+
+      // 2. Adicionar o ponto na nova disciplina
+      const newDiscName = DISCIPLINE_KEY_TO_NAME[discId];
+      if (newDiscName) {
+        const target = updatedDisciplines.find(d => d.name.toLowerCase() === newDiscName.toLowerCase());
+        if (target) {
+          target.level = Math.min(5, target.level + 1);
+        } else {
+          updatedDisciplines.push({
+            id: generateRandomId("disc"),
+            name: newDiscName,
+            level: 1,
+            powers: []
+          });
+        }
+      }
+
+      // Filtrar disciplinas que ficaram com nível 0
+      updatedDisciplines = updatedDisciplines.filter(d => d.level > 0);
+
+      return {
+        ...prev,
+        predatorSelections: newSelections,
+        disciplines: updatedDisciplines
       };
     });
   };
@@ -1827,6 +1926,55 @@ export default function CharacterSheetClient({
               onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
             />
 
+            {/* BANNER INTERATIVO DE ESCOLHA DO PREDADOR */}
+            {status !== "IN_PLAY" && character.profile.predator_type && (() => {
+              const predatorSlug = getPredatorSlug(character.profile.predator_type);
+              if (!predatorSlug) return null;
+              const rule = PREDATOR_TYPES[predatorSlug];
+              if (!rule) return null;
+
+              const chosenDiscId = character.predatorSelections?.chosenDiscipline;
+              const hasRemaining = !chosenDiscId;
+
+              return (
+                <div className="rounded border border-yellow-600/40 bg-yellow-950/20 p-4 text-sm text-yellow-400">
+                  <div className="flex items-center justify-between font-bold uppercase tracking-wider">
+                    <span>⚡ Bônus de Predador: {rule.name}</span>
+                    {hasRemaining ? (
+                      <span className="animate-pulse text-xs text-yellow-500 font-semibold bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded">
+                        [ Escolha 1 ponto de Disciplina ]
+                      </span>
+                    ) : (
+                      <span className="text-xs text-green-400 font-semibold bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded">
+                        [ ✓ Escolha Concluída ]
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {rule.disciplines.map(discId => {
+                      const isSelected = chosenDiscId === discId;
+                      const discName = DISCIPLINE_KEY_TO_NAME[discId] || discId;
+                      return (
+                        <button
+                          key={discId}
+                          type="button"
+                          onClick={() => handleSelectPredatorDiscipline(discId)}
+                          className={`px-3 py-1.5 text-xs rounded border font-data uppercase tracking-wider transition-all cursor-pointer ${
+                            isSelected 
+                              ? "bg-purple-900/60 border-purple-500 text-purple-200 font-bold shadow-[0_0_8px_rgba(147,51,234,0.4)]" 
+                              : "bg-bg-main/50 border-white/10 hover:border-yellow-500 text-text-muted hover:text-text-primary"
+                          }`}
+                        >
+                          +1 {discName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {character.disciplines.map(disc => (
                 <div key={disc.id} className="bg-bg-main/30 border border-white/5 rounded-sm p-4 space-y-3 relative group">
@@ -1874,9 +2022,19 @@ export default function CharacterSheetClient({
                         const isActive = idx < disc.level;
                         const isBase = idx < (alloc.disciplinesBase[disc.id] || 0);
                         
+                        // Lógica da bolinha roxa do predador para as disciplinas
+                        const predatorSlug = getPredatorSlug(character.profile.predator_type);
+                        const chosenDiscId = character.predatorSelections?.chosenDiscipline;
+                        const chosenDiscName = chosenDiscId ? DISCIPLINE_KEY_TO_NAME[chosenDiscId] : null;
+                        
+                        const isPredatorDisc = chosenDiscName && disc.name.toLowerCase() === chosenDiscName.toLowerCase();
+                        const isPredatorDot = isPredatorDisc && isActive && idx >= (disc.level - 1) && idx < disc.level;
+                        
                         let activeClass = "";
                         if (isActive) {
-                          if (isReadOnly) {
+                          if (isPredatorDot) {
+                            activeClass = "bg-purple-600 border border-purple-400 shadow-[0_0_8px_rgba(147,51,234,0.7)] animate-pulse-subtle";
+                          } else if (isReadOnly) {
                             activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
                           } else if (isBase) {
                             activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_6px_rgba(200,36,52,0.6)]";

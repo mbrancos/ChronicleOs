@@ -116,6 +116,57 @@ export interface RollMacro {
   rouse_check: boolean;
 }
 
+export interface PredatorSelections {
+  chosenDiscipline?: string; // ID em inglês, ex: "potence", "celerity"
+}
+
+export const DISCIPLINE_KEY_TO_NAME: Record<string, string> = {
+  animalism: "Animalismo",
+  auspex: "Auspício",
+  dominate: "Dominação",
+  blood_sorcery: "Feitiçaria de Sangue",
+  fortitude: "Fortitude",
+  protean: "Metamorfose",
+  oblivion: "Oblivion",
+  obfuscate: "Ofuscação",
+  potence: "Potência",
+  presence: "Presença",
+  celerity: "Rapidez",
+  thin_blood_alchemy: "Alquimia de Sangue-Ralo"
+};
+
+export function getPredatorSlug(predatorType: string): string | null {
+  if (!predatorType) return null;
+  const p = predatorType.toLowerCase().trim();
+  if (p.includes("alleycat")) return "alleycat";
+  if (p.includes("bagger")) return "bagger";
+  if (p.includes("cleaver")) return "cleaver";
+  if (p.includes("consensualist")) return "consensualist";
+  if (p.includes("farmer")) return "farmer";
+  if (p.includes("osiris")) return "osiris";
+  if (p.includes("sandman")) return "sandman";
+  if (p.includes("scene queen")) return "scene_queen";
+  if (p.includes("siren")) return "siren";
+  return null;
+}
+
+export interface PredatorTypeRule {
+  name: string;
+  disciplines: string[]; // IDs das disciplinas elegíveis em inglês
+}
+
+export const PREDATOR_TYPES: Record<string, PredatorTypeRule> = {
+  alleycat: { name: "Alleycat (Gato de Beco)", disciplines: ["potence", "celerity"] },
+  bagger: { name: "Bagger (Ladrão de Sangue)", disciplines: ["obfuscate", "blood_sorcery", "oblivion"] },
+  cleaver: { name: "Cleaver (Cutelo)", disciplines: ["dominate", "animalism"] },
+  consensualist: { name: "Consensualist (Consensualista)", disciplines: ["auspex", "fortitude"] },
+  farmer: { name: "Farmer (Fazendeiro)", disciplines: ["animalism", "protean"] },
+  osiris: { name: "Osiris", disciplines: ["blood_sorcery", "presence"] },
+  sandman: { name: "Sandman", disciplines: ["auspex", "obfuscate"] },
+  scene_queen: { name: "Scene Queen (Rainha da Cena)", disciplines: ["dominate", "potence"] },
+  siren: { name: "Siren (Sereia)", disciplines: ["presence", "fortitude"] },
+};
+
 export interface CharacterSheetData {
   profile: CharacterProfile;
   status: CharacterStatus;
@@ -142,6 +193,7 @@ export interface CharacterSheetData {
     touchstone: string;
     isAlive: boolean;
   }>;
+  predatorSelections?: PredatorSelections;
 }
 
 export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
@@ -155,6 +207,7 @@ export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
     sire: "",
     generation: 13
   },
+  predatorSelections: {},
   status: {
     hunger: 1,
     humanity: 7,
