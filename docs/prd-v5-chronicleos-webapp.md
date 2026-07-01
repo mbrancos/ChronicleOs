@@ -105,6 +105,7 @@ Armazena as mesas criadas, servindo como contêiner obrigatório para as fichas.
 | name | text | Nome da crônica |
 | narrator_id | fk | Relacionamento com users.id (Define quem é o Mestre desta mesa) |
 | description | text | Resumo ou sinopse da história |
+| system_rules | jsonb | Objeto de regras customizadas (Flexibilidade de Sangue, Automação de Humanidade, Automação de Predador, Multiplicador de XP) |
 
 ### characters
 Armazena TODAS as entidades (Jogadores, NPCs e Coterie). Fichas de NPCs podem ser criadas diretamente no cofre (com `campaign_id` como `null`), permitindo a portabilidade entre crônicas.
@@ -171,3 +172,4 @@ Livro-razão de transações de XP de cada personagem, auditando o avanço das f
 3. **Controle de Turnos e Fog of War**: Narrador arrasta tokens entre o "Palco da Cena" (visível aos jogadores) e os "Bastidores" (invisível aos jogadores), e controla a escala de cinza de tokens inativos que já agiram no turno.
 4. **Ficha Única Anchor-Driven**: Layout moderno sem abas com rolagem vertical suave e barra de navegação sticky no topo da ficha.
 5. **Edição Divina (Narrator Override)**: Chave-mestra no menu superior que permite ao Narrador contornar as regras oficiais e aplicar ajustes diretos na ficha dos jogadores (com log de 0 XP e sincronia em tempo real).
+6. **Regras da Casa (Homebrews) e Multiplicador de XP**: Painel de controle no modal do Narrador permitindo habilitar flexibilidade de slot de poderes, automação de humanidade/predador e multiplicador de XP da crônica de 1x a 5x.

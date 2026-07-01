@@ -2,6 +2,24 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.26.0] - 2026-07-01
+
+### Adicionado
+- **Regras da Casa (Homebrews) e Configurações da Crônica:**
+  - **Schema do Banco (Drizzle/Neon)**: Adicionado o campo `systemRules` (tipo JSONB) na tabela `campaigns` do Neon Database com fallback seguro para crônicas antigas.
+  - **Painel de Homebrews do Narrador**: Nova seção "Regras da Casa (Homebrews)" no modal de configurações da crônica (`NarratorDashboardClient.tsx`) contendo switches para alternar regras do sistema: *Permitir Flexibilidade de Sangue* (slots extras), *Julgamento do Sangue Automático* (humanidade reativa) e *Automação de Escolha de Predador*.
+  - **Multiplicador de XP**: Input numérico para o multiplicador de XP da sessão (limitado de 1x a 5x, com cast numérico estrito no `onChange` para evitar persistência de strings). O total de XP ganho por sessão pelos jogadores é multiplicado de forma reativa.
+  - **Conexão e Sincronização**: O objeto da campanha/crônica e as regras do sistema são propagados em tempo real no VTT do Narrador, VTT do Jogador e rotas de fichas individuais, aplicando ou liberando as restrições reativamente.
+
+### Modificado
+- **Reestruturação e Validação de Poderes de Disciplinas:**
+  - **Tipagem Estruturada**: Alterado o tipo `Discipline` de `powers: string[]` para `powers: AcquiredPower[]`, com objetos contendo `id`, `name` e `level`.
+  - **Ordenação Dinâmica por Nível**: Os poderes adquiridos são normalizados dinamicamente a partir de strings legadas (auto-cura automática ao editar ou remover) e exibidos com badge indicativa (`Nível [N]`), em ordem crescente.
+  - **Trava Reativa de Slots**: O botão `+ Adicionar Poder` fica desabilitado se a quantidade de poderes de disciplinas adquiridos for igual ou superior às bolinhas da disciplina.
+  - **Trava de Nível Máximo do Poder**: O nível selecionado para o novo poder no formulário inline é limitado pelo número atual de bolinhas da disciplina.
+
+---
+
 ## [0.25.0] - 2026-07-01
 
 ### Adicionado
