@@ -2,6 +2,22 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.25.0] - 2026-07-01
+
+### Adicionado
+- **Integração do Tipo de Predador (Vampiro V5):**
+  - **Suporte a Escolhas do Predador:** Criada a constante `PREDATOR_TYPES` com slugs purificados em inglês e mapeamento dinâmico a partir do perfil do personagem.
+  - **Dedução Reativa e Precisa de XP:** Ajustado o motor `calculateBaseAndXp` para processar bônus do predador em uma cópia rasa do array de disciplinas antes do pareamento com o gabarito ideal de criação, eliminando falsas cobranças de XP fantasma do jogador.
+  - **Círculos do Predador Roxos (`DotSlider`):** Adicionado suporte visual para pintar de roxo espectral (`bg-purple-600 border-purple-400 shadow-[0_0_8px_rgba(147,51,234,0.7)] animate-pulse-subtle`) os pontos de habilidades/disciplinas oriundos do Tipo de Predador.
+  - **Banner Interativo ("Letrinhas Amarelas"):** Criado painel interativo no topo das Disciplinas na ficha (exibido em modo `DRAFT` ou edição livre), permitindo escolher o bônus do predador com botões dinâmicos que gerenciam os pontos com total consistência.
+  - **Especialidades Extras Gratuitas:** O motor de regras agora concede `2` especialidades gratuitas na criação se o personagem tiver qualquer Tipo de Predador selecionado (em vez de `1` por padrão).
+
+### Modificado
+- **Reordenação e Alinhamento com Ficha V5 Oficial:**
+  - Reordenados todos os arrays de renderização e tradução do dicionário `TECHNICAL_NAMES` para corresponderem exatamente aos nomes e à posição visual da ficha oficial de Vampiro V5 em português (ex: "Esportes" alterado para "Atletismo", "Lábia" para "Subterfúgio", "Subterfúgio/Furto" para "Ladroagem", "Acadêmicos" para "Erudição", e "Perspicácia" para "Sagacidade").
+
+---
+
 ## [0.24.0] - 2026-06-29
 
 ### Adicionado

@@ -129,7 +129,7 @@ Histórico e registro de rolagens efetuadas na mesa, servindo também como log p
 | campaign_id | fk | Relacionamento com campaigns.id (NOT NULL) |
 | character_id | fk | Relacionamento opcional com characters.id |
 | character_name| text | Nome do personagem que efetuou a jogada |
-| pool_name | text | Nome da pool de dados (ex: "Força + Esportes" ou "Dano Aplicado") |
+| pool_name | text | Nome da pool de dados (ex: "Força + Atletismo" ou "Dano Aplicado") |
 | result_data | jsonb | Resultados individuais de cada d10 rolado |
 | hunger_dice | integer | Quantidade de dados de fome aplicados na rolagem |
 | is_rerolled | boolean | Flag indicando se a jogada sofreu Rerrolagem de Força de Vontade |
