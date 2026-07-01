@@ -18,14 +18,12 @@ interface RollItem {
 
 interface RollEffectsProps {
   campaignId: string;
-  rollEffectMode: "NONE" | "HORROR" | "COMEDY";
   comedyImageUrl: string | null;
   isStoryteller?: boolean;
 }
 
 export default function RollEffects({
   campaignId,
-  rollEffectMode,
   comedyImageUrl,
   isStoryteller = false,
 }: RollEffectsProps) {
@@ -39,13 +37,11 @@ export default function RollEffects({
   const comedyDurationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Refs para ler sempre o valor mais atualizado das configurações sem re-assinar o Websocket
-  const rollEffectModeRef = useRef(rollEffectMode);
   const comedyImageUrlRef = useRef(comedyImageUrl);
 
   useEffect(() => {
-    rollEffectModeRef.current = rollEffectMode;
     comedyImageUrlRef.current = comedyImageUrl;
-  }, [rollEffectMode, comedyImageUrl]);
+  }, [comedyImageUrl]);
 
   // Limpar recursos ao desmontar
   useEffect(() => {
@@ -107,29 +103,24 @@ export default function RollEffects({
     }
   };
 
-  // Disparar o efeito de acordo com a configuração atual do Ref
-  const triggerEffect = () => {
-    const currentMode = rollEffectModeRef.current;
+  const triggerHorrorAnimation = () => {
+    setShowHorror(true);
+    playAudio("/audio/heartbeat.mp3");
 
-    if (currentMode === "NONE") return;
+    if (horrorDurationTimeoutRef.current) clearTimeout(horrorDurationTimeoutRef.current);
+    horrorDurationTimeoutRef.current = setTimeout(() => {
+      setShowHorror(false);
+    }, 6000);
+  };
 
-    if (currentMode === "HORROR") {
-      setShowHorror(true);
-      playAudio("/audio/heartbeat.mp3");
+  const triggerComedyAnimation = () => {
+    setShowComedy(true);
+    playAudio("/audio/toasty.mp3");
 
-      if (horrorDurationTimeoutRef.current) clearTimeout(horrorDurationTimeoutRef.current);
-      horrorDurationTimeoutRef.current = setTimeout(() => {
-        setShowHorror(false);
-      }, 6000);
-    } else if (currentMode === "COMEDY") {
-      setShowComedy(true);
-      playAudio("/audio/toasty.mp3");
-
-      if (comedyDurationTimeoutRef.current) clearTimeout(comedyDurationTimeoutRef.current);
-      comedyDurationTimeoutRef.current = setTimeout(() => {
-        setShowComedy(false);
-      }, 1500);
-    }
+    if (comedyDurationTimeoutRef.current) clearTimeout(comedyDurationTimeoutRef.current);
+    comedyDurationTimeoutRef.current = setTimeout(() => {
+      setShowComedy(false);
+    }, 1500);
   };
 
   // WebSocket com Pusher para ouvir novas rolagens em tempo real (assina apenas uma vez por canal)
@@ -145,13 +136,23 @@ export default function RollEffects({
     });
 
     const handleNewRoll = (newRoll: RollItem) => {
-      // Validar se é uma rolagem padrão do V5 e se resultou em Falha Bestial
-      if (
-        newRoll.resultData &&
-        newRoll.resultData.type === "standard" &&
-        newRoll.resultData.isBestialFailure === true
-      ) {
-        triggerEffect();
+      const res = newRoll.resultData;
+      if (!res || res.type !== "standard") return;
+
+      const isBestialFailure = res.isBestialFailure === true;
+      const isMessySuccess = res.isMessianic === true; 
+      const isPureFailure = res.totalSuccesses === 0;
+      const isOverkill = res.totalSuccesses >= 4;
+
+      // 1. GATILHO DO HORROR (Manifestação da Besta)
+      if (isBestialFailure || isMessySuccess) {
+        triggerHorrorAnimation();
+        return; // Encerra aqui para evitar disparar ambos os efeitos na mesma rolagem
+      }
+
+      // 2. GATILHO DA COMÉDIA (O Absurdo Humano ou Sobrenatural)
+      if (isPureFailure || isOverkill) {
+        triggerComedyAnimation();
       }
     };
 

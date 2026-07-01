@@ -34,10 +34,6 @@ export const campaigns = pgTable("campaigns", {
   allowedClans: jsonb("allowed_clans").$type<string[]>(), // Nulo significa todos permitidos
   tenets: jsonb("tenets").$type<string[]>().default([]).notNull(),
   currentSession: integer("current_session").default(1).notNull(),
-  rollEffectMode: text("roll_effect_mode", { enum: ["NONE", "HORROR", "COMEDY"] })
-    .$type<"NONE" | "HORROR" | "COMEDY">()
-    .default("HORROR")
-    .notNull(),
   comedyImageUrl: text("comedy_image_url"),
   systemRules: jsonb("system_rules")
     .$type<ChronicleSystemRules>()

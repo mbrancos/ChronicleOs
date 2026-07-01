@@ -50,7 +50,6 @@ export default async function MesaPage({ params }: PageProps) {
           name: campaign.name,
           narratorId: campaign.narratorId,
           description: campaign.description,
-          rollEffectMode: campaign.rollEffectMode,
           comedyImageUrl: campaign.comedyImageUrl,
           systemRules: campaign.systemRules
         }}
@@ -91,7 +90,6 @@ export default async function MesaPage({ params }: PageProps) {
         buildState: character.buildState
       }} 
       campaignSettings={{
-        rollEffectMode: campaign.rollEffectMode,
         comedyImageUrl: campaign.comedyImageUrl
       }}
       chronicle={campaign}

@@ -284,7 +284,6 @@ export async function updateCampaignSettingsAction(
     allowedClans: string[];
     tenets?: string[];
     currentSession?: number;
-    rollEffectMode: "NONE" | "HORROR" | "COMEDY";
     comedyImageUrl?: string | null;
     systemRules: ChronicleSystemRules;
   }
@@ -325,7 +324,6 @@ export async function updateCampaignSettingsAction(
         allowedClans: settings.allowedClans,
         tenets: settings.tenets || [],
         currentSession: Math.max(1, Number(settings.currentSession) || 1),
-        rollEffectMode: settings.rollEffectMode,
         comedyImageUrl: settings.comedyImageUrl?.trim() || null,
         systemRules: settings.systemRules,
       })

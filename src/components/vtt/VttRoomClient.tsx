@@ -30,7 +30,6 @@ interface VttRoomClientProps {
     buildState: any;
   };
   campaignSettings?: {
-    rollEffectMode: "NONE" | "HORROR" | "COMEDY";
     comedyImageUrl: string | null;
   };
   chronicle?: any;
@@ -383,7 +382,6 @@ export default function VttRoomClient({ character, campaignSettings, chronicle }
       {campaignSettings && (
         <RollEffects
           campaignId={character.campaignId}
-          rollEffectMode={campaignSettings.rollEffectMode}
           comedyImageUrl={campaignSettings.comedyImageUrl}
           isStoryteller={false}
         />

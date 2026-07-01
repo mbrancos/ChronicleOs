@@ -31,7 +31,6 @@ interface StorytellerDashboardClientProps {
     name: string;
     narratorId: string;
     description: string | null;
-    rollEffectMode: "NONE" | "HORROR" | "COMEDY";
     comedyImageUrl: string | null;
     systemRules?: ChronicleSystemRules | null;
   };
@@ -626,7 +625,6 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary flex">
       <RollEffects
         campaignId={campaign.id}
-        rollEffectMode={campaign.rollEffectMode}
         comedyImageUrl={campaign.comedyImageUrl}
         isStoryteller={true}
       />
