@@ -94,11 +94,17 @@ export interface Specialty {
   name: string;
 }
 
+export interface AcquiredPower {
+  id: string;
+  name: string;
+  level: number;
+}
+
 export interface Discipline {
   id: string;
   name: string;
   level: number;
-  powers: string[];
+  powers: AcquiredPower[];
 }
 
 export interface Advantage {
@@ -268,9 +274,10 @@ export function getMaxHealth(sheet: CharacterSheetData): number {
     (d) => d.name.toLowerCase().includes("fortitude")
   );
   if (fortitude) {
-    const hasResilience = fortitude.powers?.some(
-      (p) => p.toLowerCase().includes("resili") || p.toLowerCase().includes("resilience")
-    );
+    const hasResilience = fortitude.powers?.some((p) => {
+      const powerName = typeof p === "string" ? p : p.name;
+      return powerName.toLowerCase().includes("resili") || powerName.toLowerCase().includes("resilience");
+    });
     if (hasResilience) {
       max += fortitude.level;
     }

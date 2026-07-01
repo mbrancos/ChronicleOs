@@ -14,7 +14,8 @@ import {
   getPredatorSlug,
   PREDATOR_TYPES,
   DISCIPLINE_KEY_TO_NAME,
-  PredatorSelections
+  PredatorSelections,
+  AcquiredPower
 } from "@/types/character";
 import Link from "next/link";
 import DotSlider from "@/components/sheet/DotSlider";
@@ -464,6 +465,7 @@ interface CharacterSheetClientProps {
   initialBuildState?: any;
   characterType?: "jogador" | "npc" | "coterie";
   isStoryteller?: boolean;
+  chronicle?: any;
 }
 
 export default function CharacterSheetClient({
@@ -477,9 +479,14 @@ export default function CharacterSheetClient({
   initialStatus = "DRAFT",
   initialBuildState = {},
   characterType = "jogador",
-  isStoryteller = false
+  isStoryteller = false,
+  chronicle
 }: CharacterSheetClientProps) {
   const { showSuccess, showWarning, showError } = useToast();
+
+  const [activeAddPowerDiscId, setActiveAddPowerDiscId] = useState<string | null>(null);
+  const [newPowerName, setNewPowerName] = useState("");
+  const [newPowerLevel, setNewPowerLevel] = useState<number>(1);
   
   // ESTADO LOCAL DA FICHA (Mescla com os dados padrão se for novo personagem no banco)
   const [character, setCharacter] = useState<CharacterSheetData>(() => {
@@ -1015,7 +1022,7 @@ export default function CharacterSheetClient({
             id: `disc_init_${index}_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
             name: discName,
             level: 1,
-            powers: ["Poder Inicial"]
+            powers: []
           }));
         } else {
           updatedDisciplines = [];
@@ -1110,7 +1117,7 @@ export default function CharacterSheetClient({
       id: generateRandomId("disc"),
       name: "Nova Disciplina",
       level: 1,
-      powers: ["Novo Poder"]
+      powers: []
     };
     setCharacter(prev => ({
       ...prev,
@@ -1151,14 +1158,50 @@ export default function CharacterSheetClient({
     }));
   };
 
-  const handleAddPower = (disciplineId: string) => {
+  const handleAddPower = (disciplineId: string, name: string, level: number) => {
     setCharacter(prev => ({
       ...prev,
       disciplines: prev.disciplines.map(d => {
         if (d.id === disciplineId) {
+          const normalized = (d.powers || []).map((p, idx) => {
+            if (typeof p === "string") {
+              return { id: `legacy-${idx}`, name: p, level: 1 };
+            }
+            return p;
+          });
+          const newPower: AcquiredPower = {
+            id: generateRandomId("pow"),
+            name,
+            level
+          };
           return {
             ...d,
-            powers: [...d.powers, "Novo Poder"]
+            powers: [...normalized, newPower]
+          };
+        }
+        return d;
+      })
+    }));
+
+    setNewPowerName("");
+    setNewPowerLevel(1);
+    setActiveAddPowerDiscId(null);
+  };
+
+  const handlePowerChange = (disciplineId: string, powerId: string, newText: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      disciplines: prev.disciplines.map(d => {
+        if (d.id === disciplineId) {
+          const normalized = (d.powers || []).map((p, idx) => {
+            if (typeof p === "string") {
+              return { id: `legacy-${idx}`, name: p, level: 1 };
+            }
+            return p;
+          });
+          return {
+            ...d,
+            powers: normalized.map(p => p.id === powerId ? { ...p, name: newText } : p)
           };
         }
         return d;
@@ -1166,28 +1209,20 @@ export default function CharacterSheetClient({
     }));
   };
 
-  const handlePowerChange = (disciplineId: string, powerIdx: number, newText: string) => {
+  const handleDeletePower = (disciplineId: string, powerId: string) => {
     setCharacter(prev => ({
       ...prev,
       disciplines: prev.disciplines.map(d => {
         if (d.id === disciplineId) {
-          const updatedPowers = [...d.powers];
-          updatedPowers[powerIdx] = newText;
-          return { ...d, powers: updatedPowers };
-        }
-        return d;
-      })
-    }));
-  };
-
-  const handleDeletePower = (disciplineId: string, powerIdx: number) => {
-    setCharacter(prev => ({
-      ...prev,
-      disciplines: prev.disciplines.map(d => {
-        if (d.id === disciplineId) {
+          const normalized = (d.powers || []).map((p, idx) => {
+            if (typeof p === "string") {
+              return { id: `legacy-${idx}`, name: p, level: 1 };
+            }
+            return p;
+          });
           return {
             ...d,
-            powers: d.powers.filter((_, idx) => idx !== powerIdx)
+            powers: normalized.filter(p => p.id !== powerId)
           };
         }
         return d;
@@ -2062,42 +2097,129 @@ export default function CharacterSheetClient({
                     <span className="text-[10px] uppercase tracking-wider font-semibold text-text-muted block">Poderes Adquiridos:</span>
                     
                     <div className="space-y-1.5">
-                      {disc.powers.map((pow, pIdx) => (
-                        <div 
-                          key={pIdx} 
-                          className="flex items-center justify-between text-sm text-text-primary font-reading pl-2 py-0.5 border-l border-blood-red/40 bg-white/5 rounded-r-sm group/power"
-                        >
-                          <div className="flex items-center space-x-2 flex-1 mr-2">
-                            <span className="text-blood-red font-bold select-none">•</span>
-                            <InlineEdit
-                              value={pow}
-                              onChange={(val) => handlePowerChange(disc.id, pIdx, val)}
-                              placeholder="Novo Poder"
-                              disabled={isReadOnly}
-                              className="text-sm font-reading text-text-primary flex-1"
-                            />
+                      {(() => {
+                        const normalizedPowers = (disc.powers || []).map((p, idx) => {
+                          if (typeof p === "string") {
+                            return { id: `legacy-${idx}`, name: p, level: 1 };
+                          }
+                          return p;
+                        });
+                        
+                        const sortedPowers = [...normalizedPowers].sort((a, b) => a.level - b.level);
+                        
+                        return sortedPowers.map((pow) => (
+                          <div 
+                            key={pow.id} 
+                            className="flex items-center justify-between text-sm text-text-primary font-reading pl-2 py-0.5 border-l border-blood-red/40 bg-white/5 rounded-r-sm group/power"
+                          >
+                            <div className="flex items-center space-x-2 flex-1 mr-2">
+                              <span className="bg-blood-red/10 border border-blood-red/20 text-hunger-red text-[10px] px-1.5 py-0.5 rounded font-data font-bold select-none">
+                                Nível {pow.level}
+                              </span>
+                              <InlineEdit
+                                value={pow.name}
+                                onChange={(val) => handlePowerChange(disc.id, pow.id, val)}
+                                placeholder="Novo Poder"
+                                disabled={isReadOnly}
+                                className="text-sm font-reading text-text-primary flex-1"
+                              />
+                            </div>
+                            {(status !== "IN_PLAY" || isOverrideActive) && (
+                              <button
+                                onClick={() => handleDeletePower(disc.id, pow.id)}
+                                className="text-text-muted/40 hover:text-hunger-red opacity-0 group-hover/power:opacity-100 transition-opacity duration-150 cursor-pointer pr-1 select-none text-[10px] font-bold"
+                                title="Remover Poder"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </div>
-                          {(status !== "IN_PLAY" || isOverrideActive) && (
-                            <button
-                              onClick={() => handleDeletePower(disc.id, pIdx)}
-                              className="text-text-muted/40 hover:text-hunger-red opacity-0 group-hover/power:opacity-100 transition-opacity duration-150 cursor-pointer pr-1 select-none text-[10px] font-bold"
-                              title="Remover Poder"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
 
-                    {(status !== "IN_PLAY" || isOverrideActive) && (
-                      <button
-                        onClick={() => handleAddPower(disc.id)}
-                        className="text-[10px] uppercase tracking-wider font-bold text-gold-accent/40 hover:text-gold-accent transition-colors duration-150 cursor-pointer pt-1.5 flex items-center space-x-1 select-none"
-                      >
-                        <span>+ Adicionar Poder</span>
-                      </button>
+                    {/* MINI-FORMULÁRIO INLINE PARA ADIÇÃO DE PODER */}
+                    {activeAddPowerDiscId === disc.id && (
+                      <div className="bg-bg-main/30 border border-white/5 p-3 rounded-sm space-y-3 mt-2 shadow-none">
+                        <div className="text-[10px] uppercase font-bold text-yellow-500 tracking-wider">Novo Poder de {disc.name}</div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                          <input
+                            type="text"
+                            placeholder="Nome do Poder (Ex: Ampliar Sentidos...)"
+                            value={newPowerName}
+                            onChange={(e) => setNewPowerName(e.target.value)}
+                            className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent flex-1 h-9 font-reading"
+                          />
+                          <div className="flex items-center space-x-2">
+                            <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nível:</label>
+                            <select
+                              value={newPowerLevel}
+                              onChange={(e) => setNewPowerLevel(Number(e.target.value))}
+                              className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9"
+                            >
+                              {Array.from({ length: isOverrideActive ? 5 : disc.level }).map((_, idx) => (
+                                <option key={idx + 1} value={idx + 1} className="bg-bg-card">
+                                  {idx + 1}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex justify-end space-x-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveAddPowerDiscId(null);
+                              setNewPowerName("");
+                              setNewPowerLevel(1);
+                            }}
+                            className="text-xs uppercase tracking-wider font-bold text-text-muted hover:text-white px-3 py-1.5 transition-colors cursor-pointer select-none"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!newPowerName.trim()}
+                            onClick={() => handleAddPower(disc.id, newPowerName.trim(), newPowerLevel)}
+                            className="bg-burgundy border border-blood-red hover:bg-blood-red text-text-primary disabled:opacity-40 disabled:hover:bg-burgundy text-xs px-4 py-1.5 rounded-sm transition-colors cursor-pointer disabled:cursor-not-allowed font-data uppercase font-bold select-none h-8 flex items-center justify-center"
+                          >
+                            Salvar
+                          </button>
+                        </div>
+                      </div>
                     )}
+
+                    {(status !== "IN_PLAY" || isOverrideActive) && (() => {
+                      const isLimitReached = (disc.powers || []).length >= disc.level;
+                      const isBypassed = isOverrideActive || chronicle?.systemRules?.allowExtraPowersWithoutDots;
+                      const isDisabled = isLimitReached && !isBypassed;
+                      
+                      if (activeAddPowerDiscId === disc.id) return null;
+
+                      return (
+                        <button
+                          onClick={() => {
+                            setActiveAddPowerDiscId(disc.id);
+                            setNewPowerName("");
+                            setNewPowerLevel(isOverrideActive ? 1 : Math.max(1, disc.level));
+                          }}
+                          disabled={isDisabled}
+                          className={`text-[10px] uppercase tracking-wider font-bold transition-colors duration-150 pt-1.5 flex items-center space-x-1 select-none ${
+                            isDisabled 
+                              ? "text-text-muted/20 cursor-not-allowed" 
+                              : "text-gold-accent/40 hover:text-gold-accent cursor-pointer"
+                          }`}
+                          title={isDisabled ? "Limite de poderes atingido para o nível atual de bolinhas." : "Adicionar novo poder"}
+                        >
+                          <span>+ Adicionar Poder</span>
+                          {isDisabled && (
+                            <span className="text-[9px] text-hunger-red/70 lowercase font-reading tracking-normal normal-case ml-1">
+                              (limite atingido: {disc.level} bolinhas)
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
