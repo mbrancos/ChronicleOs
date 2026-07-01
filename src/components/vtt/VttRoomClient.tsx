@@ -33,9 +33,10 @@ interface VttRoomClientProps {
     rollEffectMode: "NONE" | "HORROR" | "COMEDY";
     comedyImageUrl: string | null;
   };
+  chronicle?: any;
 }
 
-export default function VttRoomClient({ character, campaignSettings }: VttRoomClientProps) {
+export default function VttRoomClient({ character, campaignSettings, chronicle }: VttRoomClientProps) {
   const { showError, showWarning } = useToast();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [localCharacter, setLocalCharacter] = useState(character);
@@ -472,6 +473,7 @@ export default function VttRoomClient({ character, campaignSettings }: VttRoomCl
           onTraitClick={handleTraitClick}
           initialStatus={localCharacter.status as "DRAFT" | "READY" | "IN_PLAY"}
           initialBuildState={localCharacter.buildState}
+          chronicle={chronicle}
           onDataChange={(newData) => {
             setLocalCharacter(prev => ({
               ...prev,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import CharacterMiniCard from "./CharacterMiniCard";
 import { createCharacterAction, updateCampaignSettingsAction, updateCampaignSessionAction } from "@/app/actions/hubActions";
 import { usePresence } from "@/hooks/usePresence";
+import { ChronicleSystemRules, DEFAULT_CHRONICLE_RULES } from "@/db/schema";
 
 interface Campaign {
   id: string;
@@ -19,6 +20,7 @@ interface Campaign {
   currentSession: number;
   rollEffectMode: "NONE" | "HORROR" | "COMEDY";
   comedyImageUrl: string | null;
+  systemRules: ChronicleSystemRules | null;
 }
 
 interface Character {
@@ -81,6 +83,10 @@ export default function NarratorDashboardClient({
   const [comedyImageUrl, setComedyImageUrl] = useState<string>(campaign.comedyImageUrl || "");
   const [isImageValid, setIsImageValid] = useState<boolean>(true);
 
+  const [systemRules, setSystemRules] = useState<ChronicleSystemRules>(() => {
+    return campaign.systemRules || DEFAULT_CHRONICLE_RULES;
+  });
+
   const sanitizeImageUrl = (url: string): string => {
     if (!url) return "";
     const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
@@ -140,6 +146,7 @@ export default function NarratorDashboardClient({
       currentSession: Number(campaignSession) || 1,
       rollEffectMode,
       comedyImageUrl: rollEffectMode === "COMEDY" ? comedyImageUrl : null,
+      systemRules,
     });
 
     if (response.success) {
@@ -611,6 +618,110 @@ export default function NarratorDashboardClient({
                       Nenhum princípio moral definido para esta crônica.
                     </span>
                   )}
+                </div>
+              </div>
+
+              {/* Regras da Casa (Homebrews) */}
+              <div className="space-y-3 pt-2 border-t border-white/5">
+                <span className="text-[10px] uppercase tracking-widest text-text-muted block">
+                  Regras da Casa (Homebrews)
+                </span>
+                
+                <div className="space-y-3 p-3 bg-black/20 border border-white/5 rounded-sm">
+                  
+                  {/* Toggle 1: Flexibilidade de Sangue */}
+                  <label className="flex items-start justify-between cursor-pointer group">
+                    <div className="max-w-[80%] pr-4 font-sans">
+                      <span className="block text-xs font-semibold text-text-primary group-hover:text-blood-red transition-colors">
+                        ⚡ Permitir Flexibilidade de Sangue
+                      </span>
+                      <span className="block text-[9px] text-text-dim mt-0.5 leading-normal">
+                        Permite que os jogadores comprem múltiplos poderes de nível baixo sem precisar subir o nível de bolinhas da Disciplina.
+                      </span>
+                    </div>
+                    <div className="relative flex items-center h-5 mt-1 select-none">
+                      <input 
+                        type="checkbox" 
+                        className="peer sr-only"
+                        checked={systemRules.allowExtraPowersWithoutDots}
+                        onChange={(e) => setSystemRules(prev => ({ ...prev, allowExtraPowersWithoutDots: e.target.checked }))}
+                      />
+                      <div className="w-8 h-4 bg-white/10 rounded-full peer-checked:bg-blood-red transition-colors border border-white/5 peer-checked:border-red-500 flex items-center">
+                         <div className={`w-3 h-3 bg-text-muted rounded-full transition-all ${systemRules.allowExtraPowersWithoutDots ? 'translate-x-4 bg-white' : 'translate-x-0.5'}`} />
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Toggle 2: Automação de Humanidade */}
+                  <label className="flex items-start justify-between cursor-pointer group">
+                    <div className="max-w-[80%] pr-4 font-sans">
+                      <span className="block text-xs font-semibold text-text-primary group-hover:text-blood-red transition-colors">
+                        🩸 Julgamento do Sangue Automático
+                      </span>
+                      <span className="block text-[9px] text-text-dim mt-0.5 leading-normal">
+                        Aplica imediatamente as alterações e bônus de Humanidade concedidas pelo Tipo de Predador selecionado na ficha de criação.
+                      </span>
+                    </div>
+                    <div className="relative flex items-center h-5 mt-1 select-none">
+                      <input 
+                        type="checkbox" 
+                        className="peer sr-only"
+                        checked={systemRules.freeHumanityAjustOnPredator}
+                        onChange={(e) => setSystemRules(prev => ({ ...prev, freeHumanityAjustOnPredator: e.target.checked }))}
+                      />
+                      <div className="w-8 h-4 bg-white/10 rounded-full peer-checked:bg-blood-red transition-colors border border-white/5 peer-checked:border-red-500 flex items-center">
+                         <div className={`w-3 h-3 bg-text-muted rounded-full transition-all ${systemRules.freeHumanityAjustOnPredator ? 'translate-x-4 bg-white' : 'translate-x-0.5'}`} />
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Toggle 3: Automação de Disciplinas de Predador */}
+                  <label className="flex items-start justify-between cursor-pointer group">
+                    <div className="max-w-[80%] pr-4 font-sans">
+                      <span className="block text-xs font-semibold text-text-primary group-hover:text-blood-red transition-colors">
+                        ✨ Automação de Escolha de Predador
+                      </span>
+                      <span className="block text-[9px] text-text-dim mt-0.5 leading-normal">
+                        Exibe o banner interativo na seção de disciplinas para o jogador alocar o ponto de bônus do seu Tipo de Predador.
+                      </span>
+                    </div>
+                    <div className="relative flex items-center h-5 mt-1 select-none">
+                      <input 
+                        type="checkbox" 
+                        className="peer sr-only"
+                        checked={systemRules.autoAlocatePredatorDisciplines}
+                        onChange={(e) => setSystemRules(prev => ({ ...prev, autoAlocatePredatorDisciplines: e.target.checked }))}
+                      />
+                      <div className="w-8 h-4 bg-white/10 rounded-full peer-checked:bg-blood-red transition-colors border border-white/5 peer-checked:border-red-500 flex items-center">
+                         <div className={`w-3 h-3 bg-text-muted rounded-full transition-all ${systemRules.autoAlocatePredatorDisciplines ? 'translate-x-4 bg-white' : 'translate-x-0.5'}`} />
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Multiplicador de XP com Cast Numérico Estrito */}
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <div className="max-w-[70%] pr-4 font-sans">
+                      <span className="block text-xs font-semibold text-text-primary">
+                        📈 Multiplicador de XP de Sessão
+                      </span>
+                      <span className="block text-[9px] text-text-dim mt-0.5 leading-normal">
+                        Multiplica o total de XP distribuído pelo Narrador no final da sessão (Limitado de 1x a 5x).
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      min={1}
+                      max={5}
+                      step={1}
+                      value={systemRules.xpMultiplier || 1}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 1 : Number(e.target.value);
+                        setSystemRules(prev => ({ ...prev, xpMultiplier: Math.max(1, Math.min(5, val)) }));
+                      }}
+                      className="w-16 bg-bg-input border border-white/10 rounded-sm p-1.5 text-xs text-center font-mono text-text-primary focus:border-blood-red outline-none"
+                    />
+                  </div>
+
                 </div>
               </div>
 

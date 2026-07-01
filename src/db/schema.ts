@@ -7,6 +7,20 @@ export const users = pgTable("users", {
   role: text("role").$type<"user" | "admin">().default("user").notNull(),
 });
 
+export interface ChronicleSystemRules {
+  allowExtraPowersWithoutDots: boolean;
+  freeHumanityAjustOnPredator: boolean;
+  autoAlocatePredatorDisciplines: boolean;
+  xpMultiplier: number;
+}
+
+export const DEFAULT_CHRONICLE_RULES: ChronicleSystemRules = {
+  allowExtraPowersWithoutDots: false,
+  freeHumanityAjustOnPredator: true,
+  autoAlocatePredatorDisciplines: true,
+  xpMultiplier: 1,
+};
+
 export const campaigns = pgTable("campaigns", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
@@ -25,6 +39,10 @@ export const campaigns = pgTable("campaigns", {
     .default("HORROR")
     .notNull(),
   comedyImageUrl: text("comedy_image_url"),
+  systemRules: jsonb("system_rules")
+    .$type<ChronicleSystemRules>()
+    .default(DEFAULT_CHRONICLE_RULES)
+    .notNull(),
 });
 
 export const characters = pgTable("characters", {

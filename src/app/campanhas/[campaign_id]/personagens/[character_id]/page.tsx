@@ -1,6 +1,9 @@
 import { getCharacterSheet } from "@/app/actions/characterActions";
 import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import { notFound } from "next/navigation";
+import { db } from "@/db";
+import { campaigns } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 interface PageProps {
   params: Promise<{
@@ -20,6 +23,14 @@ export default async function CharacterPage({ params }: PageProps) {
     return notFound();
   }
 
+  // Buscar a campanha para injetar as regras customizadas (homebrews)
+  const campaignResult = await db
+    .select()
+    .from(campaigns)
+    .where(eq(campaigns.id, campaign_id))
+    .limit(1);
+
+  const campaign = campaignResult[0] || null;
   const initialData = response.data ?? null;
 
   return (
@@ -31,6 +42,7 @@ export default async function CharacterPage({ params }: PageProps) {
       initialStatus={(response.type === "npc") ? "DRAFT" : response.status}
       initialBuildState={response.buildState}
       characterType={response.type}
+      chronicle={campaign}
     />
   );
 }

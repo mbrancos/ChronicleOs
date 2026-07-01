@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { campaigns, characters, users } from "@/db/schema";
+import { campaigns, characters, users, ChronicleSystemRules } from "@/db/schema";
 import { auth } from "@/lib/auth/server";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -286,6 +286,7 @@ export async function updateCampaignSettingsAction(
     currentSession?: number;
     rollEffectMode: "NONE" | "HORROR" | "COMEDY";
     comedyImageUrl?: string | null;
+    systemRules: ChronicleSystemRules;
   }
 ) {
   try {
@@ -326,6 +327,7 @@ export async function updateCampaignSettingsAction(
         currentSession: Math.max(1, Number(settings.currentSession) || 1),
         rollEffectMode: settings.rollEffectMode,
         comedyImageUrl: settings.comedyImageUrl?.trim() || null,
+        systemRules: settings.systemRules,
       })
       .where(eq(campaigns.id, campaignId));
 

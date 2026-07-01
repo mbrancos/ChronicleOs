@@ -14,7 +14,7 @@ import { getSceneTokens, createSceneToken, deleteSceneToken, toggleTokenAction, 
 import { getCampaignDashboard } from "@/app/actions/narratorActions";
 import { updateCharacterSheet } from "@/app/actions/characterActions";
 import { rollV5, rollRouseCheck } from "@/lib/vtt/BloodEngine";
-import { characters } from "@/db/schema";
+import { characters, ChronicleSystemRules } from "@/db/schema";
 import { CharacterSheetData } from "@/types/character";
 import Pusher from "pusher-js";
 import { 
@@ -33,6 +33,7 @@ interface StorytellerDashboardClientProps {
     description: string | null;
     rollEffectMode: "NONE" | "HORROR" | "COMEDY";
     comedyImageUrl: string | null;
+    systemRules?: ChronicleSystemRules | null;
   };
 }
 
@@ -953,6 +954,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             initialBuildState={selectedChar!.buildState}
             characterType={selectedChar!.type}
             isStoryteller={true}
+            chronicle={campaign}
             onDataChange={async (newData) => {
               // Atualizar estado de personagens localmente de imediato
               const updateLocalList = (list: CampaignCharacter[]) =>
@@ -1027,13 +1029,17 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                   ) : (
                     playersList.map((p) => {
                       const data = individualXpData[p.id] || { presence: true, desire: false, ambition: false, extra: 0 };
-                      const totalXp = baseXp + (data.presence ? 1 : 0) + (data.desire ? 1 : 0) + (data.ambition ? 1 : 0) + (Number(data.extra) || 0);
+                      const multiplier = campaign.systemRules?.xpMultiplier || 1;
+                      const baseSum = baseXp + (data.presence ? 1 : 0) + (data.desire ? 1 : 0) + (data.ambition ? 1 : 0) + (Number(data.extra) || 0);
+                      const totalXp = baseSum * multiplier;
                       
                       return (
                         <div key={p.id} className="bg-black/35 border border-white/5 p-2 rounded-xs flex flex-col space-y-1.5">
                           <div className="flex justify-between items-center font-bold text-text-primary">
                             <span>{p.name}</span>
-                            <span className="text-amber-400 font-mono text-[11px]">Total: +{totalXp} XP</span>
+                            <span className="text-amber-400 font-mono text-[11px]">
+                              Total: +{totalXp} XP {multiplier > 1 && `(x${multiplier})`}
+                            </span>
                           </div>
                           
                           <div className="grid grid-cols-3 gap-2 text-[9px] text-text-muted font-sans">
@@ -1115,7 +1121,9 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                     
                     const grants = playersList.map(p => {
                       const data = individualXpData[p.id] || { presence: false, desire: false, ambition: false, extra: 0 };
-                      const totalXp = baseXp + (data.presence ? 1 : 0) + (data.desire ? 1 : 0) + (data.ambition ? 1 : 0) + (Number(data.extra) || 0);
+                      const multiplier = campaign.systemRules?.xpMultiplier || 1;
+                      const baseSum = baseXp + (data.presence ? 1 : 0) + (data.desire ? 1 : 0) + (data.ambition ? 1 : 0) + (Number(data.extra) || 0);
+                      const totalXp = baseSum * multiplier;
                       return {
                         characterId: p.id,
                         characterName: p.name,
