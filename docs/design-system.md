@@ -238,3 +238,31 @@ Para feedbacks reativos da aplicação, substitui-se o uso de `alert()` nativo d
    // Evento mecânico de Degradação Moral
    showDegradation(degradationAmount);
    ```
+
+---
+
+## 8. Efeitos Visuais de Rolagem e Escudo do Mestre (VTT)
+
+### A. Layout do Escudo do Mestre (Mesa Privada)
+Para dar a certeza ao Narrador de que a sua rolagem está oculta e protegida por segredo absoluto de spoiler, o card de log privado do Narrador recebe um estilo gótico intimista diferenciado:
+
+* **Container do Log Privado**:
+  - Borda: `1px dashed var(--color-gold-accent)/40` (`border-dashed border-amber-600/40`) para indicar confidencialidade.
+  - Fundo: `var(--color-bg-card-dark)` levemente tingido de âmbar (`bg-amber-950/10`) para destacar a jogada na tela.
+  - Sombra sutil: `shadow-[0_0_8px_rgba(245,158,11,0.05)]`.
+* **Badge "Escudo do Mestre"**:
+  - Posição: Ao lado do nome "Narrador" no cabeçalho.
+  - Estilo: Texto `var(--color-gold-accent)` (`text-amber-500`) em caixa alta condensada (`font-bold text-[8px] uppercase tracking-widest`), fundo `bg-amber-950/40`, contorno fino `border border-amber-800/30` e bordas levemente suavizadas (`rounded`).
+  - Espaçamento estrito: `px-1.5 py-0.5` (utilitário nativo de padding do Tailwind) para perfeito alinhamento de layout.
+
+### B. Efeitos de Rolagem Reativos Automáticos
+O sistema dita a atmosfera da mesa em tempo real de forma automatizada baseado nos dados rolados, sem intervenção de configuração do Narrador.
+
+1. **Horror da Besta**:
+   - **Gatilhos**: Falha Bestial (`isBestialFailure === true`) ou Sucesso Bagunçado (`isMessianic === true` / `isMessySuccess`).
+   - **Visual**: Filtro de vinheta de visão de túnel vermelho-escura pulsante (`horror-active-overlay`) cobrindo as bordas da tela inteira por 6 segundos.
+   - **Áudio**: Batimentos cardíacos acelerados.
+2. **Alívio Cômico**:
+   - **Gatilhos**: Falha Pura (0 sucessos totais) ou Massacre (4 ou mais sucessos).
+   - **Visual**: Mascote clássico do "Toasty!" (Dan Forden) com sua imagem PNG estática padrão (`https://i.imgur.com/xVp4CqV.png`) deslizando horizontalmente no canto inferior direito da tela por 1.5 segundos.
+   - **Áudio**: Efeito sonoro do grito agudo clássico de "Toasty!".

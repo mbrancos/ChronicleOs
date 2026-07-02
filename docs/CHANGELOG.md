@@ -2,6 +2,35 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.27.0] - 2026-07-02
+
+### Adicionado
+- **Efeitos de Rolagem Reativos e Automáticos:**
+  - **Coexistência e Fusão**: Os efeitos audiovisuais de Horror e de Comédia foram fundidos e agora reagem automaticamente ao resultado matemático de qualquer jogada de dados (removido o dropdown seletivo de modo).
+  - **Gatilho de Horror**: Ativado automaticamente por Falha Bestial (`isBestialFailure === true`) ou Sucesso Bagunçado (`isMessianic === true` mapeado para `isMessySuccess`), cobrindo a tela do jogador com visão de túnel vermelha e batimentos cardíacos.
+  - **Gatilho de Comédia**: Ativado automaticamente por Falha Pura (0 sucessos) ou Massacre (4+ sucessos), deslizando na tela o mascote clássico "Toasty!" com seu áudio característico.
+- **UX do Escudo do Mestre no Chat:**
+  - **Layout Dedicado**: Rolagens privadas do Narrador ganharam estilização intimista no feed ([RollLogItem.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/vtt/RollLogItem.tsx)) com borda tracejada âmbar (`border-dashed border-amber-600/40`), fundo âmbar escuro sutil (`bg-amber-950/10`) e sombra dourada sutil.
+  - **Badge do Escudo**: Nova badge compacta `Escudo do Mestre 🛡️` com padding `py-0.5 px-1.5` (2px/6px) nativo do Tailwind inserida ao lado do nome do mestre nas jogadas ocultas para eliminar dúvidas se a rolagem foi confidencial.
+
+### Modificado
+- **Padronização Absoluta do Mascote do VTT:**
+  - **Imagem de Mascote Fixa**: A URL do mascote clássico "Toasty!" (`https://i.imgur.com/xVp4CqV.png`) foi integrada diretamente de forma permanente no frontend ([RollEffects.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/vtt/RollEffects.tsx)), removendo a possibilidade de Narradores alterarem a imagem ou sons.
+  - **Limpeza de Configurações**: Removido por completo o formulário e pré-visualização do "Mascote da Mesa" do modal de configurações da crônica no painel do Narrador ([NarratorDashboardClient.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/narrator/NarratorDashboardClient.tsx)), deixando o painel focado apenas em Homebrews e XP.
+  - **Limpeza de Schema e Server Actions**: Eliminada a coluna `comedyImageUrl` da tabela `campaigns` no Neon DB ([schema.ts](file:///d:/Etna/Projetos/ChronicleOS/src/db/schema.ts)) e da Server Action de salvamento de configurações de crônica ([hubActions.ts](file:///d:/Etna/Projetos/ChronicleOS/src/app/actions/hubActions.ts)).
+- **Blindagem do Escudo do Mestre (Anti-Spoiler):**
+  - **Guard Clause no Frontend**: O motor de efeitos ignora instantaneamente qualquer animação ou áudio de comédia/horror na tela de jogadores se a transmissão for marcada como secreta (`newRoll.isSecret && !isStoryteller`), evitando spoilers.
+  - **Blindagem de Metadados no Backend**: A Server Action `saveRoll` ([rolls.ts](file:///d:/Etna/Projetos/ChronicleOS/src/app/actions/rolls.ts)) zera e oculta as flags críticas de efeitos (`isBestialFailure` e `isMessianic`) no payload mascarado (`maskedResult`) transmitido aos jogadores pelo canal público do Pusher.
+
+### Corrigido
+- **Crash de Renderização da Mesa em Produção**: Criada e executada migração SQL direta no Neon DB para adicionar a coluna `system_rules` (JSONB) e remover `roll_effect_mode` e `comedy_image_url`, resolvendo exceções de banco em produção.
+- **Avisos de CSS e Linting da IDE**:
+  - Removido o conflito de classes responsivas `flex`, `hidden` e `md:block` no botão de Despertar em [StorytellerDashboardClient.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/vtt/StorytellerDashboardClient.tsx), simplificando para `hidden md:flex`.
+  - Corrigido o estilo do cabeçalho da ficha em [CharacterSheetClient.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/sheet/CharacterSheetClient.tsx) de `top-[0px]` para `top-0`.
+  - Eliminadas as classes redundantes `lowercase` e `normal-case` da badge de limite de poderes nas Disciplinas em [CharacterSheetClient.tsx](file:///d:/Etna/Projetos/ChronicleOS/src/components/sheet/CharacterSheetClient.tsx).
+
+---
+
 ## [0.26.0] - 2026-07-01
 
 ### Adicionado
