@@ -31,7 +31,6 @@ interface StorytellerDashboardClientProps {
     name: string;
     narratorId: string;
     description: string | null;
-    comedyImageUrl: string | null;
     systemRules?: ChronicleSystemRules | null;
   };
 }
@@ -625,7 +624,6 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary flex">
       <RollEffects
         campaignId={campaign.id}
-        comedyImageUrl={campaign.comedyImageUrl}
         isStoryteller={true}
       />
       {/* 1. FEED DE ROLAGENS (Sidebar Esquerdo) */}

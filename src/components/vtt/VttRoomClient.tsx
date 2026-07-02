@@ -29,13 +29,10 @@ interface VttRoomClientProps {
     status: string;
     buildState: any;
   };
-  campaignSettings?: {
-    comedyImageUrl: string | null;
-  };
   chronicle?: any;
 }
 
-export default function VttRoomClient({ character, campaignSettings, chronicle }: VttRoomClientProps) {
+export default function VttRoomClient({ character, chronicle }: VttRoomClientProps) {
   const { showError, showWarning } = useToast();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [localCharacter, setLocalCharacter] = useState(character);
@@ -379,13 +376,10 @@ export default function VttRoomClient({ character, campaignSettings, chronicle }
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-bg-main relative text-text-primary flex flex-col">
-      {campaignSettings && (
-        <RollEffects
-          campaignId={character.campaignId}
-          comedyImageUrl={campaignSettings.comedyImageUrl}
-          isStoryteller={false}
-        />
-      )}
+      <RollEffects
+        campaignId={character.campaignId}
+        isStoryteller={false}
+      />
       
       {/* AREA DE JOGO SUPERIOR (Sidebar + Mesa) — 80px = h-20 do PlayerDock fixo */}
       <div className="flex flex-row h-[calc(100vh-80px)] w-full overflow-hidden relative">

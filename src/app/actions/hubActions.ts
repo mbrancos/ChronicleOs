@@ -284,7 +284,6 @@ export async function updateCampaignSettingsAction(
     allowedClans: string[];
     tenets?: string[];
     currentSession?: number;
-    comedyImageUrl?: string | null;
     systemRules: ChronicleSystemRules;
   }
 ) {
@@ -324,7 +323,6 @@ export async function updateCampaignSettingsAction(
         allowedClans: settings.allowedClans,
         tenets: settings.tenets || [],
         currentSession: Math.max(1, Number(settings.currentSession) || 1),
-        comedyImageUrl: settings.comedyImageUrl?.trim() || null,
         systemRules: settings.systemRules,
       })
       .where(eq(campaigns.id, campaignId));

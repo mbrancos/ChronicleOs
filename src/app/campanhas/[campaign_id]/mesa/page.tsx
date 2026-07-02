@@ -50,7 +50,6 @@ export default async function MesaPage({ params }: PageProps) {
           name: campaign.name,
           narratorId: campaign.narratorId,
           description: campaign.description,
-          comedyImageUrl: campaign.comedyImageUrl,
           systemRules: campaign.systemRules
         }}
       />
@@ -89,9 +88,6 @@ export default async function MesaPage({ params }: PageProps) {
         status: character.status,
         buildState: character.buildState
       }} 
-      campaignSettings={{
-        comedyImageUrl: campaign.comedyImageUrl
-      }}
       chronicle={campaign}
     />
   );

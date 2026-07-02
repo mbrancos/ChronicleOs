@@ -18,13 +18,11 @@ interface RollItem {
 
 interface RollEffectsProps {
   campaignId: string;
-  comedyImageUrl: string | null;
   isStoryteller?: boolean;
 }
 
 export default function RollEffects({
   campaignId,
-  comedyImageUrl,
   isStoryteller = false,
 }: RollEffectsProps) {
   const [showHorror, setShowHorror] = useState(false);
@@ -35,13 +33,6 @@ export default function RollEffects({
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const horrorDurationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const comedyDurationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Refs para ler sempre o valor mais atualizado das configurações sem re-assinar o Websocket
-  const comedyImageUrlRef = useRef(comedyImageUrl);
-
-  useEffect(() => {
-    comedyImageUrlRef.current = comedyImageUrl;
-  }, [comedyImageUrl]);
 
   // Limpar recursos ao desmontar
   useEffect(() => {
@@ -250,10 +241,10 @@ export default function RollEffects({
       {showHorror && <div className="horror-active-overlay" />}
 
       {/* Overlay de Alívio Cômico (Toasty do Mascote) */}
-      {showComedy && comedyImageUrlRef.current && (
+      {showComedy && (
         <div className="comedy-mascot-active">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={comedyImageUrlRef.current} alt="Mascote Crônico" />
+          <img src="https://i.imgur.com/xVp4CqV.png" alt="Mascote Crônico" />
         </div>
       )}
     </>
