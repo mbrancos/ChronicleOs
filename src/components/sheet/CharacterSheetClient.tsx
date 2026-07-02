@@ -1637,7 +1637,7 @@ export default function CharacterSheetClient({
         {/* ======================================================== */}
         {/* MENU DE NAVEGAÇÃO FIXO (STICKY HEADER) */}
         {/* ======================================================== */}
-        <div className="sticky top-[0px] z-30 bg-bg-main/95 backdrop-blur-md border-b border-white/10 py-3 flex items-center select-none pl-2 shadow-md pr-4 overflow-x-auto md:overflow-x-visible scrollbar-none flex-row flex-nowrap md:flex-wrap space-x-1.5 gap-y-0 md:gap-y-1.5 w-full">
+        <div className="sticky top-0 z-30 bg-bg-main/95 backdrop-blur-md border-b border-white/10 py-3 flex items-center select-none pl-2 shadow-md pr-4 overflow-x-auto md:overflow-x-visible scrollbar-none flex-row flex-nowrap md:flex-wrap space-x-1.5 gap-y-0 md:gap-y-1.5 w-full">
           {(
             [
               { id: "atributos", label: "Atributos" },
@@ -2213,7 +2213,7 @@ export default function CharacterSheetClient({
                         >
                           <span>+ Adicionar Poder</span>
                           {isDisabled && (
-                            <span className="text-[9px] text-hunger-red/70 lowercase font-reading tracking-normal normal-case ml-1">
+                            <span className="text-[9px] text-hunger-red/70 font-reading tracking-normal ml-1">
                               (limite atingido: {disc.level} bolinhas)
                             </span>
                           )}

@@ -788,7 +788,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             <div className="h-6 w-px bg-white/10 shrink-0 md:block hidden" />
 
             {/* Despertar toggle */}
-            <div className="flex items-center gap-1.5 shrink-0 md:block hidden">
+            <div className="hidden md:flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setIsRouseSelected(!isRouseSelected)}
                 className={`h-7 px-2.5 font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer border ${
