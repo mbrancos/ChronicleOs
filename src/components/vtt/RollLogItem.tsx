@@ -328,9 +328,11 @@ export default function RollLogItem({
   return (
     <div
       className={`backdrop-blur-md border rounded-sm p-2 flex flex-col space-y-1.5 transition-all duration-200 select-text ${
-        roll.isRerolled
-          ? "bg-bg-card-dark/45 border-white/5 opacity-60"
-          : "bg-bg-card-dark/85 border-white/10 hover:border-white/15"
+        roll.isSecret && isStoryteller
+          ? "bg-amber-950/10 border-dashed border-amber-600/40 hover:border-amber-500/50 shadow-[0_0_8px_rgba(245,158,11,0.05)]"
+          : roll.isRerolled
+            ? "bg-bg-card-dark/45 border-white/5 opacity-60"
+            : "bg-bg-card-dark/85 border-white/10 hover:border-white/15"
       }`}
     >
       {/* Cabeçalho compacto: [Hora] Nome - Atributo */}
@@ -339,6 +341,11 @@ export default function RollLogItem({
           <span className="font-bold text-text-primary truncate">
             {showSecret ? "Narrador" : roll.characterName}
           </span>
+          {roll.isSecret && isStoryteller && (
+            <span className="text-[8px] font-bold uppercase tracking-widest text-amber-500 px-1.5 py-0.5 bg-amber-950/40 border border-amber-800/30 rounded shrink-0">
+              Escudo do Mestre 🛡️
+            </span>
+          )}
           <span className="text-text-dim/60 font-semibold truncate">
             {showSecret ? "Rolagem Secreta" : roll.poolName}
           </span>

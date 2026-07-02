@@ -75,7 +75,9 @@ export async function saveRoll(
               normalDice: Array(resultData.normalDice?.length || 0).fill(null),
               hungerDice: Array(resultData.hungerDice?.length || 0).fill(null),
               totalSuccesses: 0,
-              isSuccess: false
+              isSuccess: false,
+              isBestialFailure: false,
+              isMessianic: false
             }
           : {
               type: "rouse",

@@ -136,6 +136,9 @@ export default function RollEffects({
     });
 
     const handleNewRoll = (newRoll: RollItem) => {
+      // 🛡️ Se a rolagem for secreta e o visualizador for um jogador, encerra na hora
+      if (newRoll.isSecret && !isStoryteller) return;
+
       const res = newRoll.resultData;
       if (!res || res.type !== "standard") return;
 
