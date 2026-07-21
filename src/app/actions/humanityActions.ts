@@ -149,9 +149,9 @@ export async function rollRemorseAction(characterId: string) {
       return { success: false, error: "Este personagem não possui nenhuma Mácula para rolar Remorso." };
     }
 
-    // 2. Calcular a Parada de Dados (Caixas vazias da trilha de Humanidade)
-    // dicePool = 10 - humanity - stains. Mínimo de 1 dado.
-    let dicePool = 10 - oldHumanity - oldStains;
+    // 2. Calcular a Parada de Dados (Humanidade não coberta por Máculas)
+    // dicePool = humanity - stains. Mínimo de 1 dado. (Regra V5 correta)
+    let dicePool = oldHumanity - oldStains;
     if (dicePool < 1) {
       dicePool = 1;
     }
@@ -227,5 +227,87 @@ export async function rollRemorseAction(characterId: string) {
   } catch (error: any) {
     console.error("Erro em rollRemorseAction:", error);
     return { success: false, error: error?.message || "Erro interno ao rodar teste de Remorso." };
+  }
+}
+
+/**
+ * Server Action para persistir alterações de Humanidade diretamente no banco,
+ * evitando race conditions com o autosave genérico da ficha.
+ */
+export async function setHumanityAction(characterId: string, newHumanity: number) {
+  try {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(characterId)) {
+      return { success: false, error: "ID de personagem inválido." };
+    }
+
+    const clampedHumanity = Math.max(0, Math.min(10, newHumanity));
+
+    // 1. Carregar personagem do banco
+    const result = await db
+      .select({
+        id: characters.id,
+        name: characters.name,
+        campaignId: characters.campaignId,
+        sheetData: characters.sheetData,
+      })
+      .from(characters)
+      .where(eq(characters.id, characterId))
+      .limit(1);
+
+    if (result.length === 0) {
+      return { success: false, error: "Personagem não encontrado." };
+    }
+
+    const character = result[0];
+    const sheet = character.sheetData as CharacterSheetData;
+    if (!sheet || !sheet.status) {
+      return { success: false, error: "Dados do personagem inválidos." };
+    }
+
+    // 2. Atualizar Humanidade na ficha
+    sheet.status.humanity = clampedHumanity;
+
+    // Corrigir Máculas se agora passam do limite (humanity + stains > 10)
+    const currentStains = sheet.status.stains || 0;
+    if (clampedHumanity + currentStains > 10) {
+      sheet.status.stains = Math.max(0, 10 - clampedHumanity);
+    }
+
+    await db
+      .update(characters)
+      .set({ sheetData: sheet })
+      .where(eq(characters.id, characterId));
+
+    // 3. Notificar via Pusher
+    const campaignId = character.campaignId;
+    if (campaignId) {
+      try {
+        await pusherServer.trigger(`public-campaign-${campaignId}`, "stains-updated", {
+          characterId: character.id,
+          characterName: character.name,
+          newHumanity: clampedHumanity,
+          newStains: sheet.status.stains,
+          degradationOccurred: false,
+          degradationAmount: 0
+        });
+      } catch (pushErr) {
+        console.error("Erro Pusher (setHumanityAction):", pushErr);
+      }
+    }
+
+    // Revalidar caminhos
+    if (campaignId) {
+      revalidatePath(`/campanhas/${campaignId}/mesa`);
+      revalidatePath(`/campanhas/${campaignId}/jogador`);
+      revalidatePath(`/campanhas/${campaignId}/narrador`);
+    } else {
+      revalidatePath(`/hub`);
+    }
+
+    return { success: true, humanity: clampedHumanity, stains: sheet.status.stains };
+  } catch (error: any) {
+    console.error("Erro em setHumanityAction:", error);
+    return { success: false, error: error?.message || "Erro interno ao ajustar Humanidade." };
   }
 }

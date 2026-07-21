@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { addStainAction, rollRemorseAction } from "@/app/actions/humanityActions";
+import React, { useState, useTransition } from "react";
+import { addStainAction, rollRemorseAction, setHumanityAction } from "@/app/actions/humanityActions";
 import { useToast } from "@/context/ToastContext";
 
 interface HumanityTrackerProps {
@@ -21,7 +21,8 @@ export default function HumanityTracker({
   onStainsChange,
   disabled = false
 }: HumanityTrackerProps) {
-  const { showError, showDegradation } = useToast();
+  const { showError, showDegradation, showWarning } = useToast();
+  const [isUpdatingHumanity, startHumanityTransition] = useTransition();
   const [isUpdatingStains, setIsUpdatingStains] = useState(false);
   const [isRemorseModalOpen, setIsRemorseModalOpen] = useState(false);
   const [isRollingRemorse, setIsRollingRemorse] = useState(false);
@@ -33,21 +34,49 @@ export default function HumanityTracker({
     newHumanity: number;
   } | null>(null);
 
-  const isDegenerating = humanity + stains > 10;
-  const dicePool = Math.max(1, 10 - humanity - stains);
+  const isWassail = humanity === 0;
+  const isWassailDanger = humanity === 1;
+  // Fórmula V5 correta: humanidade não coberta por máculas
+  const dicePool = Math.max(1, humanity - stains);
 
-  // Manipular alteração de humanidade via stepper
+  // ============================================================
+  // HANDLERS
+  // ============================================================
+
+  // Humanidade via Server Action dedicada (persistência imediata)
   const adjustHumanity = (amount: number) => {
-    if (disabled) return;
+    if (disabled || isWassail && amount < 0) return;
     const newVal = Math.max(0, Math.min(10, humanity + amount));
+    if (newVal === humanity) return;
+
+    // Atualização otimista
     onHumanityChange(newVal);
+
+    // Persistir no banco via Server Action
+    startHumanityTransition(async () => {
+      try {
+        const res = await setHumanityAction(characterId, newVal);
+        if (res.success) {
+          // Corrigir Máculas se o backend as ajustou por overflow
+          if (res.stains !== undefined && res.stains !== stains) {
+            onStainsChange(res.stains);
+          }
+        } else {
+          // Reverter
+          onHumanityChange(humanity);
+          showError(res.error || "Erro ao ajustar Humanidade.", "Humanidade");
+        }
+      } catch {
+        onHumanityChange(humanity);
+        showError("Erro de conexão ao ajustar Humanidade.", "Erro de Rede");
+      }
+    });
   };
 
-  // Manipular adição de Máculas (Stains) chamando a Server Action para tratar overflow
+  // Máculas via Server Action (já existente)
   const handleAddStain = async () => {
-    if (disabled || isUpdatingStains) return;
+    if (disabled || isUpdatingStains || isWassail) return;
     setIsUpdatingStains(true);
-
     try {
       const res = await addStainAction(characterId, 1);
       if (res.success) {
@@ -58,19 +87,16 @@ export default function HumanityTracker({
       } else {
         showError(res.error || "Erro desconhecido", "Adicionar Mácula");
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch {
       showError("Erro de conexão ao adicionar Mácula.", "Erro de Rede");
     } finally {
       setIsUpdatingStains(false);
     }
   };
 
-  // Manipular remoção de Mácula (Stains)
   const handleRemoveStain = async () => {
     if (disabled || isUpdatingStains || stains <= 0) return;
     setIsUpdatingStains(true);
-
     try {
       const res = await addStainAction(characterId, -1);
       if (res.success) {
@@ -78,19 +104,17 @@ export default function HumanityTracker({
       } else {
         showError(res.error || "Erro desconhecido", "Remover Mácula");
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch {
       showError("Erro de conexão ao remover Mácula.", "Erro de Rede");
     } finally {
       setIsUpdatingStains(false);
     }
   };
 
-  // Executar teste de Remorso
+  // Teste de Remorso
   const handleRollRemorse = async () => {
     if (disabled || isRollingRemorse) return;
     setIsRollingRemorse(true);
-
     try {
       const res = await rollRemorseAction(characterId);
       if (res.success) {
@@ -101,16 +125,13 @@ export default function HumanityTracker({
           oldHumanity: res.oldHumanity ?? humanity,
           newHumanity: res.newHumanity ?? humanity
         });
-        
-        // Atualizar estado na interface do jogador
         onStainsChange(0);
         onHumanityChange(res.newHumanity ?? humanity);
       } else {
         showError(res.error || "Erro desconhecido", "Teste de Remorso");
         setIsRemorseModalOpen(false);
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch {
       showError("Erro ao conectar com o servidor para rolar Remorso.", "Erro de Rede");
       setIsRemorseModalOpen(false);
     } finally {
@@ -123,119 +144,180 @@ export default function HumanityTracker({
     setRemorseResult(null);
   };
 
+  // ============================================================
+  // SVG ICONS
+  // ============================================================
+
+  const HumanityDot = () => (
+    <svg width="12" height="12" viewBox="0 0 12 12" className="shrink-0">
+      <circle cx="6" cy="6" r="5" fill="currentColor" stroke="currentColor" strokeWidth="1" />
+    </svg>
+  );
+
+  const StainMark = () => (
+    <svg width="12" height="12" viewBox="0 0 12 12" className="shrink-0">
+      <line x1="3" y1="9" x2="9" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
-    <div className="space-y-2 bg-bg-card/35 p-3 rounded-sm border border-white/5 shadow-none relative">
-      <div className="flex justify-between items-center text-xs font-data uppercase font-semibold text-text-muted">
-        <span>Bússola Moral (Humanidade)</span>
-        <span className="text-[10px] text-gold-accent font-semibold">
-          Hum: {humanity} / Mac: {stains}
+    <div className={`space-y-3 p-3 rounded-sm border transition-all duration-300 ${
+      isWassail 
+        ? "bg-deep-crimson/10 border-hunger-red/50 shadow-[0_0_12px_rgba(200,36,52,0.2)]" 
+        : isWassailDanger
+          ? "bg-hunger-red/5 border-hunger-red/25"
+          : "bg-bg-card/35 border-white/5"
+    }`}>
+
+      {/* ===== CABEÇALHO ===== */}
+      <div className="flex justify-between items-center">
+        <span className="text-xs font-data uppercase font-semibold tracking-wider text-text-muted">
+          Bússola Moral
         </span>
-      </div>
-
-      {/* RENDERIZAÇÃO DA TRILHA BIDIRECIONAL */}
-      <div className="flex items-center space-x-2">
-        {/* Stepper Esquerda: Humanidade */}
-        {!disabled && (
-          <div className="flex space-x-1 shrink-0">
-            <button
-              onClick={() => adjustHumanity(-1)}
-              className="w-6 h-6 bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-white/10 text-xs font-bold text-text-muted hover:text-gold-accent flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none"
-              title="Reduzir Humanidade"
-            >
-              -
-            </button>
-            <button
-              onClick={() => adjustHumanity(1)}
-              className="w-6 h-6 bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-white/10 text-xs font-bold text-text-muted hover:text-gold-accent flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none"
-              title="Aumentar Humanidade"
-            >
-              +
-            </button>
-          </div>
-        )}
-
-        {/* A Trilha central de 10 caixas */}
-        <div 
-          className={`flex-1 flex justify-between items-center p-1 rounded-xs transition-all duration-300 border bg-bg-main/30 h-8 ${
-            isDegenerating 
-              ? "border-hunger-red/40 bg-deep-crimson/5 animate-pulse" 
-              : "border-white/5"
-          }`}
-          role="group"
-          aria-label={`Trilha de Humanidade ${humanity} e Máculas ${stains}.`}
-        >
-          {Array.from({ length: 10 }).map((_, idx) => {
-            const boxNum = idx + 1;
-            const isHum = boxNum <= humanity;
-            const isStn = boxNum > (10 - stains);
-            
-            let bgClass = "bg-transparent border border-white/10";
-            let content = null;
-
-            if (isHum) {
-              // Humanidade Preenchida: Rosa Vermelha ou Dourado Sólido
-              bgClass = "bg-gold-accent border-gold-accent text-bg-main shadow-[0_0_6px_rgba(255,216,77,0.4)]";
-              content = <span className="text-[10px] select-none leading-none">🌹</span>;
-            } else if (isStn) {
-              // Mácula Ativa: Vermelho Escuro Manchado
-              bgClass = "bg-hunger-red/25 border-hunger-red text-hunger-red font-bold shadow-[0_0_6px_rgba(200,36,52,0.3)] animate-pulse-subtle";
-              content = <span className="text-[10px] select-none leading-none">/</span>;
-            }
-
-            return (
-              <div
-                key={idx}
-                className={`w-5 h-5 rounded-xs flex items-center justify-center text-[10px] ${bgClass}`}
-                title={`Posição ${boxNum}: ${isHum ? "Humanidade" : isStn ? "Mácula" : "Vazio"}`}
-              >
-                {content}
-              </div>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-data font-bold px-1.5 py-0.5 rounded-xs border ${
+            isWassail
+              ? "text-hunger-red border-hunger-red/40 bg-hunger-red/10"
+              : "text-gold-accent border-gold-accent/20 bg-gold-accent/5"
+          }`}>
+            {isWassail ? "WASSAIL" : `HUM ${humanity}`}
+          </span>
+          {stains > 0 && (
+            <span className="text-[10px] font-data font-bold text-hunger-red px-1.5 py-0.5 rounded-xs border border-hunger-red/30 bg-hunger-red/5">
+              {stains} {stains === 1 ? "MÁCULA" : "MÁCULAS"}
+            </span>
+          )}
+          {isUpdatingHumanity && (
+            <span className="text-[9px] text-text-dim font-data animate-pulse">Salvando...</span>
+          )}
         </div>
-
-        {/* Stepper Direita: Máculas */}
-        {!disabled && (
-          <div className="flex space-x-1 shrink-0">
-            <button
-              onClick={handleRemoveStain}
-              disabled={isUpdatingStains || stains <= 0}
-              className="w-6 h-6 bg-white/5 border border-white/10 hover:border-hunger-red/50 hover:bg-white/10 text-xs font-bold text-text-muted hover:text-hunger-red flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Remover Mácula"
-            >
-              -
-            </button>
-            <button
-              onClick={handleAddStain}
-              disabled={isUpdatingStains}
-              className="w-6 h-6 bg-white/5 border border-white/10 hover:border-hunger-red/50 hover:bg-white/10 text-xs font-bold text-text-muted hover:text-hunger-red flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Adicionar Mácula (Risco de Degradação)"
-            >
-              +
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Mensagens de Alerta e Botão de Fim de Sessão */}
-      <div className="flex flex-col space-y-1.5 pt-0.5">
-        {isDegenerating && (
-          <span className="text-[9px] text-hunger-red font-bold uppercase tracking-wider block animate-pulse">
-            ⚠️ Alerta: Máculas em excesso causaram dano à Força de Vontade!
+      {/* ===== TRILHA DE 10 POSIÇÕES ===== */}
+      <div 
+        className={`flex items-center justify-between p-1.5 rounded-xs border transition-all duration-300 h-9 ${
+          isWassail
+            ? "border-hunger-red/40 bg-deep-crimson/10"
+            : stains > 0 && humanity + stains > 8
+              ? "border-hunger-red/25 bg-hunger-red/5 animate-pulse-subtle" 
+              : "border-white/5 bg-bg-main/30"
+        }`}
+        role="group"
+        aria-label={`Trilha de Humanidade ${humanity} e Máculas ${stains}.`}
+      >
+        {Array.from({ length: 10 }).map((_, idx) => {
+          const boxNum = idx + 1;
+          const isHum = boxNum <= humanity;
+          const isStn = boxNum > (10 - stains);
+          
+          let boxClass = "bg-transparent border border-white/10";
+          let content = null;
+
+          if (isHum) {
+            boxClass = "bg-gold-accent/90 border-gold-accent text-bg-main shadow-[0_0_5px_rgba(255,216,77,0.35)]";
+            content = <HumanityDot />;
+          } else if (isStn) {
+            boxClass = "bg-hunger-red/15 border-hunger-red/60 text-hunger-red shadow-[0_0_5px_rgba(200,36,52,0.25)]";
+            content = <StainMark />;
+          }
+
+          return (
+            <div
+              key={idx}
+              className={`w-5.5 h-5.5 rounded-xs flex items-center justify-center transition-all duration-150 ${boxClass}`}
+              title={`Posição ${boxNum}: ${isHum ? "Humanidade" : isStn ? "Mácula" : "Vazio"}`}
+            >
+              {content}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ===== CONTROLES SEPARADOS ===== */}
+      {!disabled && (
+        <div className="grid grid-cols-2 gap-3">
+          {/* Controle de Humanidade */}
+          <div className="flex items-center justify-between bg-bg-main/40 border border-white/5 rounded-xs px-2 py-1.5">
+            <span className="text-[9px] font-data uppercase tracking-wider text-text-muted font-semibold">Humanidade</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => adjustHumanity(-1)}
+                disabled={isUpdatingHumanity || isWassail}
+                className="w-5.5 h-5.5 bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-gold-accent flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Reduzir Humanidade"
+              >
+                −
+              </button>
+              <span className="text-xs font-data font-bold text-gold-accent w-4 text-center tabular-nums">{humanity}</span>
+              <button
+                onClick={() => adjustHumanity(1)}
+                disabled={isUpdatingHumanity || humanity >= 10}
+                className="w-5.5 h-5.5 bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-gold-accent flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Aumentar Humanidade"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Controle de Máculas */}
+          <div className="flex items-center justify-between bg-bg-main/40 border border-white/5 rounded-xs px-2 py-1.5">
+            <span className="text-[9px] font-data uppercase tracking-wider text-text-muted font-semibold">Máculas</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleRemoveStain}
+                disabled={isUpdatingStains || stains <= 0 || isWassail}
+                className="w-5.5 h-5.5 bg-white/5 border border-white/10 hover:border-hunger-red/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-hunger-red flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Remover Mácula"
+              >
+                −
+              </button>
+              <span className={`text-xs font-data font-bold w-4 text-center tabular-nums ${stains > 0 ? "text-hunger-red" : "text-text-dim"}`}>{stains}</span>
+              <button
+                onClick={handleAddStain}
+                disabled={isUpdatingStains || isWassail}
+                className="w-5.5 h-5.5 bg-white/5 border border-white/10 hover:border-hunger-red/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-hunger-red flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Adicionar Mácula"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== ALERTAS E AÇÕES ===== */}
+      <div className="flex flex-col space-y-1.5">
+        {/* Alerta de Wassail */}
+        {isWassail && (
+          <div className="p-2 bg-deep-crimson/15 border border-hunger-red/40 rounded-xs text-[10px] font-data text-hunger-red uppercase tracking-wider font-bold text-center animate-pulse">
+            💀 Wassail — A Besta dominou por completo. Este personagem perdeu sua alma.
+          </div>
+        )}
+
+        {/* Aviso de perigo */}
+        {isWassailDanger && !isWassail && (
+          <span className="text-[9px] text-hunger-red/80 font-bold uppercase tracking-wider block">
+            ⚠️ Humanidade em nível crítico. Próxima falha de Remorso = Wassail.
           </span>
         )}
 
-        {stains > 0 && !disabled && (
+        {/* Botão de Teste de Remorso */}
+        {stains > 0 && !disabled && !isWassail && (
           <button
             onClick={() => setIsRemorseModalOpen(true)}
             className="w-full py-1.5 bg-burgundy/40 border border-blood-red hover:bg-burgundy text-[10px] font-bold font-data text-text-primary uppercase tracking-widest rounded-xs transition-all duration-150 cursor-pointer shadow-[0_0_8px_rgba(200,36,52,0.15)] flex items-center justify-center gap-1.5 select-none"
           >
-            <span>⚖️ Rolar Remorso (Fim de Sessão)</span>
+            <span>⚖️ Rolar Remorso — {dicePool} {dicePool === 1 ? "dado" : "dados"}</span>
           </button>
         )}
       </div>
 
-      {/* MODAL GÓTICO DE CONFIRMAÇÃO DO TESTE DE REMORSO */}
+      {/* ===== MODAL DE TESTE DE REMORSO ===== */}
       {isRemorseModalOpen && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-bg-card border border-blood-red max-w-sm w-full p-5 rounded-sm shadow-[0_0_25px_rgba(139,0,0,0.3)] space-y-4">
@@ -258,11 +340,11 @@ export default function HumanityTracker({
                     O Remorso é testado para ver se o seu vampiro ainda sente culpa por suas ações ou se sua alma se degradou de vez.
                   </p>
                   <div className="flex justify-between border-t border-white/5 pt-2 font-data text-[11px]">
-                    <span className="text-text-muted">Parada de Dados (Vazias):</span>
+                    <span className="text-text-muted">Parada de Dados:</span>
                     <span className="text-gold-accent font-bold">{dicePool} d10</span>
                   </div>
                   <p className="text-[10px] text-text-dim italic">
-                    * Calculado como: 10 - Humanidade ({humanity}) - Máculas ({stains}). Mínimo de 1 dado. Pelo menos um resultado 6 ou mais garante o sucesso.
+                    * Calculado como: Humanidade ({humanity}) − Máculas ({stains}). Mínimo de 1 dado. Pelo menos um resultado 6 ou mais garante o sucesso.
                   </p>
                 </div>
 
@@ -329,6 +411,9 @@ export default function HumanityTracker({
                       <p className="text-[10.5px] text-text-primary font-reading leading-snug">
                         Você não sentiu remorso e aceitou a monstruosidade. Sua Humanidade caiu de {remorseResult.oldHumanity} para <strong>{remorseResult.newHumanity}</strong>.
                         As Máculas foram zeradas.
+                        {remorseResult.newHumanity === 0 && (
+                          <span className="block mt-1 text-hunger-red font-bold">💀 Wassail. A Besta reinou. O personagem caiu nas trevas.</span>
+                        )}
                       </p>
                     </div>
                   )}
@@ -344,7 +429,8 @@ export default function HumanityTracker({
                   </button>
                 </div>
               </div>
-            )}          </div>
+            )}
+          </div>
         </div>
       )}
     </div>

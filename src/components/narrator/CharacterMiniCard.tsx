@@ -29,6 +29,8 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
   const hunger = sheet?.status?.hunger ?? 0;
   const health = sheet?.status?.health || { max: 5, superficial: 0, aggravated: 0 };
   const willpower = sheet?.status?.willpower || { max: 5, superficial: 0, aggravated: 0 };
+  const humanityVal = sheet?.status?.humanity ?? 7;
+  const stainsVal = sheet?.status?.stains ?? 0;
 
   // Helper para renderizar quadradinhos de dano (Tracker) de forma estática e segura no Tailwind
   const renderTrackerBoxes = (
@@ -143,6 +145,33 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
           <span className="text-[10px] uppercase tracking-wider text-text-muted font-data">Força de Vontade</span>
           <div className="flex space-x-1">
             {renderTrackerBoxes(willpower, "willpower")}
+          </div>
+        </div>
+
+        {/* Marcador de Humanidade / Máculas (Mini Trilha) */}
+        <div className="flex items-center justify-between">
+          <span className={`text-[10px] uppercase tracking-wider font-data ${humanityVal <= 1 ? 'text-hunger-red font-bold' : 'text-text-muted'}`}>
+            Humanidade{stainsVal > 0 ? ` / ${stainsVal} Mac.` : ''}
+          </span>
+          <div className="flex space-x-0.5">
+            {Array.from({ length: 10 }).map((_, i) => {
+              const boxNum = i + 1;
+              const isHum = boxNum <= humanityVal;
+              const isStn = boxNum > (10 - stainsVal);
+              let boxClass = 'bg-bg-input border-white/10';
+              if (isHum) {
+                boxClass = 'bg-gold-accent/80 border-gold-accent';
+              } else if (isStn) {
+                boxClass = 'bg-hunger-red/20 border-hunger-red/50';
+              }
+              return (
+                <div
+                  key={i}
+                  className={`w-2.5 h-2.5 rounded-xs border ${boxClass}`}
+                  title={`${boxNum}: ${isHum ? 'Humanidade' : isStn ? 'Mácula' : 'Vazio'}`}
+                />
+              );
+            })}
           </div>
         </div>
 
