@@ -139,7 +139,7 @@ export default function PlayerDock({
             {getInitials(character.name || "Marcus")}
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-bold font-gothic text-text-primary tracking-wider uppercase truncate max-w-[120px] sm:max-w-[200px]">
+            <div className="text-sm font-bold font-gothic text-text-primary tracking-wider uppercase truncate max-w-30 sm:max-w-50">
               {character.name}
             </div>
             <button

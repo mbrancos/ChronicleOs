@@ -760,7 +760,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             <div className="h-6 w-px bg-white/10 shrink-0" />
 
             {/* Ação */}
-            <div className="flex items-center gap-1.5 flex-1 max-w-[120px] md:max-w-[220px]">
+            <div className="flex items-center gap-1.5 flex-1 max-w-30 md:max-w-55">
               <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold shrink-0 md:inline hidden">Ação</span>
               <input
                 type="text"
@@ -840,7 +840,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                         }`}
                         title={isOnline ? "Online" : "Offline"}
                       />
-                      <span className="text-xs font-semibold truncate max-w-[70px]" title={p.name}>{p.name}</span>
+                      <span className="text-xs font-semibold truncate max-w-17.5" title={p.name}>{p.name}</span>
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <button onClick={() => handleDoubleClickToken(p.id)} className="text-[9px] text-text-muted hover:text-white uppercase font-bold cursor-pointer">Ficha</button>
@@ -864,7 +864,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                 const isOnBoard = tokensList.some((t) => t.characterId === npc.id);
                 return (
                   <div key={npc.id} className="flex justify-between items-center bg-black/35 p-1.5 rounded-sm border border-white/5">
-                    <span className="text-xs font-semibold truncate max-w-[85px]" title={npc.name}>{npc.name}</span>
+                    <span className="text-xs font-semibold truncate max-w-21.25" title={npc.name}>{npc.name}</span>
                     <div className="flex items-center space-x-1.5">
                       <button onClick={() => handleDoubleClickToken(npc.id)} className="text-[9px] text-text-muted hover:text-white uppercase font-bold cursor-pointer">Ficha</button>
                       <button disabled={isOnBoard} onClick={() => handleAddCharacterToBoard(npc)} className="text-[9px] text-gold-accent hover:text-amber-300 disabled:text-text-dim/40 uppercase font-bold cursor-pointer">
@@ -979,7 +979,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       {/* MODAL DE DISTRIBUIÇÃO DE XP (FASE 25) */}
       {isXpModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="w-[500px] bg-bg-card-dark border border-white/10 rounded-sm p-5 shadow-2xl flex flex-col space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="w-125 bg-bg-card-dark border border-white/10 rounded-sm p-5 shadow-2xl flex flex-col space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
               <h2 className="text-base font-gothic text-blood-red tracking-widest uppercase">
                 Distribuir XP da Sessão

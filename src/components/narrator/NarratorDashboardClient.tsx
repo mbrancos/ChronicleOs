@@ -739,7 +739,7 @@ export default function NarratorDashboardClient({
               Selecione personagens do seu cofre para torná-los Antagonistas/NPCs ativos desta crônica. Eles serão transferidos para esta campanha.
             </p>
 
-            <div className="flex-1 overflow-y-auto pr-1 space-y-2 mb-4 min-h-[200px] border border-white/5 bg-black/25 p-3 rounded-sm">
+            <div className="flex-1 overflow-y-auto pr-1 space-y-2 mb-4 min-h-50 border border-white/5 bg-black/25 p-3 rounded-sm">
               {!vaultCharacters || vaultCharacters.length === 0 ? (
                 <p className="text-xs text-text-muted italic text-center py-8">
                   Nenhum personagem disponível no cofre (sem crônica associada).

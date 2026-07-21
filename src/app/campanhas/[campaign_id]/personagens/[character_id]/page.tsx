@@ -24,13 +24,18 @@ export default async function CharacterPage({ params }: PageProps) {
   }
 
   // Buscar a campanha para injetar as regras customizadas (homebrews)
-  const campaignResult = await db
-    .select()
-    .from(campaigns)
-    .where(eq(campaigns.id, campaign_id))
-    .limit(1);
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let campaign = null;
 
-  const campaign = campaignResult[0] || null;
+  if (uuidRegex.test(campaign_id)) {
+    const campaignResult = await db
+      .select()
+      .from(campaigns)
+      .where(eq(campaigns.id, campaign_id))
+      .limit(1);
+
+    campaign = campaignResult[0] || null;
+  }
   const initialData = response.data ?? null;
 
   return (

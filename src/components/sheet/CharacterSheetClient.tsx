@@ -1896,7 +1896,7 @@ export default function CharacterSheetClient({
                   </select>
                 </div>
 
-                <div className="flex flex-col space-y-1 flex-1 min-w-[200px]">
+                <div className="flex flex-col space-y-1 flex-1 min-w-50">
                   <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nome da Especialização</label>
                   <input
                     type="text"
@@ -2299,7 +2299,7 @@ export default function CharacterSheetClient({
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Nova Vantagem"
                                   disabled={isReadOnly}
-                                  className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-[200px]"
+                                  className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-50"
                                 />
                                 <span className="text-[9px] uppercase tracking-wider text-text-muted">
                                   {adv.type === "merit" ? "Qualidade" : "Antecedente"}
@@ -2382,7 +2382,7 @@ export default function CharacterSheetClient({
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Novo Defeito"
                                   disabled={isReadOnly}
-                                  className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-[200px]"
+                                  className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-50"
                                 />
                                 <span className="text-[9px] uppercase tracking-wider text-text-muted">
                                   {adv.type === "flaw" ? "Defeito" : "Ficha de Saber"}
@@ -2542,7 +2542,7 @@ export default function CharacterSheetClient({
                 </div>
               </div>
 
-              <div className="lg:col-span-6 bg-bg-main border border-white/10 rounded-sm p-4 space-y-4 min-h-[300px] flex flex-col justify-between">
+              <div className="lg:col-span-6 bg-bg-main border border-white/10 rounded-sm p-4 space-y-4 min-h-75 flex flex-col justify-between">
                 
                 {!rollResult ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-2 text-text-dim">
