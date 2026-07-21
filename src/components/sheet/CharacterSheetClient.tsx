@@ -1505,87 +1505,90 @@ export default function CharacterSheetClient({
         {/* ======================================================== */}
         <section className="bg-bg-card border border-white/10 rounded-sm p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center shadow-none relative">
           
-          {/* AVATAR DO VAMPIRO */}
-          <div className="lg:col-span-2 flex justify-center">
-            <div className="relative w-28 h-28 rounded-full border-2 border-gold-accent/40 bg-bg-main flex items-center justify-center overflow-hidden shadow-none group">
-              <svg className="w-16 h-16 text-text-dim/40 group-hover:text-blood-red/40 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </svg>
-              <div className="absolute inset-0 bg-linear-to-t from-bg-main/80 via-transparent to-transparent flex items-end justify-center pb-1">
-                <span className="text-[10px] uppercase tracking-wider text-text-muted">
-                  {character.profile.name?.split(" ")[0] || "Vampiro"}
-                </span>
+          {/* PRIMEIRO TERÇO (1/3): FOTO + DADOS DE PERFIL DO VAMPIRO */}
+          <div className="lg:col-span-4 flex flex-col xl:flex-row items-center xl:items-start gap-4">
+            {/* AVATAR DO VAMPIRO */}
+            <div className="shrink-0">
+              <div className="relative w-24 h-24 rounded-full border-2 border-gold-accent/40 bg-bg-main flex items-center justify-center overflow-hidden shadow-none group">
+                <svg className="w-14 h-14 text-text-dim/40 group-hover:text-blood-red/40 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+                <div className="absolute inset-0 bg-linear-to-t from-bg-main/80 via-transparent to-transparent flex items-end justify-center pb-1">
+                  <span className="text-[10px] uppercase tracking-wider text-text-muted">
+                    {character.profile.name?.split(" ")[0] || "Vampiro"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* DADOS DE PERFIL */}
-          <div className="lg:col-span-4 space-y-2 max-w-full">
-            <h1 className="text-4xl font-gothic tracking-wider text-blood-red leading-none flex items-center gap-1">
-              <InlineEdit
-                value={character.profile.name || "Novo Vampiro"}
-                onChange={(val) => handleProfileChange("name", val)}
-                disabled={isReadOnly}
-                className="text-4xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase"
-              />
-            </h1>
-            <div className="text-xs uppercase tracking-widest text-gold-accent font-data font-semibold flex flex-wrap items-center gap-1.5 leading-none">
-              <span className="text-text-muted">Clã</span>
-              <InlineEdit
-                value={character.profile.clan}
-                onChange={(val) => handleProfileChange("clan", val)}
-                type="select"
-                options={CLAN_OPTIONS}
-                disabled={isReadOnly}
-                className="text-gold-accent hover:bg-white/5 font-bold"
-              />
-              <span className="text-text-dim">•</span>
-              <InlineEdit
-                value={character.profile.concept || "Neófito"}
-                onChange={(val) => handleProfileChange("concept", val)}
-                type="select"
-                options={POWER_LEVEL_OPTIONS}
-                disabled={isReadOnly}
-                className="text-text-primary hover:bg-white/5 font-bold"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-text-muted font-data uppercase pt-1.5">
-              <div className="flex items-center gap-1">
-                <span>Geração:</span>
+            {/* DADOS DE PERFIL */}
+            <div className="space-y-1.5 flex-1 min-w-0 text-center xl:text-left">
+              <h1 className="text-2xl sm:text-3xl font-gothic tracking-wider text-blood-red leading-none flex items-center justify-center xl:justify-start gap-1">
                 <InlineEdit
-                  value={String(character.profile.generation)}
-                  onChange={(val) => handleProfileChange("generation", Number(val) || 11)}
-                  type="number"
+                  value={character.profile.name || "Novo Vampiro"}
+                  onChange={(val) => handleProfileChange("name", val)}
                   disabled={isReadOnly}
-                  className="text-text-primary hover:bg-white/5 font-bold"
+                  className="text-2xl sm:text-3xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase truncate"
                 />
-                <span>ª</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span>Predador:</span>
+              </h1>
+              <div className="text-xs uppercase tracking-widest text-gold-accent font-data font-semibold flex flex-wrap items-center justify-center xl:justify-start gap-1.5 leading-none">
+                <span className="text-text-muted">Clã</span>
                 <InlineEdit
-                  value={character.profile.predator_type}
-                  onChange={(val) => handleProfileChange("predator_type", val)}
+                  value={character.profile.clan}
+                  onChange={(val) => handleProfileChange("clan", val)}
                   type="select"
-                  options={PREDATOR_OPTIONS}
+                  options={CLAN_OPTIONS}
+                  disabled={isReadOnly}
+                  className="text-gold-accent hover:bg-white/5 font-bold"
+                />
+                <span className="text-text-dim">•</span>
+                <InlineEdit
+                  value={character.profile.concept || "Neófito"}
+                  onChange={(val) => handleProfileChange("concept", val)}
+                  type="select"
+                  options={POWER_LEVEL_OPTIONS}
                   disabled={isReadOnly}
                   className="text-text-primary hover:bg-white/5 font-bold"
                 />
               </div>
-              <div className="col-span-2 flex items-center gap-1 truncate">
-                <span>Sire:</span>
-                <InlineEdit
-                  value={character.profile.sire}
-                  onChange={(val) => handleProfileChange("sire", val)}
-                  disabled={isReadOnly}
-                  className="text-text-primary hover:bg-white/5 font-bold"
-                />
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-text-muted font-data uppercase pt-1">
+                <div className="flex items-center gap-1">
+                  <span>Geração:</span>
+                  <InlineEdit
+                    value={String(character.profile.generation)}
+                    onChange={(val) => handleProfileChange("generation", Number(val) || 11)}
+                    type="number"
+                    disabled={isReadOnly}
+                    className="text-text-primary hover:bg-white/5 font-bold"
+                  />
+                  <span>ª</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>Predador:</span>
+                  <InlineEdit
+                    value={character.profile.predator_type}
+                    onChange={(val) => handleProfileChange("predator_type", val)}
+                    type="select"
+                    options={PREDATOR_OPTIONS}
+                    disabled={isReadOnly}
+                    className="text-text-primary hover:bg-white/5 font-bold"
+                  />
+                </div>
+                <div className="col-span-2 flex items-center gap-1 truncate">
+                  <span>Sire:</span>
+                  <InlineEdit
+                    value={character.profile.sire}
+                    onChange={(val) => handleProfileChange("sire", val)}
+                    disabled={isReadOnly}
+                    className="text-text-primary hover:bg-white/5 font-bold"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* RASTREADORES RÁPIDOS MODULARIZADOS */}
-          <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
+          {/* OUTROS DOIS TERÇOS (2/3): RASTREADORES RÁPIDOS MODULARIZADOS */}
+          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
             
             {/* VITALIDADE (HEALTH) - DAMAGE TRACKER */}
             <DamageTracker 
