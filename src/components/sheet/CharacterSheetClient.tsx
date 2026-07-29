@@ -840,6 +840,27 @@ export default function CharacterSheetClient({
       return;
     }
 
+    if (status === "DRAFT" && characterType !== "npc" && value >= 4) {
+      const currentVal = Number(character.skills[skillName]) || 0;
+      if (value > currentVal) {
+        const allSkills: { key: string; val: number }[] = [];
+        if (character.skills) {
+          Object.entries(character.skills).forEach(([k, v]) => {
+            allSkills.push({ key: k, val: Number(v) || 0 });
+          });
+        }
+
+        const otherSkillsWith4OrMore = allSkills.filter(s => s.key !== skillName && s.val >= 4);
+        if (otherSkillsWith4OrMore.length > 0) {
+          showWarning(
+            "Regra V5 - Habilidades: Na criação base, você só pode ter 1 Habilidade em nível 4. Escolha outra habilidade (em nível 1, 2 ou 3) para receber seus pontos!",
+            "Cota de Habilidades V5"
+          );
+          return;
+        }
+      }
+    }
+
     setCharacter(prev => ({
       ...prev,
       skills: {
@@ -1898,13 +1919,21 @@ export default function CharacterSheetClient({
             <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex flex-wrap items-center gap-3">
               <span>Habilidades</span>
               {status === "DRAFT" && characterType !== "npc" && (
-                <span className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
-                  alloc.skillsRemaining === 0
-                    ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
-                    : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
-                }`}>
-                  {alloc.skillsRemaining === 0 ? "🟢 0 Restantes (Concluído) ✓" : `🟡 ${alloc.skillsRemaining} ${alloc.skillsRemaining === 1 ? "ponto restante" : "pontos restantes"}`}
-                </span>
+                <>
+                  <span className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                    alloc.skillsRemaining === 0
+                      ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                      : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                  }`}>
+                    {alloc.skillsRemaining === 0 ? "🟢 0 Restantes (Concluído) ✓" : `🟡 ${alloc.skillsRemaining} ${alloc.skillsRemaining === 1 ? "ponto restante" : "pontos restantes"}`}
+                  </span>
+                  <span 
+                    className="text-[11px] font-data text-gold-accent/80 bg-gold-accent/10 border border-gold-accent/20 px-2 py-0.5 rounded-xs normal-case tracking-normal cursor-help"
+                    title="Regra V5 de Criação: Cota oficial de 20 pontos distribuídos em 1x(4), 3x(3), 3x(2), 3x(1)."
+                  >
+                    💡 Esquema V5: 1x(4) | 3x(3) | 3x(2) | 3x(1)
+                  </span>
+                </>
               )}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
