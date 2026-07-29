@@ -51,30 +51,34 @@ export default function BloodPanel({ value, onChange, disabled = false }: BloodP
   };
 
   return (
-    <div className="bg-bg-main/40 border border-blood-red/20 rounded-sm p-5 space-y-4 shadow-[0_0_15px_rgba(139,0,0,0.08)] relative overflow-hidden group hover:border-blood-red/40 transition-all duration-300">
-      {/* Brilho gótico de fundo */}
-      <div className="absolute top-0 right-0 w-24 h-24 bg-blood-red/5 rounded-full blur-2xl group-hover:bg-blood-red/10 transition-all duration-300 pointer-events-none" />
-
-      <div className="flex items-center space-x-2 border-b border-white/5 pb-2">
-        <svg className="w-4 h-4 text-blood-red shrink-0" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-        </svg>
-        <h3 className="font-gothic text-base uppercase tracking-wider text-blood-red font-bold">
-          Fisiologia do Sangue (Ressonância)
-        </h3>
+    <div className="bg-bg-card/35 border border-white/5 rounded-sm p-3 space-y-2.5 transition-all duration-300 hover:border-white/10">
+      <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
+        <div className="flex items-center space-x-1.5">
+          <svg className="w-3.5 h-3.5 text-blood-red shrink-0" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+          </svg>
+          <h3 className="font-data text-xs uppercase tracking-wider text-text-muted font-semibold">
+            Ressonância
+          </h3>
+        </div>
+        {resonance !== "Vazio" && (
+          <span className="text-[10px] font-data font-bold text-blood-red bg-blood-red/10 border border-blood-red/30 px-1.5 py-0.5 rounded-xs uppercase">
+            Ativa
+          </span>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-2">
         {/* Dropdown de humor / ressonância */}
-        <div className="flex flex-col space-y-1.5">
-          <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold font-data">
-            Ressonância Atual (Humor da Vítima)
+        <div className="flex flex-col space-y-1">
+          <label className="text-[9px] text-text-muted uppercase tracking-wider font-semibold font-data">
+            Humor da Vítima
           </label>
           <select
             value={resonance}
             disabled={disabled}
             onChange={(e) => handleResonanceChange(e.target.value)}
-            className="bg-bg-input border border-white/10 text-text-primary text-xs p-2.5 rounded-sm outline-none focus:border-blood-red/60 focus:ring-1 focus:ring-blood-red/30 transition-all duration-150 h-10 font-reading cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
+            className="bg-bg-input border border-white/10 text-text-primary text-xs px-2 rounded-xs outline-none focus:border-blood-red/60 transition-all duration-150 h-8 font-reading cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed"
           >
             {RESONANCE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value} className="bg-bg-card text-text-primary">
@@ -84,16 +88,16 @@ export default function BloodPanel({ value, onChange, disabled = false }: BloodP
           </select>
         </div>
 
-        {/* Input/Textarea de Discrasi */}
-        <div className="flex flex-col space-y-1.5">
-          <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold font-data">
-            Discrasi (Bônus Temporário de Sangue)
+        {/* Input de Discrasi */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-[9px] text-text-muted uppercase tracking-wider font-semibold font-data">
+            Discrasi (Bônus Temporário)
           </label>
           <input
             type="text"
             value={localDyscrasia}
             disabled={disabled}
-            placeholder={disabled ? "Sem discrasi ativa." : "Ex: +1 dado em Dominação contra mortais..."}
+            placeholder={disabled ? "Sem discrasi ativa." : "Ex: +1 dado em Dominação..."}
             onChange={(e) => setLocalDyscrasia(e.target.value)}
             onBlur={handleDyscrasiaBlur}
             onKeyDown={(e) => {
@@ -102,7 +106,7 @@ export default function BloodPanel({ value, onChange, disabled = false }: BloodP
                 (e.target as HTMLInputElement).blur();
               }
             }}
-            className="bg-bg-input border border-white/10 text-text-primary text-xs p-2.5 rounded-sm outline-none focus:border-blood-red/60 focus:ring-1 focus:ring-blood-red/30 transition-all duration-150 h-10 font-reading placeholder:text-text-dim/40 disabled:opacity-55 disabled:cursor-not-allowed"
+            className="bg-bg-input border border-white/10 text-text-primary text-xs px-2 rounded-xs outline-none focus:border-blood-red/60 transition-all duration-150 h-8 font-reading placeholder:text-text-dim/40 disabled:opacity-55 disabled:cursor-not-allowed"
           />
         </div>
       </div>

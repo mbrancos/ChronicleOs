@@ -239,24 +239,24 @@ export default function HumanityTracker({
 
       {/* ===== CONTROLES SEPARADOS ===== */}
       {!disabled && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
           {/* Controle de Humanidade */}
-          <div className="flex items-center justify-between bg-bg-main/40 border border-white/5 rounded-xs px-2 py-1.5">
-            <span className="text-[9px] font-data uppercase tracking-wider text-text-muted font-semibold">Humanidade</span>
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between gap-1 bg-bg-main/50 border border-white/10 rounded-xs px-2 py-1 flex-1 min-w-[110px]">
+            <span className="text-[9px] font-data uppercase tracking-wider text-text-muted font-bold truncate">Humanidade</span>
+            <div className="flex items-center gap-0.5 shrink-0">
               <button
                 onClick={() => adjustHumanity(-1)}
                 disabled={isUpdatingHumanity || isWassail}
-                className="w-5.5 h-5.5 bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-gold-accent flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
+                className="w-5 h-5 bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-gold-accent flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Reduzir Humanidade"
               >
                 −
               </button>
-              <span className="text-xs font-data font-bold text-gold-accent w-4 text-center tabular-nums">{humanity}</span>
+              <span className="text-xs font-data font-bold text-gold-accent w-3.5 text-center tabular-nums">{humanity}</span>
               <button
                 onClick={() => adjustHumanity(1)}
                 disabled={isUpdatingHumanity || humanity >= 10}
-                className="w-5.5 h-5.5 bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-gold-accent flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
+                className="w-5 h-5 bg-white/5 border border-white/10 hover:border-gold-accent/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-gold-accent flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Aumentar Humanidade"
               >
                 +
@@ -265,22 +265,22 @@ export default function HumanityTracker({
           </div>
 
           {/* Controle de Máculas */}
-          <div className="flex items-center justify-between bg-bg-main/40 border border-white/5 rounded-xs px-2 py-1.5">
-            <span className="text-[9px] font-data uppercase tracking-wider text-text-muted font-semibold">Máculas</span>
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between gap-1 bg-bg-main/50 border border-white/10 rounded-xs px-2 py-1 flex-1 min-w-[110px]">
+            <span className="text-[9px] font-data uppercase tracking-wider text-text-muted font-bold truncate">Máculas</span>
+            <div className="flex items-center gap-0.5 shrink-0">
               <button
                 onClick={handleRemoveStain}
                 disabled={isUpdatingStains || stains <= 0 || isWassail}
-                className="w-5.5 h-5.5 bg-white/5 border border-white/10 hover:border-hunger-red/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-hunger-red flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
+                className="w-5 h-5 bg-white/5 border border-white/10 hover:border-hunger-red/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-hunger-red flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Remover Mácula"
               >
                 −
               </button>
-              <span className={`text-xs font-data font-bold w-4 text-center tabular-nums ${stains > 0 ? "text-hunger-red" : "text-text-dim"}`}>{stains}</span>
+              <span className={`text-xs font-data font-bold w-3.5 text-center tabular-nums ${stains > 0 ? "text-hunger-red" : "text-text-dim"}`}>{stains}</span>
               <button
                 onClick={handleAddStain}
                 disabled={isUpdatingStains || isWassail}
-                className="w-5.5 h-5.5 bg-white/5 border border-white/10 hover:border-hunger-red/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-hunger-red flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
+                className="w-5 h-5 bg-white/5 border border-white/10 hover:border-hunger-red/50 hover:bg-white/10 text-[10px] font-bold text-text-muted hover:text-hunger-red flex items-center justify-center rounded-xs transition-colors cursor-pointer select-none disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Adicionar Mácula"
               >
                 +

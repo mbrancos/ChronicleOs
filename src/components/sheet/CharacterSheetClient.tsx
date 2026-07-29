@@ -1659,9 +1659,9 @@ export default function CharacterSheetClient({
             </div>
 
             {/* OUTROS DOIS TERÇOS (2/3): RASTREADORES RÁPIDOS MODULARIZADOS */}
-            <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
+            <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-3.5 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
               
-              {/* VITALIDADE (HEALTH) - DAMAGE TRACKER */}
+              {/* LINHA 1: VITALIDADE (HEALTH) & FORÇA DE VONTADE (WILLPOWER) */}
               <DamageTracker 
                 characterId={characterId}
                 label="Vitalidade" 
@@ -1670,7 +1670,6 @@ export default function CharacterSheetClient({
                 variant="health" 
               />
 
-              {/* FORÇA DE VONTADE (WILLPOWER) - DAMAGE TRACKER */}
               <DamageTracker 
                 characterId={characterId}
                 label="Força de Vontade" 
@@ -1679,30 +1678,31 @@ export default function CharacterSheetClient({
                 variant="willpower" 
               />
 
-              {/* FOME (HUNGER) - DOT SLIDER EM RED */}
-              <DotSlider
-                label="Fome"
-                value={character.status.hunger}
-                onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
-                allowZero
-                variant="red"
-              />
+              {/* LINHA 2: FOME & RESSONÂNCIA (LADO A LADO) */}
+              <div className="bg-bg-card/35 border border-white/5 rounded-sm p-3 space-y-2.5 transition-all duration-300 hover:border-white/10">
+                <DotSlider
+                  label="Fome"
+                  value={character.status.hunger}
+                  onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
+                  allowZero
+                  variant="red"
+                />
+              </div>
 
-              {/* HUMANIDADE & MÁCULAS (HUMANITY & STAINS) - HUMANITY TRACKER */}
-              <HumanityTracker
-                characterId={characterId}
-                humanity={character.status.humanity}
-                stains={character.status.stains}
-                onHumanityChange={handleHumanityChange}
-                onStainsChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, stains: val } }))}
+              <BloodPanel
+                value={character.bloodState}
+                onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
                 disabled={isSheetDisabled}
               />
 
-              {/* PAINEL DE FISIOLOGIA DO SANGUE (RESSONÂNCIA & DISCRASI) */}
-              <div className="md:col-span-2 pt-1">
-                <BloodPanel
-                  value={character.bloodState}
-                  onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
+              {/* LINHA 3: BÚSSOLA MORAL & MÁCULAS (LARGURA TOTAL 2 COLUNAS) */}
+              <div className="md:col-span-2">
+                <HumanityTracker
+                  characterId={characterId}
+                  humanity={character.status.humanity}
+                  stains={character.status.stains}
+                  onHumanityChange={handleHumanityChange}
+                  onStainsChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, stains: val } }))}
                   disabled={isSheetDisabled}
                 />
               </div>
