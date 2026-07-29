@@ -93,6 +93,7 @@ export interface Specialty {
   id: string;
   skill: keyof CharacterSkills; // Força o vínculo com uma habilidade existente
   name: string;
+  source?: string; // Motivo/Origem: "1ª Grátis", "2ª Grátis", "Predador", "Hab. 4", "Por XP"
 }
 
 export interface AcquiredPower {

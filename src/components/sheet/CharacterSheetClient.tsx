@@ -221,6 +221,18 @@ function executeSimulationRoll(
 
 const POWER_LEVEL_OPTIONS = ["Cria", "Neófito", "Ancila"];
 
+const PREDATOR_SPECIALTY_MAP: Record<string, { skill: keyof CharacterSkills; name: string }[]> = {
+  "Consensualista": [{ skill: "medicine", name: "Coleta de Sangue" }, { skill: "persuasion", name: "Vitimização" }],
+  "Gato de Beco": [{ skill: "intimidation", name: "Briga de Rua" }, { skill: "brawl", name: "Desarmado" }],
+  "Ladrão de Sangue": [{ skill: "subterfuge", name: "Falsificação" }, { skill: "streetwise", name: "Mercado Negro" }],
+  "Bagger": [{ skill: "medicine", name: "Coleta de Sangue" }, { skill: "streetwise", name: "Mercado Negro" }],
+  "Sereia": [{ skill: "persuasion", name: "Sedução" }, { skill: "subterfuge", name: "Sedução" }],
+  "Sandman": [{ skill: "stealth", name: "Invasão" }],
+  "Cleaver": [{ skill: "subterfuge", name: "Vida Dupla" }],
+  "Caçador de Fazenda": [{ skill: "survival", name: "Rastreio" }],
+  "Osferus": [{ skill: "brawl", name: "Luta de Rua" }],
+};
+
 const DISCIPLINE_OPTIONS = [
   "Animalismo",
   "Auspício",
@@ -676,6 +688,42 @@ export default function CharacterSheetClient({
   // ESTADOS DO MINI-FORMULÁRIO DE ESPECIALIZAÇÕES (ABA NÚCLEO)
   const [selectedSkill, setSelectedSkill] = useState<keyof CharacterSkills | "">("");
   const [newSpecialtyName, setNewSpecialtyName] = useState("");
+  const [specialtySource, setSpecialtySource] = useState<string>("1ª Grátis");
+
+  // Automação de Especialização: Detectar Habilidade Nível 4 ou Predador
+  useEffect(() => {
+    if (status !== "DRAFT" || !character.skills) return;
+
+    // 1. Verificar se existe alguma Habilidade com nível >= 4 sem especialização cadastrada
+    const skillLevel4Entry = Object.entries(character.skills).find(([key, val]) => {
+      if (Number(val) < 4) return false;
+      const alreadyHasSpec = character.specialties?.some(s => s.skill === key);
+      return !alreadyHasSpec;
+    });
+
+    if (skillLevel4Entry) {
+      const [skillKey] = skillLevel4Entry;
+      if (selectedSkill !== skillKey || specialtySource !== "Hab. 4") {
+        setSelectedSkill(skillKey as keyof CharacterSkills);
+        setSpecialtySource("Hab. 4");
+      }
+      return;
+    }
+
+    // 2. Se o jogador tiver um Predador selecionado e ainda não tiver cadastrado a especialização do Predador
+    const predatorName = character.profile?.predator_type?.trim() || "";
+    if (predatorName && PREDATOR_SPECIALTY_MAP[predatorName]) {
+      const hasPredatorSpec = character.specialties?.some(s => s.source === "Predador");
+      if (!hasPredatorSpec) {
+        const defaultChoice = PREDATOR_SPECIALTY_MAP[predatorName][0];
+        if (defaultChoice && (selectedSkill !== defaultChoice.skill || specialtySource !== "Predador")) {
+          setSelectedSkill(defaultChoice.skill);
+          setNewSpecialtyName(defaultChoice.name);
+          setSpecialtySource("Predador");
+        }
+      }
+    }
+  }, [character.skills, character.profile?.predator_type, character.specialties, status]);
   
   // ESTADO DE SINCRONIZAÇÃO (Optimistic UI Autosave)
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -1374,7 +1422,8 @@ export default function CharacterSheetClient({
     const newSpec: Specialty = {
       id: generateRandomId("spec"),
       skill: selectedSkill,
-      name: newSpecialtyName.trim()
+      name: newSpecialtyName.trim(),
+      source: specialtySource || "1ª Grátis"
     };
     
     setCharacter(prev => ({
@@ -2006,46 +2055,86 @@ export default function CharacterSheetClient({
                 Especializações de Habilidades
               </h3>
               <p className="text-xs text-text-muted font-reading">
-                Defina especializações para obter dados de bônus em testes específicos vinculados a Habilidades.
+                Defina especializações para obter dados de bônus (+1 dado) em testes específicos vinculados a Habilidades.
               </p>
             </div>
 
             {/* LISTAGEM DE BADGES */}
             <div className="flex flex-wrap gap-2">
-              {character.specialties && character.specialties.map(spec => (
-                <span 
-                  key={spec.id} 
-                  className="bg-bg-main/60 border border-gold-accent/30 text-gold-accent text-xs px-3 py-1 rounded-sm flex items-center space-x-2 font-data uppercase tracking-wider shadow-none"
-                >
-                  <span>
-                    <strong className="text-text-primary mr-1">{TECHNICAL_NAMES[spec.skill] || spec.skill}:</strong> 
-                    {spec.name}
+              {character.specialties && character.specialties.map(spec => {
+                let sourceBadge = null;
+                const source = spec.source || "1ª Grátis";
+                if (source === "1ª Grátis" || source === "2ª Grátis") {
+                  sourceBadge = <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 uppercase tracking-wider">{source}</span>;
+                } else if (source === "Predador") {
+                  sourceBadge = <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-deep-crimson/80 border border-blood-red/40 text-blood-red uppercase tracking-wider">Predador</span>;
+                } else if (source === "Hab. 4") {
+                  sourceBadge = <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-amber-950/80 border border-amber-500/40 text-amber-300 uppercase tracking-wider">Hab. 4</span>;
+                } else if (source === "Por XP") {
+                  sourceBadge = <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-blue-950/80 border border-blue-500/40 text-blue-300 uppercase tracking-wider">Por XP</span>;
+                } else {
+                  sourceBadge = <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-white/10 border border-white/20 text-text-muted uppercase tracking-wider">{source.substring(0, 10)}</span>;
+                }
+
+                return (
+                  <span 
+                    key={spec.id} 
+                    className="bg-bg-main/60 border border-gold-accent/30 text-gold-accent text-xs px-2.5 py-1 rounded-sm flex items-center space-x-2 font-data uppercase tracking-wider shadow-none"
+                  >
+                    {sourceBadge}
+                    <span>
+                      <strong className="text-text-primary mr-1">{TECHNICAL_NAMES[spec.skill] || spec.skill}:</strong> 
+                      {spec.name}
+                    </span>
+                    {(status !== "IN_PLAY" || isOverrideActive) && (
+                      <button
+                        onClick={() => handleDeleteSpecialty(spec.id)}
+                        className="text-hunger-red hover:text-white cursor-pointer select-none text-[10px] font-bold ml-1"
+                        title="Excluir Especialização"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </span>
-                  {(status !== "IN_PLAY" || isOverrideActive) && (
-                    <button
-                      onClick={() => handleDeleteSpecialty(spec.id)}
-                      className="text-hunger-red hover:text-white cursor-pointer select-none text-[10px] font-bold"
-                      title="Excluir Especialização"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </span>
-              ))}
+                );
+              })}
               {(!character.specialties || character.specialties.length === 0) && (
                 <span className="text-xs text-text-muted/60 italic font-reading">Nenhuma especialização cadastrada.</span>
               )}
             </div>
 
-            {/* MINI-FORMULÁRIO DE CADASTRO */}
+            {/* MINI-FORMULÁRIO DE CADASTRO COM 2 DROPDOWNS + 1 INPUT */}
             {(status !== "IN_PLAY" || isOverrideActive) && (
-              <div className="flex flex-wrap items-center gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-2xl shadow-none">
-                <div className="flex flex-col space-y-1">
+              <div className="flex flex-wrap items-end gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-3xl shadow-none">
+                {/* DROPDOWN 1: MOTIVO / ORIGEM */}
+                <div className="flex flex-col space-y-1 min-w-[130px]">
+                  <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Motivo / Origem</label>
+                  <select
+                    value={specialtySource}
+                    onChange={(e) => setSpecialtySource(e.target.value)}
+                    className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 cursor-pointer"
+                  >
+                    <option value="1ª Grátis" className="bg-bg-card">🟢 1ª Grátis</option>
+                    <option value="2ª Grátis" className="bg-bg-card">🟢 2ª Grátis</option>
+                    <option value="Predador" className="bg-bg-card">🩸 Predador</option>
+                    <option value="Hab. 4" className="bg-bg-card">⭐ Hab. 4</option>
+                    <option value="Por XP" className="bg-bg-card">💎 Por XP (3pts)</option>
+                  </select>
+                </div>
+
+                {/* DROPDOWN 2: HABILIDADE BASE */}
+                <div className="flex flex-col space-y-1 min-w-[150px]">
                   <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Habilidade Base</label>
                   <select
                     value={selectedSkill}
-                    onChange={(e) => setSelectedSkill(e.target.value as keyof CharacterSkills | "")}
-                    className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9"
+                    onChange={(e) => {
+                      const newSkill = e.target.value as keyof CharacterSkills | "";
+                      setSelectedSkill(newSkill);
+                      if (newSkill && character.skills && Number(character.skills[newSkill]) >= 4) {
+                        setSpecialtySource("Hab. 4");
+                      }
+                    }}
+                    className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 cursor-pointer"
                   >
                     <option value="" className="bg-bg-card">Selecione...</option>
                     {Object.entries(TECHNICAL_NAMES)
@@ -2054,25 +2143,32 @@ export default function CharacterSheetClient({
                         "charisma", "manipulation", "composure",
                         "intelligence", "wits", "resolve"
                       ].includes(key))
-                      .map(([key, label]) => (
-                        <option key={key} value={key} className="bg-bg-card">{label}</option>
-                      ))
+                      .map(([key, label]) => {
+                        const lvl = character.skills ? Number(character.skills[key as keyof CharacterSkills]) || 0 : 0;
+                        return (
+                          <option key={key} value={key} className="bg-bg-card">
+                            {label} {lvl > 0 ? `(${lvl})` : ""}
+                          </option>
+                        );
+                      })
                     }
                   </select>
                 </div>
 
-                <div className="flex flex-col space-y-1 flex-1 min-w-50">
+                {/* INPUT 3: NOME DA ESPECIALIZAÇÃO */}
+                <div className="flex flex-col space-y-1 flex-1 min-w-[180px]">
                   <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nome da Especialização</label>
                   <input
                     type="text"
-                    placeholder="Ex: Briga de Rua, Machados..."
+                    placeholder="Ex: Pistolas, Briga de Rua, Invasão..."
                     value={newSpecialtyName}
                     onChange={(e) => setNewSpecialtyName(e.target.value)}
                     className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 font-reading"
                   />
                 </div>
 
-                <div className="flex flex-col space-y-1 pt-5">
+                {/* BOTÃO ADICIONAR */}
+                <div className="flex flex-col space-y-1">
                   <button
                     onClick={handleAddSpecialty}
                     disabled={!selectedSkill || !newSpecialtyName.trim()}
