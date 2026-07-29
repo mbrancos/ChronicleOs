@@ -1,6 +1,7 @@
 export interface CharacterProfile {
   name?: string; // Nome editável do vampiro
   portrait_url?: string; // Para futura integração com upload ou links de imagens
+  avatarUrl?: string; // Foto de perfil do personagem (URL da imagem)
   concept: string;
   clan: string;
   bane?: string; // A Maldição específica do Clã

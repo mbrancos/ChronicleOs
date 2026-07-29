@@ -503,6 +503,30 @@ export default function CharacterSheetClient({
   const [status, setStatus] = useState<"DRAFT" | "READY" | "IN_PLAY">(initialStatus);
   const [buildState, setBuildState] = useState<any>(initialBuildState);
 
+  // Estados para Modal de Avatar (Foto de Perfil)
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [avatarUrlInput, setAvatarUrlInput] = useState("");
+  const [avatarImageError, setAvatarImageError] = useState(false);
+
+  // Estado para Scrollspy de Navegação Fixa (Aba Ativa)
+  const [activeTabId, setActiveTabId] = useState<string>("atributos");
+
+  useEffect(() => {
+    const sectionIds = ["atributos", "habilidades", "especializacoes", "disciplinas", "conviccoes", "vantagens", "inventario", "macros", "xp_diary"];
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 130;
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el && el.offsetTop <= scrollPosition) {
+          setActiveTabId(sectionIds[i]);
+          break;
+        }
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   // Histórico de transações de XP
   const [xpLedger, setXpLedger] = useState<any[]>([]);
   const [isLoadingLedger, setIsLoadingLedger] = useState(false);
@@ -1503,27 +1527,50 @@ export default function CharacterSheetClient({
         {/* ======================================================== */}
         {/* CABEÇALHO FIXO - DADOS DO VAMPIRO & TRACKERS RÁPIDOS */}
         {/* ======================================================== */}
-        <section className="bg-bg-card border border-white/10 rounded-sm p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center shadow-none relative">
+        <section id="sec-profile" className="bg-bg-card border border-white/10 rounded-sm p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center shadow-none relative">
           
           {/* PRIMEIRO TERÇO (1/3): FOTO + DADOS DE PERFIL DO VAMPIRO */}
-          <div className="lg:col-span-4 flex flex-col xl:flex-row items-center xl:items-start gap-4">
-            {/* AVATAR DO VAMPIRO */}
+          <div className="lg:col-span-5 flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            {/* AVATAR DO VAMPIRO (INTERATIVO) */}
             <div className="shrink-0">
-              <div className="relative w-24 h-24 rounded-full border-2 border-gold-accent/40 bg-bg-main flex items-center justify-center overflow-hidden shadow-none group">
-                <svg className="w-14 h-14 text-text-dim/40 group-hover:text-blood-red/40 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                </svg>
-                <div className="absolute inset-0 bg-linear-to-t from-bg-main/80 via-transparent to-transparent flex items-end justify-center pb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-text-muted">
-                    {character.profile.name?.split(" ")[0] || "Vampiro"}
-                  </span>
-                </div>
+              <div 
+                onClick={() => {
+                  if (!isReadOnly) {
+                    setAvatarUrlInput(character.profile.avatarUrl || character.profile.portrait_url || "");
+                    setIsAvatarModalOpen(true);
+                  }
+                }}
+                className={`relative w-24 h-24 rounded-full border-2 border-gold-accent/40 bg-bg-main flex items-center justify-center overflow-hidden shadow-md group transition-all duration-300 ${
+                  !isReadOnly ? "cursor-pointer hover:border-gold-accent hover:shadow-[0_0_15px_rgba(212,175,55,0.3)]" : ""
+                }`}
+                title={!isReadOnly ? "Clique para alterar a foto de perfil do personagem" : ""}
+              >
+                {(character.profile.avatarUrl || character.profile.portrait_url) && !avatarImageError ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img 
+                    src={character.profile.avatarUrl || character.profile.portrait_url} 
+                    alt={character.profile.name || "Vampiro"} 
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                    onError={() => setAvatarImageError(true)}
+                  />
+                ) : (
+                  <svg className="w-12 h-12 text-text-dim/40 group-hover:text-gold-accent/60 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                  </svg>
+                )}
+
+                {!isReadOnly && (
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center text-gold-accent font-data text-[9px] uppercase font-bold tracking-wider">
+                    <span className="text-sm mb-0.5">📷</span>
+                    <span>Alterar Foto</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* DADOS DE PERFIL */}
-            <div className="space-y-1.5 flex-1 min-w-0 text-center xl:text-left">
-              <h1 className="text-2xl sm:text-3xl font-gothic tracking-wider text-blood-red leading-none flex items-center justify-center xl:justify-start gap-1">
+            <div className="space-y-2 flex-1 min-w-0 text-center sm:text-left">
+              <h1 className="text-2xl sm:text-3xl font-gothic tracking-wider text-blood-red leading-none flex items-center justify-center sm:justify-start gap-1">
                 <InlineEdit
                   value={character.profile.name || "Novo Vampiro"}
                   onChange={(val) => handleProfileChange("name", val)}
@@ -1531,8 +1578,8 @@ export default function CharacterSheetClient({
                   className="text-2xl sm:text-3xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase truncate"
                 />
               </h1>
-              <div className="text-xs uppercase tracking-widest text-gold-accent font-data font-semibold flex flex-wrap items-center justify-center xl:justify-start gap-1.5 leading-none">
-                <span className="text-text-muted">Clã</span>
+              <div className="text-xs uppercase tracking-widest text-gold-accent font-data font-semibold flex flex-wrap items-center justify-center sm:justify-start gap-2 leading-none">
+                <span className="text-text-muted">Clã:</span>
                 <InlineEdit
                   value={character.profile.clan}
                   onChange={(val) => handleProfileChange("clan", val)}
@@ -1542,6 +1589,7 @@ export default function CharacterSheetClient({
                   className="text-gold-accent hover:bg-white/5 font-bold"
                 />
                 <span className="text-text-dim">•</span>
+                <span className="text-text-muted">Idade:</span>
                 <InlineEdit
                   value={character.profile.concept || "Neófito"}
                   onChange={(val) => handleProfileChange("concept", val)}
@@ -1551,8 +1599,10 @@ export default function CharacterSheetClient({
                   className="text-text-primary hover:bg-white/5 font-bold"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-text-muted font-data uppercase pt-1">
-                <div className="flex items-center gap-1">
+
+              {/* CAMPOS FLUIDOS SEM SOBREPOSIÇÃO OU CORTES */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1.5 text-xs text-text-muted font-data uppercase pt-1">
+                <div className="flex items-center gap-1 shrink-0">
                   <span>Geração:</span>
                   <InlineEdit
                     value={String(character.profile.generation)}
@@ -1563,7 +1613,7 @@ export default function CharacterSheetClient({
                   />
                   <span>ª</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   <span>Predador:</span>
                   <InlineEdit
                     value={character.profile.predator_type}
@@ -1571,10 +1621,10 @@ export default function CharacterSheetClient({
                     type="select"
                     options={PREDATOR_OPTIONS}
                     disabled={isReadOnly}
-                    className="text-text-primary hover:bg-white/5 font-bold"
+                    className="text-text-primary hover:bg-white/5 font-bold max-w-40 sm:max-w-none"
                   />
                 </div>
-                <div className="col-span-2 flex items-center gap-1 truncate">
+                <div className="flex items-center gap-1 shrink-0">
                   <span>Sire:</span>
                   <InlineEdit
                     value={character.profile.sire}
@@ -1584,11 +1634,26 @@ export default function CharacterSheetClient({
                   />
                 </div>
               </div>
+
+              {/* CARD EXPLICATIVO DAS REGRAS V5 PARA O NÍVEL DE PODER */}
+              {(() => {
+                const rules = getPowerLevelRules(character.profile.concept || "Neófito");
+                return (
+                  <div className="mt-2.5 p-2 bg-bg-main/60 border border-gold-accent/20 rounded-xs text-[10px] font-data text-text-muted leading-tight">
+                    <span className="text-gold-accent font-bold uppercase tracking-wider block mb-0.5">
+                      💡 Regra V5 - Idade ({rules.name}):
+                    </span>
+                    <span>
+                      Atributos (13 pts) e Habilidades (20 pts) são padrão em todas as idades. Nível <strong className="text-gold-accent">{rules.name}</strong> concede: <strong>Potência de Sangue {rules.bloodPotency}</strong>, <strong>{rules.disciplines} Disciplinas</strong> e <strong>{rules.advantages} Vantagens</strong>.
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
           {/* OUTROS DOIS TERÇOS (2/3): RASTREADORES RÁPIDOS MODULARIZADOS */}
-          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
+          <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
             
             {/* VITALIDADE (HEALTH) - DAMAGE TRACKER */}
             <DamageTracker 
@@ -1643,31 +1708,40 @@ export default function CharacterSheetClient({
         <div className="sticky top-0 z-30 bg-bg-main/95 backdrop-blur-md border-b border-white/10 py-3 flex items-center select-none pl-2 shadow-md pr-4 overflow-x-auto md:overflow-x-visible scrollbar-none flex-row flex-nowrap md:flex-wrap space-x-1.5 gap-y-0 md:gap-y-1.5 w-full">
           {(
             [
-              { id: "atributos", label: "Atributos" },
-              { id: "habilidades", label: "Habilidades" },
-              { id: "especializacoes", label: "Especializações" },
-              { id: "disciplinas", label: "Disciplinas" },
-              { id: "conviccoes", label: "Convicções" },
-              { id: "vantagens", label: "Vantagens" },
-              { id: "inventario", label: "Inventário" },
-              { id: "macros", label: "Macros & Notas" },
-              { id: "xp_diary", label: "Diário de XP 📜" },
+              { id: "sec-profile", label: "👤 Perfil" },
+              { id: "atributos", label: "📊 Atributos" },
+              { id: "habilidades", label: "🗡️ Habilidades" },
+              { id: "especializacoes", label: "🎯 Especializações" },
+              { id: "disciplinas", label: "🩸 Disciplinas" },
+              { id: "conviccoes", label: "⚖️ Convicções" },
+              { id: "vantagens", label: "⭐ Vantagens" },
+              { id: "inventario", label: "🎒 Inventário" },
+              { id: "macros", label: "📜 Macros" },
+              { id: "xp_diary", label: "💎 Diário de XP" },
             ] as const
-          ).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setRollResult(null);
-                const el = document.getElementById(item.id);
-                if (el) {
-                  el.scrollIntoView({ behavior: "smooth", block: "start" });
-                }
-              }}
-              className="shrink-0 py-1.5 px-4 text-[10px] uppercase tracking-widest font-data font-bold border border-white/10 hover:border-gold-accent hover:text-gold-accent text-text-muted bg-black/45 rounded-sm transition-all duration-150 cursor-pointer focus:outline-none"
-            >
-              {item.label}
-            </button>
-          ))}
+          ).map((item) => {
+            const isActive = activeTabId === item.id || (item.id === "atributos" && activeTabId === "sec-profile");
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setRollResult(null);
+                  setActiveTabId(item.id);
+                  const el = document.getElementById(item.id);
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+                className={`shrink-0 py-1.5 px-3.5 text-[10px] uppercase tracking-widest font-data font-bold border transition-all duration-200 cursor-pointer focus:outline-none rounded-sm ${
+                  isActive
+                    ? "bg-gold-accent/20 border-gold-accent text-gold-accent shadow-[0_0_10px_rgba(212,175,55,0.25)] scale-102 font-extrabold"
+                    : "border-white/10 hover:border-gold-accent/60 hover:text-gold-accent text-text-muted bg-black/45"
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
           {isStoryteller && (
             <button
               onClick={() => {
@@ -1699,11 +1773,15 @@ export default function CharacterSheetClient({
           
           {/* SEÇÃO 1: ATRIBUTOS */}
           <section id="atributos" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
-            <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex items-center justify-between">
+            <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex flex-wrap items-center gap-3">
               <span>Atributos</span>
-              {status === "DRAFT" && characterType !== "npc" && alloc.attributesRemaining > 0 && (
-                <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
-                  Atributos: {alloc.attributesRemaining} {alloc.attributesRemaining === 1 ? "ponto restante" : "pontos restantes"}
+              {status === "DRAFT" && characterType !== "npc" && (
+                <span className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                  alloc.attributesRemaining === 0
+                    ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                    : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                }`}>
+                  {alloc.attributesRemaining === 0 ? "🟢 0 Restantes (Concluído) ✓" : `🟡 ${alloc.attributesRemaining} ${alloc.attributesRemaining === 1 ? "ponto restante" : "pontos restantes"}`}
                 </span>
               )}
             </h3>
@@ -1766,11 +1844,15 @@ export default function CharacterSheetClient({
 
           {/* SEÇÃO 2: HABILIDADES */}
           <section id="habilidades" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
-            <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex items-center justify-between">
+            <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex flex-wrap items-center gap-3">
               <span>Habilidades</span>
-              {status === "DRAFT" && characterType !== "npc" && alloc.skillsRemaining > 0 && (
-                <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
-                  Habilidades: {alloc.skillsRemaining} {alloc.skillsRemaining === 1 ? "ponto restante" : "pontos restantes"}
+              {status === "DRAFT" && characterType !== "npc" && (
+                <span className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                  alloc.skillsRemaining === 0
+                    ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                    : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                }`}>
+                  {alloc.skillsRemaining === 0 ? "🟢 0 Restantes (Concluído) ✓" : `🟡 ${alloc.skillsRemaining} ${alloc.skillsRemaining === 1 ? "ponto restante" : "pontos restantes"}`}
                 </span>
               )}
             </h3>
@@ -1926,15 +2008,19 @@ export default function CharacterSheetClient({
           {/* SEÇÃO 4: DISCIPLINAS */}
           <section id="disciplinas" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
             <div className="flex justify-between items-center flex-wrap gap-4 border-b border-white/5 pb-2">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center flex-wrap gap-3">
                 <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase flex items-center space-x-2">
                   <span>Disciplinas Vampíricas (Poderes do Sangue)</span>
-                  {status === "DRAFT" && characterType !== "npc" && alloc.disciplinesRemaining > 0 && (
-                    <span className="text-xs font-data text-yellow-400 normal-case tracking-normal ml-3 bg-yellow-400/10 border border-yellow-400/20 px-2 py-0.5 rounded-sm">
-                      Disciplinas: {alloc.disciplinesRemaining} {alloc.disciplinesRemaining === 1 ? "ponto restante" : "pontos restantes"}
-                    </span>
-                  )}
                 </h3>
+                {status === "DRAFT" && characterType !== "npc" && (
+                  <span className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                    alloc.disciplinesRemaining === 0
+                      ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                      : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                  }`}>
+                    {alloc.disciplinesRemaining === 0 ? "🟢 0 Restantes (Concluído) ✓" : `🟡 ${alloc.disciplinesRemaining} ${alloc.disciplinesRemaining === 1 ? "ponto restante" : "pontos restantes"}`}
+                  </span>
+                )}
                 {(status !== "IN_PLAY" || isOverrideActive) && (
                   <button
                     onClick={handleAddDiscipline}
@@ -2267,11 +2353,15 @@ export default function CharacterSheetClient({
 
               return (
                 <>
-                  <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex items-center justify-between">
+                  <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex flex-wrap items-center gap-3">
                     <span>Vantagens, Qualidades, Defeitos & Fichas de Saber</span>
-                    {status === "DRAFT" && characterType !== "npc" && alloc.advantagesRemaining > 0 && (
-                      <span className="text-xs font-data text-yellow-400 normal-case tracking-normal">
-                        Vantagens: {alloc.advantagesRemaining} {alloc.advantagesRemaining === 1 ? "ponto restante" : "pontos restantes"}
+                    {status === "DRAFT" && characterType !== "npc" && (
+                      <span className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                        alloc.advantagesRemaining === 0
+                          ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                          : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                      }`}>
+                        {alloc.advantagesRemaining === 0 ? "🟢 0 Restantes (Concluído) ✓" : `🟡 ${alloc.advantagesRemaining} ${alloc.advantagesRemaining === 1 ? "ponto restante" : "pontos restantes"}`}
                       </span>
                     )}
                   </h3>
@@ -2792,6 +2882,146 @@ export default function CharacterSheetClient({
               >
                 {evolutionLoading ? "Evoluindo..." : "Confirmar Evolução"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* DOCK FLUTUANTE DE PROGRESSO DA FICHA (CRIAÇÃO) */}
+      {status === "DRAFT" && characterType !== "npc" && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-bg-card-dark/95 border border-gold-accent/40 rounded-full px-5 py-2.5 shadow-[0_0_25px_rgba(0,0,0,0.9)] backdrop-blur-md flex items-center gap-4 text-xs font-data select-none max-w-[95vw] overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-3 shrink-0">
+            <span className={alloc.attributesRemaining === 0 ? "text-emerald-400 font-bold flex items-center gap-1" : "text-amber-400 flex items-center gap-1"}>
+              Atributos {alloc.attributesRemaining === 0 ? "✓" : `(${alloc.attributesRemaining})`}
+            </span>
+            <span className="text-white/20">•</span>
+            <span className={alloc.skillsRemaining === 0 ? "text-emerald-400 font-bold flex items-center gap-1" : "text-amber-400 flex items-center gap-1"}>
+              Habilidades {alloc.skillsRemaining === 0 ? "✓" : `(${alloc.skillsRemaining})`}
+            </span>
+            <span className="text-white/20">•</span>
+            <span className={alloc.disciplinesRemaining === 0 ? "text-emerald-400 font-bold flex items-center gap-1" : "text-amber-400 flex items-center gap-1"}>
+              Disciplinas {alloc.disciplinesRemaining === 0 ? "✓" : `(${alloc.disciplinesRemaining})`}
+            </span>
+            <span className="text-white/20">•</span>
+            <span className={alloc.advantagesRemaining === 0 ? "text-emerald-400 font-bold flex items-center gap-1" : "text-amber-400 flex items-center gap-1"}>
+              Vantagens {alloc.advantagesRemaining === 0 ? "✓" : `(${alloc.advantagesRemaining})`}
+            </span>
+          </div>
+
+          {alloc.attributesRemaining === 0 && alloc.skillsRemaining === 0 && alloc.disciplinesRemaining === 0 && alloc.advantagesRemaining === 0 && (
+            <button
+              onClick={async () => {
+                setStatus("READY");
+                const response = await updateCharacterSheet(characterId, character, buildStateRef.current, "READY");
+                if (response.success) {
+                  showSuccess("Ficha concluída com sucesso e guardada no cofre!", "Personagem Concluído");
+                } else {
+                  showError("Erro ao concluir ficha: " + response.error);
+                }
+              }}
+              className="shrink-0 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider rounded-full shadow-[0_0_12px_rgba(52,211,153,0.4)] transition-all duration-200 cursor-pointer animate-bounce flex items-center gap-1.5"
+            >
+              <span>Concluir Ficha</span>
+              <span>🎯</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* MODAL GÓTICO DE ALTERAÇÃO DA FOTO DE PERFIL */}
+      {isAvatarModalOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-bg-card border border-gold-accent/40 max-w-md w-full p-6 rounded-sm shadow-[0_0_30px_rgba(0,0,0,0.9)] space-y-4 font-data">
+            <div className="border-b border-white/10 pb-3 flex items-center justify-between">
+              <h3 className="text-lg font-gothic tracking-wider text-gold-accent uppercase flex items-center gap-2">
+                <span>📷 Alterar Foto do Personagem</span>
+              </h3>
+              <button 
+                onClick={() => setIsAvatarModalOpen(false)}
+                className="text-text-muted hover:text-white transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-xs uppercase tracking-wider text-text-muted font-bold block">
+                Link/URL da Imagem (JPEG, PNG, WebP)
+              </label>
+              <input 
+                type="text"
+                placeholder="https://exemplo.com/minha-foto.png"
+                value={avatarUrlInput}
+                onChange={(e) => {
+                  setAvatarUrlInput(e.target.value);
+                  setAvatarImageError(false);
+                }}
+                className="w-full bg-bg-input border border-white/15 text-text-primary text-xs p-2.5 rounded-sm outline-none focus:border-gold-accent font-reading"
+              />
+
+              {/* PRÉ-VISUALIZAÇÃO DA FOTO */}
+              <div className="pt-2 flex flex-col items-center justify-center">
+                <span className="text-[10px] uppercase text-text-dim mb-2">Pré-visualização:</span>
+                <div className="w-24 h-24 rounded-full border-2 border-gold-accent/40 bg-black overflow-hidden flex items-center justify-center shadow-inner">
+                  {avatarUrlInput.trim() && !avatarImageError ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img 
+                      src={avatarUrlInput.trim()} 
+                      alt="Preview Avatar"
+                      className="w-full h-full object-cover object-center"
+                      onError={() => setAvatarImageError(true)}
+                    />
+                  ) : (
+                    <div className="text-center p-2">
+                      <span className="text-xs text-text-dim">
+                        {avatarImageError ? "⚠️ Link inválido ou bloqueado (CORS)" : "Nenhuma foto"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-3 border-t border-white/10">
+              {(character.profile.avatarUrl || character.profile.portrait_url) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleProfileChange("avatarUrl", "");
+                    handleProfileChange("portrait_url", "");
+                    setAvatarUrlInput("");
+                    setAvatarImageError(false);
+                    setIsAvatarModalOpen(false);
+                    showSuccess("Foto de perfil removida com sucesso!");
+                  }}
+                  className="px-3 py-1.5 border border-hunger-red/40 text-hunger-red hover:bg-hunger-red/10 text-xs font-bold uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
+                >
+                  Remover Foto
+                </button>
+              ) : <div />}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAvatarModalOpen(false)}
+                  className="px-3 py-1.5 border border-white/10 text-text-muted hover:text-white text-xs uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const trimmed = avatarUrlInput.trim();
+                    handleProfileChange("avatarUrl", trimmed);
+                    handleProfileChange("portrait_url", trimmed);
+                    setAvatarImageError(false);
+                    setIsAvatarModalOpen(false);
+                    showSuccess("Foto de perfil atualizada com sucesso!");
+                  }}
+                  className="px-4 py-1.5 bg-burgundy border border-blood-red text-white text-xs font-bold uppercase tracking-wider rounded-xs hover:bg-blood-red transition-colors cursor-pointer shadow-md"
+                >
+                  Salvar Foto
+                </button>
+              </div>
             </div>
           </div>
         </div>
