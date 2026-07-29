@@ -1692,6 +1692,15 @@ export default function CharacterSheetClient({
               disabled={isSheetDisabled}
             />
 
+            {/* PAINEL DE FISIOLOGIA DO SANGUE (RESSONÂNCIA & DISCRASI) */}
+            <div className="md:col-span-2 pt-2">
+              <BloodPanel
+                value={character.bloodState}
+                onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
+                disabled={isSheetDisabled}
+              />
+            </div>
+
           </div>
 
           {/* EXIBIÇÃO DA MALDIÇÃO DO CLÃ */}
@@ -2043,11 +2052,42 @@ export default function CharacterSheetClient({
               </div>
             </div>
 
-            {/* PAINEL DE FISIOLOGIA DO SANGUE (RESSONÂNCIA & DISCRASI) */}
-            <BloodPanel
-              value={character.bloodState}
-              onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
-            />
+            {/* BANNER CONTEXTUAL DE LEMBRETE DA RESSONÂNCIA E BÔNUS DE DISCIPLINAS */}
+            {(() => {
+              const currentRes = character.bloodState?.resonance || "Vazio";
+              const currentDyscrasia = character.bloodState?.dyscrasia || "";
+
+              const resonanceBonusMap: Record<string, { bonus: string; color: string }> = {
+                "Colérico": { bonus: "+1 dado em Potência e Celeridade", color: "text-red-400 border-red-500/40 bg-red-950/30" },
+                "Sanguíneo": { bonus: "+1 dado em Presença e Feitiçaria de Sangue", color: "text-amber-400 border-amber-500/40 bg-amber-950/30" },
+                "Melancólico": { bonus: "+1 dado em Auspício e Ofuscação", color: "text-purple-400 border-purple-500/40 bg-purple-950/30" },
+                "Fleumático": { bonus: "+1 dado em Fortitude e Dominação", color: "text-cyan-400 border-cyan-500/40 bg-cyan-950/30" },
+                "Animal": { bonus: "+1 dado em Metamorfose e Animalismo", color: "text-emerald-400 border-emerald-500/40 bg-emerald-950/30" }
+              };
+
+              const info = resonanceBonusMap[currentRes];
+
+              return (
+                <div className={`p-3 rounded border font-data text-xs flex flex-wrap items-center justify-between gap-2 shadow-sm ${info ? info.color : "bg-white/5 border-white/10 text-text-muted"}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🩸</span>
+                    <span className="font-bold uppercase tracking-wider">
+                      Ressonância Ativa: <span className="underline">{currentRes}</span>
+                    </span>
+                    {info && (
+                      <span className="font-semibold text-[11px] opacity-90">
+                        ({info.bonus})
+                      </span>
+                    )}
+                  </div>
+                  {currentDyscrasia.trim() && (
+                    <div className="text-[11px] bg-black/40 px-2.5 py-1 rounded border border-white/10 text-gold-accent font-reading">
+                      ✨ <strong className="font-data uppercase tracking-wider">Discrasi:</strong> {currentDyscrasia}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* BANNER INTERATIVO DE ESCOLHA DO PREDADOR */}
             {status !== "IN_PLAY" && character.profile.predator_type && (() => {
