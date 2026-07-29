@@ -225,7 +225,7 @@ export default function DirectorBoard({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
-          className="w-[1000px] h-[600px] bg-bg-card-dark/40 border border-white/5 rounded-md relative overflow-hidden shrink-0 shadow-2xl select-none"
+          className="w-250 h-150 bg-bg-card-dark/40 border border-white/5 rounded-md relative overflow-hidden shrink-0 shadow-2xl select-none"
           style={{
             transform: `scale(${scale})`,
             transformOrigin: "center center",
@@ -246,7 +246,7 @@ export default function DirectorBoard({
                   onResetRound();
                 }
               }}
-              className="absolute top-[68px] right-[100px] z-40 py-1 px-2.5 bg-bg-card-dark/90 hover:bg-black border border-gold-accent/30 hover:border-gold-accent text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all duration-300 shadow-md cursor-pointer select-none"
+              className="absolute top-17 right-25 z-40 py-1 px-2.5 bg-bg-card-dark/90 hover:bg-black border border-gold-accent/30 hover:border-gold-accent text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all duration-300 shadow-md cursor-pointer select-none"
             >
               ↺ Nova Rodada
             </button>
@@ -254,7 +254,7 @@ export default function DirectorBoard({
 
           {/* Controles de Imagem de Cena e Cenário no topo, fora do palco, na direção de Nova Rodada */}
           {isStoryteller && campaignId && (
-            <div className="absolute top-[68px] left-[100px] z-40 flex items-center gap-3">
+            <div className="absolute top-17 left-25 z-40 flex items-center gap-3">
               {/* Imagem de Cena */}
               <div className="relative flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
                 <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold px-1 shrink-0">Cena</span>
@@ -306,7 +306,7 @@ export default function DirectorBoard({
                           <img
                             src={currentSceneImage}
                             alt="Preview da Cena"
-                            className="max-w-[220px] max-h-[200px] object-contain rounded-xs border border-white/10"
+                            className="max-w-55 max-h-50 object-contain rounded-xs border border-white/10"
                           />
                         </div>
                       )}
