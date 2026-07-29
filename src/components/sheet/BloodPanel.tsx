@@ -106,10 +106,6 @@ export default function BloodPanel({ value, onChange, disabled = false }: BloodP
           />
         </div>
       </div>
-
-      <p className="text-[10px] text-text-muted/70 font-reading leading-relaxed">
-        * A Ressonância e a Discrasi representam os efeitos e bônus temporários concedidos ao se alimentar de sangue com estados emocionais intensificados. As alterações são sincronizadas automaticamente na nuvem.
-      </p>
     </div>
   );
 }
