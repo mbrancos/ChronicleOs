@@ -297,7 +297,7 @@ export default function HubClient({
 
     if (response.success && response.characterId) {
       showToast("Vampiro forjado com sucesso! 🩸");
-      router.push(`/campanhas/cofre/personagens/${response.characterId}`);
+      router.push(`/cofre/personagens/${response.characterId}`);
     } else {
       showToast(response.error || "Erro ao criar personagem.", "error");
     }
@@ -649,7 +649,7 @@ export default function HubClient({
                           Crônica: {char.campaignName || "Cofre (Sem Crônica)"}
                         </span>
                         <Link
-                          href={`/campanhas/${char.campaignId || "cofre"}/personagens/${char.id}`}
+                          href={char.campaignId ? `/campanhas/${char.campaignId}/personagens/${char.id}` : `/cofre/personagens/${char.id}`}
                           className="text-xs uppercase tracking-widest font-data font-bold text-blood-red hover:text-white transition-colors"
                         >
                           Abrir Ficha →
@@ -678,7 +678,7 @@ export default function HubClient({
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Link
-                              href={`/campanhas/${char.campaignId || "cofre"}/personagens/${char.id}`}
+                              href={char.campaignId ? `/campanhas/${char.campaignId}/personagens/${char.id}` : `/cofre/personagens/${char.id}`}
                               className="w-full text-left flex items-center px-4 py-2 hover:bg-white/5 hover:text-white text-text-muted transition-colors"
                             >
                               <svg className="w-3.5 h-3.5 mr-2 text-text-dim" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

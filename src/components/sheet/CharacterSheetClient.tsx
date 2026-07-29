@@ -455,7 +455,7 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
 
 interface CharacterSheetClientProps {
   characterId: string;
-  campaignId: string;
+  campaignId: string | null;
   initialData: CharacterSheetData | null;
   initialName?: string;
   onDataChange?: (data: CharacterSheetData) => void;
@@ -1409,7 +1409,7 @@ export default function CharacterSheetClient({
               )}
             </div>
             <div className="text-xs uppercase tracking-wider text-blood-red font-gothic text-right">
-              {campaignId === "cofre" ? "Cofre (Sem Crônica) 🔒" : `Crônica Ativa: ${campaignId.slice(0, 8)}`}
+              {!campaignId || campaignId === "cofre" ? "Cofre (Sem Crônica) 🔒" : chronicle?.name ? `Crônica: ${chronicle.name}` : `Crônica Ativa: ${campaignId.slice(0, 8)}`}
             </div>
           </div>
         </div>

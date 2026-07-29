@@ -193,7 +193,7 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
             </button>
           )}
           <Link
-            href={character.campaignId ? `/campanhas/${character.campaignId}/personagens/${character.id}` : `/campanhas/cofre/personagens/${character.id}`}
+            href={character.campaignId ? `/campanhas/${character.campaignId}/personagens/${character.id}` : `/cofre/personagens/${character.id}`}
             className="text-xs uppercase tracking-widest font-bold text-blood-red hover:text-white transition-colors"
           >
             Abrir Ficha →
