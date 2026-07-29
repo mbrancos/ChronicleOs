@@ -512,7 +512,7 @@ export default function CharacterSheetClient({
   const [activeTabId, setActiveTabId] = useState<string>("atributos");
 
   useEffect(() => {
-    const sectionIds = ["atributos", "habilidades", "especializacoes", "disciplinas", "conviccoes", "vantagens", "inventario", "macros", "xp_diary"];
+    const sectionIds = ["atributos", "habilidades", "disciplinas", "conviccoes", "vantagens", "inventario", "macros", "xp_diary"];
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 130;
       for (let i = sectionIds.length - 1; i >= 0; i--) {
@@ -1711,13 +1711,12 @@ export default function CharacterSheetClient({
               { id: "sec-profile", label: "👤 Perfil" },
               { id: "atributos", label: "📊 Atributos" },
               { id: "habilidades", label: "🗡️ Habilidades" },
-              { id: "especializacoes", label: "🎯 Especializações" },
               { id: "disciplinas", label: "🩸 Disciplinas" },
               { id: "conviccoes", label: "⚖️ Convicções" },
               { id: "vantagens", label: "⭐ Vantagens" },
               { id: "inventario", label: "🎒 Inventário" },
               { id: "macros", label: "📜 Macros" },
-              { id: "xp_diary", label: "💎 XP" },
+              { id: "xp_diary", label: "💎 Diário de XP" },
             ] as const
           ).map((item) => {
             const isActive = activeTabId === item.id || (item.id === "atributos" && activeTabId === "sec-profile");
