@@ -252,13 +252,13 @@ const DISCIPLINE_OPTIONS = [
 function getPowerLevelRules(concept: string) {
   const normalized = String(concept).toLowerCase().trim();
   if (normalized === "cria" || normalized === "fledgling") {
-    return { name: "Cria", disciplines: 3, advantages: 7, bloodPotency: 0 };
+    return { name: "Cria", disciplines: 2, advantages: 7, bloodPotency: 0, maxDiscLevelInCreation: 2 };
   }
   if (normalized === "ancila" || normalized === "ancillae") {
-    return { name: "Ancila", disciplines: 5, advantages: 9, bloodPotency: 2 };
+    return { name: "Ancila", disciplines: 5, advantages: 9, bloodPotency: 2, maxDiscLevelInCreation: 3 };
   }
   // Padrão: Neófito / Neonate
-  return { name: "Neófito", disciplines: 3, advantages: 7, bloodPotency: 1 };
+  return { name: "Neófito", disciplines: 3, advantages: 7, bloodPotency: 1, maxDiscLevelInCreation: 2 };
 }
 
 function calculateBaseAndXp(charData: CharacterSheetData) {
@@ -336,7 +336,10 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
   if (predatorSlug && chosenDiscId) {
     const chosenDiscName = DISCIPLINE_KEY_TO_NAME[chosenDiscId];
     if (chosenDiscName) {
-      const targetDisc = disciplinesList.find(d => d.name.toLowerCase() === chosenDiscName.toLowerCase());
+      const targetDisc = disciplinesList.find(d => 
+        d.name.toLowerCase().includes(chosenDiscName.toLowerCase()) || 
+        chosenDiscName.toLowerCase().includes(d.name.toLowerCase())
+      );
       if (targetDisc && targetDisc.level > 0) {
         targetDisc.level -= 1;
       }
@@ -346,14 +349,12 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
   const activeDiscs = disciplinesList.filter(d => d.level > 0);
   const sortedDiscs = [...activeDiscs].sort((a, b) => b.level - a.level);
 
-  const idealDiscs = rules.disciplines === 5 ? [2, 1, 1, 1] : [2, 1];
+  let remainingCreationDots = rules.disciplines;
+  const maxBasePerDisc = rules.maxDiscLevelInCreation || (rules.disciplines === 5 ? 3 : 2);
   const disciplinesBase: Record<string, number> = {};
   let disciplineXpSpent = 0;
 
-  sortedDiscs.forEach((disc, idx) => {
-    const idealVal = idealDiscs[idx] || 0;
-    const currentVal = disc.level;
-    
+  sortedDiscs.forEach((disc) => {
     const isClanDisc = clanDisciplines.some(d => disc.name.toLowerCase().includes(d.split(" ")[0].toLowerCase()));
     
     let costMultiplier = 7;
@@ -363,22 +364,27 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
       costMultiplier = 5;
     }
 
-    if (currentVal >= idealVal) {
-      disciplinesBase[disc.id] = idealVal;
-      for (let lvl = idealVal + 1; lvl <= currentVal; lvl++) {
-        disciplineXpSpent += lvl * costMultiplier;
-      }
-    } else {
-      disciplinesBase[disc.id] = currentVal;
+    const currentVal = disc.level;
+    const baseAllocated = Math.min(currentVal, maxBasePerDisc, remainingCreationDots);
+    disciplinesBase[disc.id] = baseAllocated;
+    remainingCreationDots -= baseAllocated;
+
+    for (let lvl = baseAllocated + 1; lvl <= currentVal; lvl++) {
+      disciplineXpSpent += lvl * costMultiplier;
     }
   });
 
   // Somamos de volta o ponto do predador no disciplinesBase para exibição como base na UI
   if (predatorSlug && chosenDiscId) {
     const chosenDiscName = DISCIPLINE_KEY_TO_NAME[chosenDiscId];
-    const origDisc = charData.disciplines?.find(d => d.name.toLowerCase() === chosenDiscName?.toLowerCase());
-    if (origDisc) {
-      disciplinesBase[origDisc.id] = (disciplinesBase[origDisc.id] || 0) + 1;
+    if (chosenDiscName) {
+      const origDisc = charData.disciplines?.find(d => 
+        d.name.toLowerCase().includes(chosenDiscName.toLowerCase()) ||
+        chosenDiscName.toLowerCase().includes(d.name.toLowerCase())
+      );
+      if (origDisc) {
+        disciplinesBase[origDisc.id] = (disciplinesBase[origDisc.id] || 0) + 1;
+      }
     }
   }
 
@@ -1214,7 +1220,10 @@ export default function CharacterSheetClient({
       if (prevDiscId) {
         const prevDiscName = DISCIPLINE_KEY_TO_NAME[prevDiscId];
         if (prevDiscName) {
-          const target = updatedDisciplines.find(d => d.name.toLowerCase() === prevDiscName.toLowerCase());
+          const target = updatedDisciplines.find(d => 
+            d.name.toLowerCase().includes(prevDiscName.toLowerCase()) || 
+            prevDiscName.toLowerCase().includes(d.name.toLowerCase())
+          );
           if (target) {
             target.level = Math.max(0, target.level - 1);
           }
@@ -1224,7 +1233,10 @@ export default function CharacterSheetClient({
       // 2. Adicionar o ponto na nova disciplina
       const newDiscName = DISCIPLINE_KEY_TO_NAME[discId];
       if (newDiscName) {
-        const target = updatedDisciplines.find(d => d.name.toLowerCase() === newDiscName.toLowerCase());
+        const target = updatedDisciplines.find(d => 
+          d.name.toLowerCase().includes(newDiscName.toLowerCase()) || 
+          newDiscName.toLowerCase().includes(d.name.toLowerCase())
+        );
         if (target) {
           target.level = Math.min(5, target.level + 1);
         } else {
