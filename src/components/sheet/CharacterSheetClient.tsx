@@ -691,11 +691,34 @@ export default function CharacterSheetClient({
   const [newSpecialtyName, setNewSpecialtyName] = useState("");
   const [specialtySource, setSpecialtySource] = useState<string>("1ª Grátis");
 
-  // Automação de Especialização: Detectar Habilidade Nível 4 ou Predador
+  // Automação e Avanço de Cotas de Especialização
   useEffect(() => {
     if (status !== "DRAFT" || !character.skills) return;
 
-    // 1. Verificar se existe alguma Habilidade com nível >= 4 sem especialização cadastrada
+    const has1st = (character.specialties || []).some(s => s.source === "1ª Grátis");
+    const has2nd = (character.specialties || []).some(s => s.source === "2ª Grátis");
+    const hasPred = (character.specialties || []).some(s => s.source === "Predador");
+
+    // 1. Verificar se a cota atualmente selecionada está esgotada e avançar suavemente
+    if (specialtySource === "1ª Grátis" && has1st) {
+      if (!has2nd) {
+        setSpecialtySource("2ª Grátis");
+      } else if (!hasPred) {
+        setSpecialtySource("Predador");
+      } else {
+        setSpecialtySource("Hab. 4");
+      }
+    } else if (specialtySource === "2ª Grátis" && has2nd) {
+      if (!hasPred) {
+        setSpecialtySource("Predador");
+      } else {
+        setSpecialtySource("Hab. 4");
+      }
+    } else if (specialtySource === "Predador" && hasPred) {
+      setSpecialtySource("Hab. 4");
+    }
+
+    // 2. Verificar se existe alguma Habilidade com nível >= 4 sem especialização cadastrada
     const skillLevel4Entry = Object.entries(character.skills).find(([key, val]) => {
       if (Number(val) < 4) return false;
       const alreadyHasSpec = character.specialties?.some(s => s.skill === key && s.source === "Hab. 4");
@@ -711,21 +734,17 @@ export default function CharacterSheetClient({
       return;
     }
 
-    // 2. Se o jogador tiver um Predador selecionado e ainda não tiver cadastrado a especialização do Predador
+    // 3. Se o jogador tiver um Predador selecionado e ainda não tiver cadastrado a especialização do Predador
     const predatorName = character.profile?.predator_type?.trim() || "";
-    if (predatorName && PREDATOR_SPECIALTY_MAP[predatorName]) {
-      const hasPredatorSpec = character.specialties?.some(s => s.source === "Predador");
-      if (!hasPredatorSpec) {
-        // Encontrar a primeira opção válida do predador que tenha pelo menos 1 ponto
-        const validChoice = PREDATOR_SPECIALTY_MAP[predatorName].find(opt => Number(character.skills[opt.skill]) >= 1);
-        if (validChoice && (selectedSkill !== validChoice.skill || specialtySource !== "Predador")) {
-          setSelectedSkill(validChoice.skill);
-          setNewSpecialtyName(validChoice.name);
-          setSpecialtySource("Predador");
-        }
+    if (predatorName && PREDATOR_SPECIALTY_MAP[predatorName] && !hasPred) {
+      const validChoice = PREDATOR_SPECIALTY_MAP[predatorName].find(opt => Number(character.skills[opt.skill]) >= 1);
+      if (validChoice && (selectedSkill !== validChoice.skill || specialtySource !== "Predador")) {
+        setSelectedSkill(validChoice.skill);
+        setNewSpecialtyName(validChoice.name);
+        setSpecialtySource("Predador");
       }
     }
-  }, [character.skills, character.profile?.predator_type, character.specialties, status]);
+  }, [character.skills, character.profile?.predator_type, character.specialties, status, specialtySource, selectedSkill]);
   
   // ESTADO DE SINCRONIZAÇÃO (Optimistic UI Autosave)
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -1468,6 +1487,24 @@ export default function CharacterSheetClient({
         return;
       }
     }
+
+    // 5. REGRA V5: Cota única para 1ª Grátis, 2ª Grátis e Predador
+    const has1st = (character.specialties || []).some(s => s.source === "1ª Grátis");
+    const has2nd = (character.specialties || []).some(s => s.source === "2ª Grátis");
+    const hasPred = (character.specialties || []).some(s => s.source === "Predador");
+
+    if (specialtySource === "1ª Grátis" && has1st) {
+      showWarning("Você já utilizou o slot da 1ª Especialização Gratuita da criação.", "Cota Esgotada");
+      return;
+    }
+    if (specialtySource === "2ª Grátis" && has2nd) {
+      showWarning("Você já utilizou o slot da 2ª Especialização Gratuita da criação.", "Cota Esgotada");
+      return;
+    }
+    if (specialtySource === "Predador" && hasPred) {
+      showWarning("Você já utilizou o slot de Especialização Gratuita do Tipo de Predador.", "Cota Esgotada");
+      return;
+    }
     
     const newSpec: Specialty = {
       id: generateRandomId("spec"),
@@ -2164,9 +2201,15 @@ export default function CharacterSheetClient({
                     onChange={(e) => setSpecialtySource(e.target.value)}
                     className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9 cursor-pointer"
                   >
-                    <option value="1ª Grátis" className="bg-bg-card">🟢 1ª Grátis</option>
-                    <option value="2ª Grátis" className="bg-bg-card">🟢 2ª Grátis</option>
-                    <option value="Predador" className="bg-bg-card">🩸 Predador</option>
+                    {!character.specialties?.some(s => s.source === "1ª Grátis") && (
+                      <option value="1ª Grátis" className="bg-bg-card">🟢 1ª Grátis</option>
+                    )}
+                    {!character.specialties?.some(s => s.source === "2ª Grátis") && (
+                      <option value="2ª Grátis" className="bg-bg-card">🟢 2ª Grátis</option>
+                    )}
+                    {!character.specialties?.some(s => s.source === "Predador") && (
+                      <option value="Predador" className="bg-bg-card">🩸 Predador</option>
+                    )}
                     <option value="Hab. 4" className="bg-bg-card">⭐ Hab. 4</option>
                     <option value="Por XP" className="bg-bg-card">💎 Por XP (3pts)</option>
                   </select>
