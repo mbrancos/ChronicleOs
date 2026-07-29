@@ -29,12 +29,16 @@ interface DirectorBoardProps {
   onResetRound?: () => void;
   onOpenDamageModal?: (characterId: string, characterName: string) => void;
   onChangeSceneBackground?: (url: string | null) => void;
+  activeSceneImage?: string | null;
+  onShowSceneImage?: (url: string | null) => void;
+  onOpenNarratorImageModal?: (url: string) => void;
 }
 
 export default function DirectorBoard({
   tokens,
   isStoryteller,
   sceneBackground,
+  activeSceneImage,
   campaignId,
   getCharacterSheetData,
   onTokensChange,
@@ -47,6 +51,8 @@ export default function DirectorBoard({
   onResetRound,
   onOpenDamageModal,
   onChangeSceneBackground,
+  onShowSceneImage,
+  onOpenNarratorImageModal,
 }: DirectorBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,9 +64,22 @@ export default function DirectorBoard({
 
   const { showSuccess, showError } = useToast();
   const [narratorImageInput, setNarratorImageInput] = useState("");
-  const [currentSceneImage, setCurrentSceneImage] = useState<string | null>(null);
-  const [isShowingSceneImage, setIsShowingSceneImage] = useState(false);
+  const [currentSceneImage, setCurrentSceneImage] = useState<string | null>(activeSceneImage || null);
+  const [isShowingSceneImage, setIsShowingSceneImage] = useState(!!activeSceneImage);
+  const [isHoveringThumbnail, setIsHoveringThumbnail] = useState(false);
+  const [isImageError, setIsImageError] = useState(false);
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [sceneBackgroundInput, setSceneBackgroundInput] = useState(sceneBackground || "");
+
+  useEffect(() => {
+    if (activeSceneImage !== undefined) {
+      setCurrentSceneImage(activeSceneImage);
+      setIsShowingSceneImage(!!activeSceneImage);
+      if (!activeSceneImage) {
+        setIsImageError(false);
+      }
+    }
+  }, [activeSceneImage]);
 
   useEffect(() => {
     if (sceneBackground) {
@@ -237,49 +256,154 @@ export default function DirectorBoard({
           {isStoryteller && campaignId && (
             <div className="absolute top-[68px] left-[100px] z-40 flex items-center gap-3">
               {/* Imagem de Cena */}
-              <div className="flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
+              <div className="relative flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
                 <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold px-1 shrink-0">Cena</span>
-                <input
-                  type="text"
-                  value={narratorImageInput}
-                  onChange={(e) => setNarratorImageInput(e.target.value)}
-                  placeholder="URL da imagem..."
-                  className="w-28 px-1.5 py-0.5 text-[9px] border border-white/5 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-reading"
-                />
-                <button
-                  onClick={async () => {
-                    const url = narratorImageInput.trim();
-                    if (!url) return;
-                    const res = await showSceneImageAction(campaignId, url);
-                    if (res.success) {
-                      setCurrentSceneImage(url);
-                      setIsShowingSceneImage(true);
-                      showSuccess("Imagem exibida!", "Cena");
-                    } else {
-                      showError("Erro ao exibir imagem.", "Cena");
-                    }
-                  }}
-                  disabled={!narratorImageInput.trim()}
-                  className="px-2 py-0.5 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                >
-                  Exibir
-                </button>
-                {isShowingSceneImage && (
-                  <button
-                    onClick={async () => {
-                      const res = await showSceneImageAction(campaignId, null);
-                      if (res.success) {
+                
+                {isShowingSceneImage && currentSceneImage ? (
+                  /* Slot de Mídia Ativa (Com Thumbnail) */
+                  <div className="relative flex items-center gap-1.5">
+                    {/* Thumbnail 38x38px */}
+                    <div
+                      className="relative w-9 h-9 rounded-xs border border-gold-accent/40 bg-black/40 overflow-hidden shrink-0 cursor-pointer group"
+                      onClick={() => {
+                        if (onOpenNarratorImageModal && currentSceneImage) {
+                          onOpenNarratorImageModal(currentSceneImage);
+                        }
+                      }}
+                      onMouseEnter={() => {
+                        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+                        hoverTimerRef.current = setTimeout(() => {
+                          setIsHoveringThumbnail(true);
+                        }, 300);
+                      }}
+                      onMouseLeave={() => {
+                        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+                        setIsHoveringThumbnail(false);
+                      }}
+                      title="Clique para ver em tela cheia"
+                    >
+                      {!isImageError ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={currentSceneImage}
+                          alt="Thumbnail da Cena"
+                          className="w-full h-full object-cover object-center transition-transform group-hover:scale-105"
+                          onError={() => {
+                            setIsImageError(true);
+                            showError("Formato inválido ou link bloqueado (CORS)", "Imagem de Cena");
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-black/70 text-amber-500 font-bold text-xs" title="Formato inválido ou link bloqueado (CORS)">
+                          ⚠️
+                        </div>
+                      )}
+
+                      {/* Hover Preview Popover Flutuante (300ms Debounce) */}
+                      {isHoveringThumbnail && !isImageError && (
+                        <div className="absolute top-11 left-0 z-50 p-1.5 bg-bg-card-dark/98 border border-gold-accent/40 rounded-xs shadow-[0_0_25px_rgba(0,0,0,0.85)] pointer-events-none transition-all duration-200 animate-in fade-in">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={currentSceneImage}
+                            alt="Preview da Cena"
+                            className="max-w-[220px] max-h-[200px] object-contain rounded-xs border border-white/10"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Badge AO VIVO */}
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xs text-[8px] uppercase tracking-wider text-emerald-400 font-data font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                      <span>AO VIVO</span>
+                    </div>
+
+                    {/* Botão de Fechar ✕ */}
+                    <button
+                      onClick={async () => {
+                        const prevUrl = currentSceneImage;
                         setCurrentSceneImage(null);
                         setIsShowingSceneImage(false);
                         setNarratorImageInput("");
-                        showSuccess("Imagem removida.", "Cena");
-                      }
-                    }}
-                    className="px-1.5 py-0.5 bg-hunger-red/15 hover:bg-hunger-red/25 border border-hunger-red/30 text-hunger-red font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
-                    title="Remover Imagem"
-                  >
-                    ✕
-                  </button>
+                        setIsImageError(false);
+
+                        try {
+                          const res = await showSceneImageAction(campaignId, null);
+                          if (res.success) {
+                            showSuccess("Imagem removida.", "Cena");
+                            if (onShowSceneImage) {
+                              onShowSceneImage(null);
+                            }
+                          } else {
+                            // Rollback se a Server Action falhar
+                            setCurrentSceneImage(prevUrl);
+                            setIsShowingSceneImage(true);
+                            showError("Falha ao remover imagem. Tente novamente.", "Cena");
+                          }
+                        } catch (err) {
+                          setCurrentSceneImage(prevUrl);
+                          setIsShowingSceneImage(true);
+                          showError("Falha ao remover imagem. Tente novamente.", "Cena");
+                        }
+                      }}
+                      className="px-1.5 py-1 bg-hunger-red/15 hover:bg-hunger-red/30 border border-hunger-red/40 text-hunger-red font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
+                      title="Remover Imagem de Cena"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  /* Estado Sem Imagem: Input de URL */
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={narratorImageInput}
+                      onChange={(e) => setNarratorImageInput(e.target.value)}
+                      onPaste={(e) => {
+                        const pasted = e.clipboardData.getData("text");
+                        if (pasted && (pasted.startsWith("http://") || pasted.startsWith("https://"))) {
+                          setNarratorImageInput(pasted);
+                        }
+                      }}
+                      placeholder="Cole a URL da cena..."
+                      className="w-28 px-1.5 py-0.5 text-[9px] border border-white/5 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-reading"
+                    />
+                    <button
+                      onClick={async () => {
+                        const url = narratorImageInput.trim();
+                        if (!url) return;
+
+                        const prevUrl = currentSceneImage;
+                        // Optimistic UI
+                        setCurrentSceneImage(url);
+                        setIsShowingSceneImage(true);
+                        setIsImageError(false);
+
+                        try {
+                          const res = await showSceneImageAction(campaignId, url);
+                          if (res.success) {
+                            showSuccess("Imagem exibida!", "Cena");
+                            if (onShowSceneImage) {
+                              onShowSceneImage(url);
+                            }
+                          } else {
+                            // Rollback se a Server Action falhar
+                            setCurrentSceneImage(prevUrl);
+                            setIsShowingSceneImage(!!prevUrl);
+                            showError("Falha ao transmitir imagem. Tente novamente.", "Cena");
+                          }
+                        } catch (err) {
+                          setCurrentSceneImage(prevUrl);
+                          setIsShowingSceneImage(!!prevUrl);
+                          showError("Falha ao transmitir imagem. Tente novamente.", "Cena");
+                        }
+                      }}
+                      disabled={!narratorImageInput.trim()}
+                      className="px-2 py-0.5 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    >
+                      Exibir
+                    </button>
+                  </div>
                 )}
               </div>
 

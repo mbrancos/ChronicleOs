@@ -38,6 +38,7 @@ export const campaigns = pgTable("campaigns", {
     .$type<ChronicleSystemRules>()
     .default(DEFAULT_CHRONICLE_RULES)
     .notNull(),
+  currentSceneImage: text("current_scene_image"),
 });
 
 export const characters = pgTable("characters", {

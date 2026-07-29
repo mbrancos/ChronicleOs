@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { sceneTokens } from "@/db/schema";
+import { sceneTokens, campaigns } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { pusherServer } from "@/lib/pusher";
 
@@ -360,13 +360,21 @@ export async function showSceneImageAction(campaignId: string, imageUrl: string 
       return { success: false, error: "ID de campanha inválido" };
     }
 
-    const eventName = imageUrl ? "scene-image-shown" : "scene-image-hidden";
-    const payload = { imageUrl: imageUrl ?? null };
+    const cleanUrl = imageUrl && imageUrl.trim() ? imageUrl.trim() : null;
 
-    // Apenas canal público: a imagem é para os jogadores verem
+    // 1. Persistir no banco Postgres para resiliência no recarregamento (F5)
+    await db
+      .update(campaigns)
+      .set({ currentSceneImage: cleanUrl })
+      .where(eq(campaigns.id, campaignId));
+
+    const eventName = cleanUrl ? "scene-image-shown" : "scene-image-hidden";
+    const payload = { imageUrl: cleanUrl };
+
+    // 2. Notificar todos os clientes (jogadores e narradores) via canal público
     await pusherServer.trigger(`public-campaign-${campaignId}`, eventName, payload);
 
-    return { success: true };
+    return { success: true, imageUrl: cleanUrl };
   } catch (error) {
     console.error("Erro em showSceneImageAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "Falha ao exibir imagem de cena" };

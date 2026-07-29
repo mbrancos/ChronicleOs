@@ -42,7 +42,8 @@ export default function VttRoomClient({ character, chronicle }: VttRoomClientPro
   const [isRerolling, setIsRerolling] = useState(false);
   const [isDamageModalOpen, setIsDamageModalOpen] = useState(false);
   const [sceneBackground, setSceneBackground] = useState<string | null>(null);
-  const [sceneImage, setSceneImage] = useState<string | null>(null);
+  const [sceneImage, setSceneImage] = useState<string | null>(chronicle?.currentSceneImage || null);
+  const [isSceneModalOpen, setIsSceneModalOpen] = useState(!!chronicle?.currentSceneImage);
   const [activeMobileTab, setActiveMobileTab] = useState<"board" | "feed">("board");
   const isFetching = useRef(false);
   const isFetchingTokens = useRef(false);
@@ -214,9 +215,13 @@ export default function VttRoomClient({ character, chronicle }: VttRoomClientPro
     });
     publicChannel.bind("scene-image-shown", (data: { imageUrl: string | null }) => {
       setSceneImage(data.imageUrl);
+      if (data.imageUrl) {
+        setIsSceneModalOpen(true);
+      }
     });
     publicChannel.bind("scene-image-hidden", () => {
       setSceneImage(null);
+      setIsSceneModalOpen(false);
     });
 
     // 3. Lógica de Resiliência: fetch pontual em reconexão ou foco ativo da aba do navegador
@@ -532,14 +537,26 @@ export default function VttRoomClient({ character, chronicle }: VttRoomClientPro
         />
       )}
 
+      {/* BOTÃO FLUTUANTE DE REABERTURA DE CENA PARA O JOGADOR */}
+      {sceneImage && !isSceneModalOpen && (
+        <button
+          onClick={() => setIsSceneModalOpen(true)}
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 bg-bg-card-dark/95 hover:bg-black border border-gold-accent/40 text-gold-accent hover:text-white font-data text-[10px] uppercase tracking-wider rounded-full shadow-[0_0_15px_rgba(180,130,60,0.3)] transition-all cursor-pointer flex items-center gap-1.5 animate-in fade-in"
+          title="Reabrir Imagem de Cena"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>🖼️ Ver Cena Ativa</span>
+        </button>
+      )}
+
       {/* OVERLAY DE IMAGEM DE CENA (enviada pelo Narrador via Pusher) */}
-      {sceneImage && (
+      {sceneImage && isSceneModalOpen && (
         <div
           className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 backdrop-blur-md"
-          onClick={() => setSceneImage(null)}
+          onClick={() => setIsSceneModalOpen(false)}
         >
           <div
-            className="relative max-w-3xl w-full mx-4 flex flex-col items-center space-y-3"
+            className="relative max-w-4xl w-full mx-4 flex flex-col items-center space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -548,25 +565,25 @@ export default function VttRoomClient({ character, chronicle }: VttRoomClientPro
                 🖼️ Narrador revelou uma imagem
               </span>
               <button
-                onClick={() => setSceneImage(null)}
+                onClick={() => setIsSceneModalOpen(false)}
                 className="text-text-muted hover:text-white text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
               >
                 Fechar [X]
               </button>
             </div>
-            {/* Imagem */}
-            <div className="w-full rounded-sm border border-gold-accent/20 overflow-hidden shadow-[0_0_40px_rgba(180,130,60,0.2)] relative">
+            {/* Imagem com trava de dimensões máximas */}
+            <div className="w-full flex justify-center rounded-sm border border-gold-accent/20 overflow-hidden shadow-[0_0_40px_rgba(180,130,60,0.2)] relative bg-bg-main p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={sceneImage}
                 alt="Imagem revelada pelo Narrador"
-                className="w-full max-h-[70vh] object-contain bg-bg-main"
+                className="max-h-[80vh] max-w-[90vw] object-contain bg-bg-main rounded-xs"
               />
               {/* Borda gótica sutil */}
               <div className="absolute inset-0 border border-gold-accent/10 rounded-sm pointer-events-none" />
             </div>
             <p className="text-[9px] text-text-dim/60 font-data uppercase tracking-widest">
-              Clique fora da imagem para fechar
+              Clique fora da imagem para minimizar
             </p>
           </div>
         </div>

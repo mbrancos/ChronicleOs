@@ -32,6 +32,7 @@ interface StorytellerDashboardClientProps {
     narratorId: string;
     description: string | null;
     systemRules?: ChronicleSystemRules | null;
+    currentSceneImage?: string | null;
   };
 }
 
@@ -96,8 +97,9 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
 
   // Estados para Imagem de Cena (Issue 4)
   const [narratorImageInput, setNarratorImageInput] = useState("");
-  const [isShowingSceneImage, setIsShowingSceneImage] = useState(false);
-  const [currentSceneImage, setCurrentSceneImage] = useState<string | null>(null);
+  const [isShowingSceneImage, setIsShowingSceneImage] = useState(!!campaign.currentSceneImage);
+  const [currentSceneImage, setCurrentSceneImage] = useState<string | null>(campaign.currentSceneImage || null);
+  const [isShowingNarratorModal, setIsShowingNarratorModal] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState<"board" | "feed">("board");
 
   const handleOpenDamageModal = useCallback((characterId: string, characterName: string) => {
@@ -231,6 +233,17 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     publicChannel.bind("token-updated", handleTokenUpdated);
     publicChannel.bind("token-deleted", handleTokenDeleted);
     publicChannel.bind("round-reset", handleRoundReset);
+    publicChannel.bind("scene-image-shown", (data: { imageUrl: string | null }) => {
+      if (data.imageUrl) {
+        setCurrentSceneImage((prev) => (prev === data.imageUrl ? prev : data.imageUrl));
+        setIsShowingSceneImage(true);
+      }
+    });
+    publicChannel.bind("scene-image-hidden", () => {
+      setCurrentSceneImage(null);
+      setIsShowingSceneImage(false);
+      setIsShowingNarratorModal(false);
+    });
 
     // Registrar binds no canal seguro de presença
     presenceChannel.bind("character-updated", handleCharacterUpdated);
@@ -705,6 +718,15 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
           onOpenDamageModal={handleOpenDamageModal}
           sceneBackground={sceneBackground}
           onChangeSceneBackground={setSceneBackground}
+          activeSceneImage={currentSceneImage}
+          onShowSceneImage={(url) => {
+            setCurrentSceneImage(url);
+            if (!url) setIsShowingNarratorModal(false);
+          }}
+          onOpenNarratorImageModal={(url) => {
+            setCurrentSceneImage(url);
+            setIsShowingNarratorModal(true);
+          }}
         />
 
         {/* 3. DOCK DO NARRADOR — slim, largura total da mesa central */}
@@ -1161,6 +1183,53 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
             await fetchRecentRolls();
           }}
         />
+      )}
+
+      {/* OVERLAY DE IMAGEM DE CENA DO NARRADOR */}
+      {isShowingNarratorModal && currentSceneImage && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 backdrop-blur-md"
+          onClick={() => setIsShowingNarratorModal(false)}
+        >
+          <div
+            className="relative max-w-4xl w-full mx-4 flex flex-col items-center space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between w-full px-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-data uppercase tracking-widest text-gold-accent font-bold">
+                  Projeção de Cena Ativa (Visão do Narrador)
+                </span>
+              </div>
+              <button
+                onClick={async () => {
+                  setIsShowingNarratorModal(false);
+                  setCurrentSceneImage(null);
+                  setIsShowingSceneImage(false);
+                  await showSceneImageAction(campaign.id, null);
+                }}
+                className="px-3 py-1 bg-hunger-red/20 hover:bg-hunger-red/40 border border-hunger-red/40 text-hunger-red hover:text-white text-[10px] font-data font-bold uppercase tracking-wider cursor-pointer rounded-xs transition-colors"
+              >
+                Encerrar Transmissão [X]
+              </button>
+            </div>
+            {/* Imagem com trava de dimensões máximas */}
+            <div className="w-full flex justify-center rounded-sm border border-gold-accent/20 overflow-hidden shadow-[0_0_40px_rgba(180,130,60,0.25)] relative bg-bg-main p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={currentSceneImage}
+                alt="Imagem da Cena"
+                className="max-h-[80vh] max-w-[90vw] object-contain rounded-xs"
+              />
+              <div className="absolute inset-0 border border-gold-accent/10 rounded-sm pointer-events-none" />
+            </div>
+            <p className="text-[9px] text-text-dim/60 font-data uppercase tracking-widest">
+              Clique fora da imagem para fechar apenas esta janela (a transmissão continuará ativa)
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

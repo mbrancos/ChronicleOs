@@ -50,7 +50,8 @@ export default async function MesaPage({ params }: PageProps) {
           name: campaign.name,
           narratorId: campaign.narratorId,
           description: campaign.description,
-          systemRules: campaign.systemRules
+          systemRules: campaign.systemRules,
+          currentSceneImage: campaign.currentSceneImage ?? null,
         }}
       />
     );
