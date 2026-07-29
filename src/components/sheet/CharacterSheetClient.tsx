@@ -1679,15 +1679,13 @@ export default function CharacterSheetClient({
               />
 
               {/* LINHA 2: FOME & RESSONÂNCIA (LADO A LADO) */}
-              <div className="bg-bg-card/35 border border-white/5 rounded-sm p-3 space-y-2.5 transition-all duration-300 hover:border-white/10">
-                <DotSlider
-                  label="Fome"
-                  value={character.status.hunger}
-                  onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
-                  allowZero
-                  variant="red"
-                />
-              </div>
+              <DotSlider
+                label="Fome"
+                value={character.status.hunger}
+                onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
+                allowZero
+                variant="red"
+              />
 
               <BloodPanel
                 value={character.bloodState}
