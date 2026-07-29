@@ -394,7 +394,7 @@ export default function HubClient({
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 gap-4 max-h-125 overflow-y-auto pr-1">
                   {narratorCampaigns.map(camp => (
                     <div
                       key={camp.id}
@@ -517,7 +517,7 @@ export default function HubClient({
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 gap-4 max-h-125 overflow-y-auto pr-1">
                   {playerCampaigns.map(camp => {
                     const statusLabels: Record<string, { label: string; class: string }> = {
                       DRAFT: { label: "Rascunho", class: "bg-white/5 border-white/10 text-text-dim" },
@@ -614,7 +614,7 @@ export default function HubClient({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-4 max-h-125 overflow-y-auto pr-1">
                 {characters.map(char => {
                   const clan = char.sheetData?.profile?.clan || "Vampiro";
                   const concept = char.sheetData?.profile?.concept || "Neófito";
