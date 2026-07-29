@@ -239,13 +239,13 @@ const DISCIPLINE_OPTIONS = [
 function getPowerLevelRules(concept: string) {
   const normalized = String(concept).toLowerCase().trim();
   if (normalized === "cria" || normalized === "fledgling") {
-    return { name: "Cria", disciplines: 2, advantages: 7, bloodPotency: 0 };
+    return { name: "Cria", disciplines: 3, advantages: 7, bloodPotency: 0 };
   }
   if (normalized === "ancila" || normalized === "ancillae") {
-    return { name: "Ancila", disciplines: 3, advantages: 9, bloodPotency: 2 };
+    return { name: "Ancila", disciplines: 5, advantages: 9, bloodPotency: 2 };
   }
   // Padrão: Neófito / Neonate
-  return { name: "Neófito", disciplines: 2, advantages: 7, bloodPotency: 1 };
+  return { name: "Neófito", disciplines: 3, advantages: 7, bloodPotency: 1 };
 }
 
 function calculateBaseAndXp(charData: CharacterSheetData) {
@@ -333,7 +333,7 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
   const activeDiscs = disciplinesList.filter(d => d.level > 0);
   const sortedDiscs = [...activeDiscs].sort((a, b) => b.level - a.level);
 
-  const idealDiscs = [2, 1];
+  const idealDiscs = rules.disciplines === 5 ? [2, 1, 1, 1] : [2, 1];
   const disciplinesBase: Record<string, number> = {};
   let disciplineXpSpent = 0;
 
@@ -1045,7 +1045,7 @@ export default function CharacterSheetClient({
           updatedDisciplines = allowedDiscs.map((discName, index) => ({
             id: `disc_init_${index}_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
             name: discName,
-            level: 1,
+            level: 0,
             powers: []
           }));
         } else {
@@ -1644,7 +1644,7 @@ export default function CharacterSheetClient({
                       💡 Regra V5 - Idade ({rules.name}):
                     </span>
                     <span>
-                      Atributos (13 pts) e Habilidades (20 pts) são padrão em todas as idades. Nível <strong className="text-gold-accent">{rules.name}</strong> concede: <strong>Potência de Sangue {rules.bloodPotency}</strong>, <strong>{rules.disciplines} Disciplinas</strong> e <strong>{rules.advantages} Vantagens</strong>.
+                      Atributos (13 pts) e Habilidades (20 pts) são padrão em todas as idades. Nível <strong className="text-gold-accent">{rules.name}</strong> concede: <strong>Potência de Sangue {rules.bloodPotency}</strong>, <strong>{rules.disciplines} bolinhas de Disciplinas</strong> e <strong>{rules.advantages} pts de Vantagens</strong>.
                     </span>
                   </div>
                 );
