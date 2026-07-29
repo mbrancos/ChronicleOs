@@ -88,15 +88,15 @@ const CLAN_BANE_MAPPING: Record<string, string> = {
 };
 
 const PREDATOR_OPTIONS = [
-  "Bagger (Ladrão de Sangue)",
-  "Alleycat (Gato de Beco)",
-  "Cleaver (Cutelo)",
-  "Consensualist (Consensualista)",
-  "Farmer (Fazendeiro)",
-  "Osiris",
+  "Ladrão de Sangue",
+  "Gato de Beco",
+  "Cutelo",
+  "Consensualista",
+  "Fazendeiro",
+  "Osíris",
   "Sandman",
-  "Scene Queen (Rainha da Cena)",
-  "Siren (Sereia)"
+  "Rainha da Cena",
+  "Sereia"
 ];
 
 // Dicionário de tradução de nomes técnicos para exibição
@@ -1625,7 +1625,7 @@ export default function CharacterSheetClient({
                   />
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span>Sire:</span>
+                  <span>Senhor:</span>
                   <InlineEdit
                     value={character.profile.sire}
                     onChange={(val) => handleProfileChange("sire", val)}
@@ -1717,7 +1717,7 @@ export default function CharacterSheetClient({
               { id: "vantagens", label: "⭐ Vantagens" },
               { id: "inventario", label: "🎒 Inventário" },
               { id: "macros", label: "📜 Macros" },
-              { id: "xp_diary", label: "💎 Diário de XP" },
+              { id: "xp_diary", label: "💎 XP" },
             ] as const
           ).map((item) => {
             const isActive = activeTabId === item.id || (item.id === "atributos" && activeTabId === "sec-profile");

@@ -145,15 +145,15 @@ export const DISCIPLINE_KEY_TO_NAME: Record<string, string> = {
 export function getPredatorSlug(predatorType: string): string | null {
   if (!predatorType) return null;
   const p = predatorType.toLowerCase().trim();
-  if (p.includes("alleycat")) return "alleycat";
-  if (p.includes("bagger")) return "bagger";
-  if (p.includes("cleaver")) return "cleaver";
-  if (p.includes("consensualist")) return "consensualist";
-  if (p.includes("farmer")) return "farmer";
-  if (p.includes("osiris")) return "osiris";
+  if (p.includes("alleycat") || p.includes("gato de beco")) return "alleycat";
+  if (p.includes("bagger") || p.includes("ladrão de sangue") || p.includes("ladrao de sangue")) return "bagger";
+  if (p.includes("cleaver") || p.includes("cutelo")) return "cleaver";
+  if (p.includes("consensualist") || p.includes("consensualista")) return "consensualist";
+  if (p.includes("farmer") || p.includes("fazendeiro")) return "farmer";
+  if (p.includes("osiris") || p.includes("osíris")) return "osiris";
   if (p.includes("sandman")) return "sandman";
-  if (p.includes("scene queen")) return "scene_queen";
-  if (p.includes("siren")) return "siren";
+  if (p.includes("scene queen") || p.includes("rainha da cena")) return "scene_queen";
+  if (p.includes("siren") || p.includes("sereia")) return "siren";
   return null;
 }
 
@@ -163,15 +163,15 @@ export interface PredatorTypeRule {
 }
 
 export const PREDATOR_TYPES: Record<string, PredatorTypeRule> = {
-  alleycat: { name: "Alleycat (Gato de Beco)", disciplines: ["potence", "celerity"] },
-  bagger: { name: "Bagger (Ladrão de Sangue)", disciplines: ["obfuscate", "blood_sorcery", "oblivion"] },
-  cleaver: { name: "Cleaver (Cutelo)", disciplines: ["dominate", "animalism"] },
-  consensualist: { name: "Consensualist (Consensualista)", disciplines: ["auspex", "fortitude"] },
-  farmer: { name: "Farmer (Fazendeiro)", disciplines: ["animalism", "protean"] },
-  osiris: { name: "Osiris", disciplines: ["blood_sorcery", "presence"] },
+  alleycat: { name: "Gato de Beco", disciplines: ["potence", "celerity"] },
+  bagger: { name: "Ladrão de Sangue", disciplines: ["obfuscate", "blood_sorcery", "oblivion"] },
+  cleaver: { name: "Cutelo", disciplines: ["dominate", "animalism"] },
+  consensualist: { name: "Consensualista", disciplines: ["auspex", "fortitude"] },
+  farmer: { name: "Fazendeiro", disciplines: ["animalism", "protean"] },
+  osiris: { name: "Osíris", disciplines: ["blood_sorcery", "presence"] },
   sandman: { name: "Sandman", disciplines: ["auspex", "obfuscate"] },
-  scene_queen: { name: "Scene Queen (Rainha da Cena)", disciplines: ["dominate", "potence"] },
-  siren: { name: "Siren (Sereia)", disciplines: ["presence", "fortitude"] },
+  scene_queen: { name: "Rainha da Cena", disciplines: ["dominate", "potence"] },
+  siren: { name: "Sereia", disciplines: ["presence", "fortitude"] },
 };
 
 export interface CharacterSheetData {
