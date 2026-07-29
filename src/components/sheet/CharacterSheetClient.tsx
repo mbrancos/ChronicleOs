@@ -222,15 +222,16 @@ function executeSimulationRoll(
 const POWER_LEVEL_OPTIONS = ["Cria", "Neófito", "Ancila"];
 
 const PREDATOR_SPECIALTY_MAP: Record<string, { skill: keyof CharacterSkills; name: string }[]> = {
+  "Sandman": [{ skill: "medicine", name: "Anestésicos" }, { skill: "stealth", name: "Invasão" }],
+  "Gato de Beco": [{ skill: "brawl", name: "Agarrão" }, { skill: "intimidation", name: "Briga de Rua" }],
   "Consensualista": [{ skill: "medicine", name: "Coleta de Sangue" }, { skill: "persuasion", name: "Vitimização" }],
-  "Gato de Beco": [{ skill: "intimidation", name: "Briga de Rua" }, { skill: "brawl", name: "Desarmado" }],
-  "Ladrão de Sangue": [{ skill: "subterfuge", name: "Falsificação" }, { skill: "streetwise", name: "Mercado Negro" }],
-  "Bagger": [{ skill: "medicine", name: "Coleta de Sangue" }, { skill: "streetwise", name: "Mercado Negro" }],
+  "Ladrão de Sangue": [{ skill: "larceny", name: "Arrombamento" }, { skill: "streetwise", name: "Mercado Negro" }],
+  "Cutelo": [{ skill: "persuasion", name: "Manipulação" }, { skill: "subterfuge", name: "Vida Dupla" }],
+  "Fazendeiro": [{ skill: "animal_ken", name: "Cães" }, { skill: "survival", name: "Caça" }],
+  "Osíris": [{ skill: "occult", name: "Rituais" }, { skill: "performance", name: "Atuação" }],
+  "Rainha da Cena": [{ skill: "etiquette", name: "Cena Noturna" }, { skill: "streetwise", name: "Cena Noturna" }],
   "Sereia": [{ skill: "persuasion", name: "Sedução" }, { skill: "subterfuge", name: "Sedução" }],
-  "Sandman": [{ skill: "stealth", name: "Invasão" }],
-  "Cleaver": [{ skill: "subterfuge", name: "Vida Dupla" }],
-  "Caçador de Fazenda": [{ skill: "survival", name: "Rastreio" }],
-  "Osferus": [{ skill: "brawl", name: "Luta de Rua" }],
+  "Sanguessuga": [{ skill: "brawl", name: "Vampiros" }, { skill: "stealth", name: "Rastrear Vampiros" }],
 };
 
 const DISCIPLINE_OPTIONS = [
@@ -697,7 +698,7 @@ export default function CharacterSheetClient({
     // 1. Verificar se existe alguma Habilidade com nível >= 4 sem especialização cadastrada
     const skillLevel4Entry = Object.entries(character.skills).find(([key, val]) => {
       if (Number(val) < 4) return false;
-      const alreadyHasSpec = character.specialties?.some(s => s.skill === key);
+      const alreadyHasSpec = character.specialties?.some(s => s.skill === key && s.source === "Hab. 4");
       return !alreadyHasSpec;
     });
 
@@ -715,10 +716,11 @@ export default function CharacterSheetClient({
     if (predatorName && PREDATOR_SPECIALTY_MAP[predatorName]) {
       const hasPredatorSpec = character.specialties?.some(s => s.source === "Predador");
       if (!hasPredatorSpec) {
-        const defaultChoice = PREDATOR_SPECIALTY_MAP[predatorName][0];
-        if (defaultChoice && (selectedSkill !== defaultChoice.skill || specialtySource !== "Predador")) {
-          setSelectedSkill(defaultChoice.skill);
-          setNewSpecialtyName(defaultChoice.name);
+        // Encontrar a primeira opção válida do predador que tenha pelo menos 1 ponto
+        const validChoice = PREDATOR_SPECIALTY_MAP[predatorName].find(opt => Number(character.skills[opt.skill]) >= 1);
+        if (validChoice && (selectedSkill !== validChoice.skill || specialtySource !== "Predador")) {
+          setSelectedSkill(validChoice.skill);
+          setNewSpecialtyName(validChoice.name);
           setSpecialtySource("Predador");
         }
       }
@@ -1418,6 +1420,54 @@ export default function CharacterSheetClient({
   // ========================================================
   const handleAddSpecialty = () => {
     if (!selectedSkill || !newSpecialtyName.trim()) return;
+
+    const skillLevel = character.skills ? Number(character.skills[selectedSkill]) || 0 : 0;
+    const skillLabel = TECHNICAL_NAMES[selectedSkill] || selectedSkill;
+
+    // 1. REGRA V5: Mínimo 1 ponto na Habilidade Base
+    if (skillLevel < 1) {
+      showWarning(
+        `Regra V5: Você não possui nenhum ponto em ${skillLabel}. É necessário ter pelo menos 1 ponto na Habilidade para adquirir uma Especialização.`,
+        "Cota de Especializações"
+      );
+      return;
+    }
+
+    // 2. REGRA V5: Motivo "Hab. 4" exige nível 4 na habilidade
+    if (specialtySource === "Hab. 4" && skillLevel < 4) {
+      showWarning(
+        `Regra V5: O motivo 'Hab. 4' é exclusivo para Habilidades que possuem 4 bolinhas. ${skillLabel} possui apenas ${skillLevel} ponto(s).`,
+        "Cota de Nível 4"
+      );
+      return;
+    }
+
+    // 3. REGRA V5: Prevenção de duplicatas de nome na mesma Habilidade
+    const normalizedName = newSpecialtyName.trim().toLowerCase();
+    const isDuplicate = (character.specialties || []).some(
+      s => s.skill === selectedSkill && s.name.trim().toLowerCase() === normalizedName
+    );
+    if (isDuplicate) {
+      showWarning(
+        `A especialização "${newSpecialtyName.trim()}" já está cadastrada para a habilidade ${skillLabel}.`,
+        "Especialização Duplicada"
+      );
+      return;
+    }
+
+    // 4. REGRA V5: Prevenção de reuso do motivo "Hab. 4" na mesma Habilidade
+    if (specialtySource === "Hab. 4") {
+      const alreadyHasHab4 = (character.specialties || []).some(
+        s => s.skill === selectedSkill && s.source === "Hab. 4"
+      );
+      if (alreadyHasHab4) {
+        showWarning(
+          `A habilidade ${skillLabel} já possui uma especialização cadastrada pelo motivo de Nível 4.`,
+          "Cota de Nível 4 Excedida"
+        );
+        return;
+      }
+    }
     
     const newSpec: Specialty = {
       id: generateRandomId("spec"),
@@ -2138,16 +2188,38 @@ export default function CharacterSheetClient({
                   >
                     <option value="" className="bg-bg-card">Selecione...</option>
                     {Object.entries(TECHNICAL_NAMES)
-                      .filter(([key]) => ![
-                        "strength", "dexterity", "stamina",
-                        "charisma", "manipulation", "composure",
-                        "intelligence", "wits", "resolve"
-                      ].includes(key))
+                      .filter(([key]) => {
+                        const isAttribute = [
+                          "strength", "dexterity", "stamina",
+                          "charisma", "manipulation", "composure",
+                          "intelligence", "wits", "resolve"
+                        ].includes(key);
+                        if (isAttribute) return false;
+
+                        const lvl = character.skills ? Number(character.skills[key as keyof CharacterSkills]) || 0 : 0;
+
+                        // REGRA V5: Habilidade Base PRECISA ter pelo menos 1 ponto (lvl >= 1)
+                        if (lvl < 1) return false;
+
+                        // Se o motivo for "Hab. 4", exibe apenas Habilidades com lvl >= 4
+                        if (specialtySource === "Hab. 4") {
+                          return lvl >= 4;
+                        }
+
+                        // Se o motivo for "Predador", exibe apenas as Habilidades elegíveis do Predador ativo
+                        if (specialtySource === "Predador") {
+                          const predatorName = character.profile?.predator_type?.trim() || "";
+                          const allowedOpts = PREDATOR_SPECIALTY_MAP[predatorName] || [];
+                          return allowedOpts.some(opt => opt.skill === key);
+                        }
+
+                        return true;
+                      })
                       .map(([key, label]) => {
                         const lvl = character.skills ? Number(character.skills[key as keyof CharacterSkills]) || 0 : 0;
                         return (
                           <option key={key} value={key} className="bg-bg-card">
-                            {label} {lvl > 0 ? `(${lvl})` : ""}
+                            {label} ({lvl})
                           </option>
                         );
                       })
