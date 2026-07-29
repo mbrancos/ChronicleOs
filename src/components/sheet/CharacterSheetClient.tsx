@@ -374,19 +374,8 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
     }
   });
 
-  // Somamos de volta o ponto do predador no disciplinesBase para exibição como base na UI
-  if (predatorSlug && chosenDiscId) {
-    const chosenDiscName = DISCIPLINE_KEY_TO_NAME[chosenDiscId];
-    if (chosenDiscName) {
-      const origDisc = charData.disciplines?.find(d => 
-        d.name.toLowerCase().includes(chosenDiscName.toLowerCase()) ||
-        chosenDiscName.toLowerCase().includes(d.name.toLowerCase())
-      );
-      if (origDisc) {
-        disciplinesBase[origDisc.id] = (disciplinesBase[origDisc.id] || 0) + 1;
-      }
-    }
-  }
+  // O disciplinesBase contém puramente a cota alocada dos pontos da criação (vermelhos)
+  // O ponto bônus do predador (roxa) é mantido separado para não queimar o contador da criação base
 
   // --- VANTAGENS ---
   const positiveAdvantages = (charData.advantages || []).filter(
@@ -2485,7 +2474,10 @@ export default function CharacterSheetClient({
                         const chosenDiscId = character.predatorSelections?.chosenDiscipline;
                         const chosenDiscName = chosenDiscId ? DISCIPLINE_KEY_TO_NAME[chosenDiscId] : null;
                         
-                        const isPredatorDisc = chosenDiscName && disc.name.toLowerCase() === chosenDiscName.toLowerCase();
+                        const isPredatorDisc = chosenDiscName && (
+                          disc.name.toLowerCase().includes(chosenDiscName.toLowerCase()) ||
+                          chosenDiscName.toLowerCase().includes(disc.name.toLowerCase())
+                        );
                         const isPredatorDot = isPredatorDisc && isActive && idx >= (disc.level - 1) && idx < disc.level;
                         
                         let activeClass = "";
