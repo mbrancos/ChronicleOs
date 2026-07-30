@@ -7,6 +7,7 @@ interface InlineEditProps {
   onChange: (newValue: string) => void;
   type?: "text" | "select" | "number";
   options?: string[];
+  datalistOptions?: string[];
   className?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -17,6 +18,7 @@ export default function InlineEdit({
   onChange,
   type = "text",
   options = [],
+  datalistOptions,
   className = "",
   placeholder = "Editar...",
   disabled = false
@@ -24,6 +26,7 @@ export default function InlineEdit({
   const [isEditing, setIsEditing] = useState(false);
   const [currentValue, setCurrentValue] = useState(value);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
+  const datalistIdRef = useRef<string>(`datalist-${Math.random().toString(36).substring(2, 9)}`);
 
   const [prevValue, setPrevValue] = useState(value);
 
@@ -73,17 +76,27 @@ export default function InlineEdit({
     }
 
     return (
-      <input
-        ref={inputRef as React.RefObject<HTMLInputElement>}
-        type={type === "number" ? "number" : "text"}
-        value={currentValue}
-        onChange={(e) => setCurrentValue(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        autoFocus
-        placeholder={placeholder}
-        className={`bg-bg-input border border-gold-accent/40 rounded-sm px-2 py-0.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-gold-accent focus:border-gold-accent w-full text-sm ${className}`}
-      />
+      <div className="relative w-full inline-block">
+        <input
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+          type={type === "number" ? "number" : "text"}
+          value={currentValue}
+          onChange={(e) => setCurrentValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          placeholder={placeholder}
+          list={datalistOptions ? datalistIdRef.current : undefined}
+          className={`bg-bg-input border border-gold-accent/40 rounded-sm px-2 py-0.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-gold-accent focus:border-gold-accent w-full text-sm ${className}`}
+        />
+        {datalistOptions && (
+          <datalist id={datalistIdRef.current}>
+            {datalistOptions.map((opt) => (
+              <option key={opt} value={opt} />
+            ))}
+          </datalist>
+        )}
+      </div>
     );
   }
 

@@ -249,6 +249,46 @@ const DISCIPLINE_OPTIONS = [
   "Alquimia de Sangue-Ralo"
 ];
 
+const V5_ADVANTAGES_PRESETS = {
+  merit: [
+    "Aparência Impressionante",
+    "Belo",
+    "Linguística",
+    "Sentidos Aguçados",
+    "Resiliente",
+    "Olhos de Gato",
+    "Voz Cativante"
+  ],
+  background: [
+    "Recursos",
+    "Refúgio",
+    "Aliados",
+    "Contatos",
+    "Status (Camarilla)",
+    "Status (Anarquistas)",
+    "Domínio",
+    "Influência",
+    "Massa de Sangue (Herd)"
+  ],
+  flaw: [
+    "Feio",
+    "Vício",
+    "Inimigo",
+    "Refúgio Assombrado",
+    "Segredo Sombrio",
+    "Estigma de Clã",
+    "Estômago Fraco",
+    "Analfabeto",
+    "Proscrito"
+  ],
+  loresheet: [
+    "Linhagem de Sangue",
+    "Conhecimento da Seita",
+    "Segredos Gehenna",
+    "Lenda Urbana"
+  ]
+};
+
 function getPowerLevelRules(concept: string) {
   const normalized = String(concept).toLowerCase().trim();
   if (normalized === "cria" || normalized === "fledgling") {
@@ -495,6 +535,7 @@ export default function CharacterSheetClient({
   const [activeAddPowerDiscId, setActiveAddPowerDiscId] = useState<string | null>(null);
   const [newPowerName, setNewPowerName] = useState("");
   const [newPowerLevel, setNewPowerLevel] = useState<number>(1);
+  const [showV5Guide, setShowV5Guide] = useState(false);
   
   // ESTADO LOCAL DA FICHA (Mescla com os dados padrão se for novo personagem no banco)
   const [character, setCharacter] = useState<CharacterSheetData>(() => {
@@ -2689,10 +2730,60 @@ export default function CharacterSheetClient({
               return (
                 <>
                   <div className="border-b border-white/5 pb-3 space-y-2">
-                    <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase flex flex-wrap items-center gap-3">
-                      <span>Vantagens, Qualidades, Defeitos & Fichas de Saber</span>
-                    </h3>
+                    <div className="flex justify-between items-center flex-wrap gap-2">
+                      <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase flex flex-wrap items-center gap-3">
+                        <span>Vantagens, Qualidades, Defeitos & Fichas de Saber</span>
+                      </h3>
+                      <button
+                        onClick={() => setShowV5Guide(!showV5Guide)}
+                        className="text-xs font-data text-gold-accent hover:text-white bg-burgundy/30 hover:bg-burgundy/80 border border-gold-accent/30 hover:border-gold-accent px-3 py-1 rounded-xs transition-all duration-150 cursor-pointer flex items-center space-x-1.5 select-none"
+                      >
+                        <span>📖 {showV5Guide ? "Ocultar Guia V5" : "Guia de Regras V5"}</span>
+                      </button>
+                    </div>
                     
+                    {/* CARD RETRÁTIL DE REGRAS V5 */}
+                    {showV5Guide && (
+                      <div className="bg-bg-main/70 border border-gold-accent/40 p-4 rounded-sm space-y-3 text-xs font-reading text-text-primary animate-fadeIn mt-2 shadow-[0_0_12px_rgba(0,0,0,0.5)]">
+                        <div className="flex justify-between items-center border-b border-gold-accent/20 pb-2">
+                          <h4 className="font-gothic uppercase tracking-wider text-gold-accent font-bold flex items-center space-x-1.5 text-sm">
+                            <span>📖 Guia Rápido de Vantagens & Defeitos (V5)</span>
+                          </h4>
+                          <button 
+                            onClick={() => setShowV5Guide(false)}
+                            className="text-text-muted hover:text-white font-bold text-xs cursor-pointer select-none"
+                          >
+                            ✕ Fechar
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                          <div className="space-y-1 bg-white/5 p-3 rounded-xs border border-white/5">
+                            <span className="font-bold text-gold-accent block uppercase text-[10px] tracking-wider">🌟 Cotas por Idade:</span>
+                            <ul className="list-disc list-inside space-y-1 text-text-muted leading-relaxed">
+                              <li><strong className="text-text-primary">Ancila:</strong> 9 pts Vantagens + 4 pts Defeitos</li>
+                              <li><strong className="text-text-primary">Neófito:</strong> 7 pts Vantagens + 2 pts Defeitos</li>
+                              <li><strong className="text-text-primary">Cria:</strong> 7 pts Vantagens + 2 pts Defeitos</li>
+                            </ul>
+                          </div>
+
+                          <div className="space-y-1 bg-white/5 p-3 rounded-xs border border-white/5">
+                            <span className="font-bold text-blood-red block uppercase text-[10px] tracking-wider">🩸 Defeitos Obrigatórios:</span>
+                            <p className="text-text-muted leading-relaxed">
+                              Defeitos <strong>NÃO descontam</strong> da cota de 9 (ou 7) pontos positivos. O V5 exige cadastrar o número mínimo de defeitos para equilibrar a ficha.
+                            </p>
+                          </div>
+
+                          <div className="space-y-1 bg-white/5 p-3 rounded-xs border border-white/5">
+                            <span className="font-bold text-purple-400 block uppercase text-[10px] tracking-wider">👑 Limites Recomendados:</span>
+                            <p className="text-text-muted leading-relaxed">
+                              Recomenda-se no máximo <strong>3 pts</strong> por antecedente na criação padrão. Pontos 4 e 5 indicam cargos lendários (ex: <i>Príncipe ou Primogênito</i>).
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* 3 CONTADORES SEPARADOS E CLAROS NO CABEÇALHO */}
                     {status === "DRAFT" && characterType !== "npc" && (
                       <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -2758,12 +2849,23 @@ export default function CharacterSheetClient({
                                   value={adv.name}
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Nova Vantagem"
+                                  datalistOptions={[...V5_ADVANTAGES_PRESETS.merit, ...V5_ADVANTAGES_PRESETS.background]}
                                   disabled={isReadOnly}
                                   className="font-bold text-xs text-text-primary hover:bg-white/5 cursor-pointer max-w-[130px]"
                                 />
-                                <span className="text-[9px] uppercase tracking-wider text-text-muted">
-                                  {adv.type === "merit" ? "Qualidade" : "Antecedente"}
-                                </span>
+                                <div className="flex items-center space-x-1.5 flex-wrap">
+                                  <span className="text-[9px] uppercase tracking-wider text-text-muted">
+                                    {adv.type === "merit" ? "Qualidade" : "Antecedente"}
+                                  </span>
+                                  {adv.level >= 4 && (
+                                    <span 
+                                      className="text-[9px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500/40 px-1 py-0 rounded-xs tracking-wider select-none cursor-help"
+                                      title="Nota V5: Limite de criação padrão para Neófitos é 3 pts. Níveis 4-5 representam liderança regional (ex: Príncipe/Primogênito). Verifique com seu Narrador."
+                                    >
+                                      👑 Lendário
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
                               <div className="flex space-x-1 items-center h-6">
@@ -2851,6 +2953,7 @@ export default function CharacterSheetClient({
                                   value={adv.name}
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Novo Defeito"
+                                  datalistOptions={V5_ADVANTAGES_PRESETS.flaw}
                                   disabled={isReadOnly}
                                   className="font-bold text-xs text-text-primary hover:bg-white/5 cursor-pointer max-w-[130px]"
                                 />
@@ -2935,12 +3038,23 @@ export default function CharacterSheetClient({
                                   value={adv.name}
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Nova Ficha de Saber"
+                                  datalistOptions={V5_ADVANTAGES_PRESETS.loresheet}
                                   disabled={isReadOnly}
                                   className="font-bold text-xs text-purple-200 hover:bg-white/5 cursor-pointer max-w-[130px]"
                                 />
-                                <span className="text-[9px] uppercase tracking-wider text-purple-400">
-                                  Ficha de Saber (Loresheet)
-                                </span>
+                                <div className="flex items-center space-x-1.5 flex-wrap">
+                                  <span className="text-[9px] uppercase tracking-wider text-purple-400">
+                                    Ficha de Saber (Loresheet)
+                                  </span>
+                                  {adv.level >= 4 && (
+                                    <span 
+                                      className="text-[9px] font-bold text-amber-300 bg-amber-950/60 border border-amber-500/40 px-1 py-0 rounded-xs tracking-wider select-none cursor-help"
+                                      title="Nota V5: Limite de criação padrão para Neófitos é 3 pts. Níveis 4-5 representam liderança regional (ex: Príncipe/Primogênito). Verifique com seu Narrador."
+                                    >
+                                      👑 Lendário
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
                               <div className="flex space-x-1 items-center h-6">
