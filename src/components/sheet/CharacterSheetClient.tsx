@@ -1374,13 +1374,25 @@ export default function CharacterSheetClient({
   // CALLBACKS DE VANTAGENS (ABA VANTAGENS)
   // ========================================================
   const handleAddAdvantage = (type: "background" | "merit" | "flaw" | "loresheet") => {
-    const isPositive = type === "background" || type === "merit";
+    if (type === "loresheet") {
+      const existingLoresheet = character.advantages.some(a => a.type === "loresheet");
+      if (existingLoresheet && status === "DRAFT" && !isOverrideActive) {
+        showWarning("Regra V5: É permitido selecionar apenas 1 Ficha de Saber durante a criação de personagem.", "Limite de Ficha de Saber");
+        return;
+      }
+    }
+
+    let defaultName = "Nova Qualidade / Antecedente";
+    if (type === "flaw") defaultName = "Novo Defeito";
+    if (type === "loresheet") defaultName = "Nova Ficha de Saber";
+    if (type === "background") defaultName = "Novo Antecedente";
+
     const newAdv: Advantage = {
       id: generateRandomId("adv"),
-      name: isPositive ? "Nova Qualidade / Antecedente" : "Novo Defeito / Ficha de Saber",
+      name: defaultName,
       type,
       level: 1,
-      description: "Descrição da vantagem..."
+      description: "Descrição..."
     };
     setCharacter(prev => ({
       ...prev,
@@ -2652,73 +2664,102 @@ export default function CharacterSheetClient({
           {/* SEÇÃO 6: VANTAGENS E DEFEITOS */}
           <section id="vantagens" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 space-y-6">
             {(() => {
-              const meritsAndBackgrounds = character.advantages.filter(a => a.type === "background" || a.type === "merit");
-              const flawsAndLoresheets = character.advantages.filter(a => a.type === "flaw" || a.type === "loresheet");
+              const positiveAdvantages = character.advantages.filter(a => a.type === "background" || a.type === "merit");
+              const flaws = character.advantages.filter(a => a.type === "flaw");
+              const loresheets = character.advantages.filter(a => a.type === "loresheet");
 
-              // Pré-calcular somas acumuladas de vantagens positivas da Coluna 1
-              const meritsWithSum = meritsAndBackgrounds.map((adv, idx) => {
-                const sumBefore = meritsAndBackgrounds.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
+              // Soma acumulada de vantagens positivas (Qualidades & Antecedentes)
+              const positiveWithSum = positiveAdvantages.map((adv, idx) => {
+                const sumBefore = positiveAdvantages.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
+                return { ...adv, sumBefore };
+              });
+              const totalPositiveMeritsSum = positiveAdvantages.reduce((acc, curr) => acc + curr.level, 0);
+
+              // Soma acumulada das Loresheets (que consomem da mesma cota positiva)
+              const loresheetsWithSum = loresheets.map((adv, idx) => {
+                const sumBefore = totalPositiveMeritsSum + loresheets.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
                 return { ...adv, sumBefore };
               });
 
-              // Soma total da coluna 1
-              const totalMeritsSum = meritsAndBackgrounds.reduce((acc, curr) => acc + curr.level, 0);
-
-              // Pré-calcular a soma das loresheets para a Coluna 2
-              const loresheets = flawsAndLoresheets.filter(a => a.type === "loresheet");
-              
-              // Lista unificada para a Coluna 2 com a soma acumulada de loresheets
-              const flawsAndLoresheetsWithSum = flawsAndLoresheets.map(adv => {
-                if (adv.type === "loresheet") {
-                  const idx = loresheets.findIndex(l => l.id === adv.id);
-                  const sumBefore = totalMeritsSum + loresheets.slice(0, idx).reduce((acc, curr) => acc + curr.level, 0);
-                  return { ...adv, sumBefore };
-                }
-                return { ...adv, sumBefore: 0 };
-              });
+              // Regras por Nível de Poder (Cria / Neófito / Ancila)
+              const requiredFlaws = rules.name === "Ancila" ? 4 : 2;
+              const totalFlawPoints = flaws.reduce((acc, curr) => acc + curr.level, 0);
+              const isFlawsComplete = totalFlawPoints >= requiredFlaws;
 
               return (
                 <>
-                  <h3 className="text-lg font-gothic tracking-wider text-blood-red border-b border-white/5 pb-2 uppercase flex flex-wrap items-center gap-3">
-                    <span>Vantagens, Qualidades, Defeitos & Fichas de Saber</span>
-                    {status === "DRAFT" && characterType !== "npc" && (
-                      <span className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
-                        alloc.advantagesRemaining === 0
-                          ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
-                          : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
-                      }`}>
-                        {alloc.advantagesRemaining === 0 ? "🟢 0 Restantes (Concluído) ✓" : `🟡 ${alloc.advantagesRemaining} ${alloc.advantagesRemaining === 1 ? "ponto restante" : "pontos restantes"}`}
-                      </span>
-                    )}
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="border-b border-white/5 pb-3 space-y-2">
+                    <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase flex flex-wrap items-center gap-3">
+                      <span>Vantagens, Qualidades, Defeitos & Fichas de Saber</span>
+                    </h3>
                     
-                    {/* COLUNA 1: QUALIDADES & ANTECEDENTES */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Qualidades & Antecedentes</h4>
+                    {/* 3 CONTADORES SEPARADOS E CLAROS NO CABEÇALHO */}
+                    {status === "DRAFT" && characterType !== "npc" && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {/* CONTADOR 1: VANTAGENS POSITIVAS */}
+                        <span className={`text-xs font-data px-2.5 py-1 rounded-xs border uppercase font-bold tracking-wider flex items-center space-x-1 ${
+                          alloc.advantagesRemaining === 0
+                            ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                            : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                        }`}>
+                          <span>{alloc.advantagesRemaining === 0 ? "🟢 Vantagens: 0 Restantes (Concluído) ✓" : `🟡 Vantagens: ${alloc.advantagesRemaining} ${alloc.advantagesRemaining === 1 ? "ponto restante" : "pontos restantes"}`}</span>
+                        </span>
+
+                        {/* CONTADOR 2: DEFEITOS OBRIGATÓRIOS */}
+                        <span className={`text-xs font-data px-2.5 py-1 rounded-xs border uppercase font-bold tracking-wider flex items-center space-x-1 ${
+                          isFlawsComplete
+                            ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                            : "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                        }`}>
+                          <span>{isFlawsComplete ? `🟢 Defeitos: ${totalFlawPoints}/${requiredFlaws} Pts (Cumprido) ✓` : `⚠️ Defeitos: ${totalFlawPoints}/${requiredFlaws} Pts (Faltam ${requiredFlaws - totalFlawPoints} pts)`}</span>
+                        </span>
+
+                        {/* CONTADOR 3: FICHA DE SABER */}
+                        <span className={`text-xs font-data px-2.5 py-1 rounded-xs border uppercase font-bold tracking-wider ${
+                          loresheets.length > 0
+                            ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400"
+                            : "bg-white/5 border-white/10 text-text-muted"
+                        }`}>
+                          <span>{loresheets.length > 0 ? `📜 Ficha de Saber: 1/1 (Ativa) ✓` : `📜 Ficha de Saber: 0/1 (Opcional)`}</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    {/* BLOCO / COLUNA 1: QUALIDADES & ANTECEDENTES */}
+                    <div className="space-y-4 bg-bg-main/20 p-4 border border-white/5 rounded-sm">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                        <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">
+                          Qualidades & Antecedentes
+                        </h4>
+                        <span className="text-[10px] text-text-muted font-reading">
+                          ({alloc.advantagesRemaining} pts cota)
+                        </span>
+                      </div>
+
                       <div className="space-y-3">
-                        {meritsWithSum.map(adv => (
-                          <div key={adv.id} className="bg-bg-main/30 p-3.5 border border-white/5 rounded-sm relative group">
-                            {/* BOTÃO EXCLUIR */}
+                        {positiveWithSum.map(adv => (
+                          <div key={adv.id} className="bg-bg-main/40 p-3 border border-white/5 rounded-sm relative group">
                             {(status !== "IN_PLAY" || isOverrideActive) && (
                               <button
                                 onClick={() => handleDeleteAdvantage(adv.id)}
-                                className="absolute top-3.5 right-3.5 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                                className="absolute top-3 right-3 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
                                 title="Excluir"
                               >
                                 ✕
                               </button>
                             )}
 
-                            <div className="flex justify-between items-center mb-1.5 pr-6">
+                            <div className="flex justify-between items-center mb-1 pr-6">
                               <div className="flex flex-col space-y-0.5">
                                 <InlineEdit
                                   value={adv.name}
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Nova Vantagem"
                                   disabled={isReadOnly}
-                                  className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-50"
+                                  className="font-bold text-xs text-text-primary hover:bg-white/5 cursor-pointer max-w-[130px]"
                                 />
                                 <span className="text-[9px] uppercase tracking-wider text-text-muted">
                                   {adv.type === "merit" ? "Qualidade" : "Antecedente"}
@@ -2728,7 +2769,7 @@ export default function CharacterSheetClient({
                               <div className="flex space-x-1 items-center h-6">
                                 {Array.from({ length: 5 }).map((_, idx) => {
                                   const isActive = idx < adv.level;
-                                  const isBase = idx < adv.sumBefore;
+                                  const isBase = idx < (rules.advantages - adv.sumBefore);
                                   
                                   let activeClass = "";
                                   if (isActive) {
@@ -2759,12 +2800,15 @@ export default function CharacterSheetClient({
                             <InlineEdit
                               value={adv.description || ""}
                               onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
-                              placeholder="Adicionar descrição..."
+                              placeholder="Descrição..."
                               disabled={isReadOnly}
                               className="text-xs text-text-muted font-reading leading-relaxed w-full block"
                             />
                           </div>
                         ))}
+                        {positiveWithSum.length === 0 && (
+                          <div className="text-xs text-text-muted/60 italic font-reading py-2">Nenhuma qualidade ou antecedente adicionado.</div>
+                        )}
                       </div>
 
                       {(status !== "IN_PLAY" || isOverrideActive) && (
@@ -2777,53 +2821,144 @@ export default function CharacterSheetClient({
                       )}
                     </div>
 
-                    {/* COLUNA 2: DEFEITOS & FICHAS DE SABER */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Defeitos & Fichas de Saber</h4>
+                    {/* BLOCO / COLUNA 2: DEFEITOS OBRIGATÓRIOS */}
+                    <div className="space-y-4 bg-bg-main/20 p-4 border border-white/5 rounded-sm">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                        <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold flex items-center space-x-1">
+                          <span>Defeitos Obrigatórios</span>
+                        </h4>
+                        <span className="text-[10px] text-text-muted font-reading">
+                          ({totalFlawPoints}/{requiredFlaws} pts)
+                        </span>
+                      </div>
+
                       <div className="space-y-3">
-                        {flawsAndLoresheetsWithSum.map(adv => (
-                          <div key={adv.id} className="bg-bg-main/30 p-3.5 border border-white/5 rounded-sm relative group">
-                            {/* BOTÃO EXCLUIR */}
+                        {flaws.map(adv => (
+                          <div key={adv.id} className="bg-bg-main/40 p-3 border border-white/5 rounded-sm relative group">
                             {(status !== "IN_PLAY" || isOverrideActive) && (
                               <button
                                 onClick={() => handleDeleteAdvantage(adv.id)}
-                                className="absolute top-3.5 right-3.5 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                                className="absolute top-3 right-3 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
                                 title="Excluir"
                               >
                                 ✕
                               </button>
                             )}
 
-                            <div className="flex justify-between items-center mb-1.5 pr-6">
+                            <div className="flex justify-between items-center mb-1 pr-6">
                               <div className="flex flex-col space-y-0.5">
                                 <InlineEdit
                                   value={adv.name}
                                   onChange={(val) => handleAdvantageNameChange(adv.id, val)}
                                   placeholder="Novo Defeito"
                                   disabled={isReadOnly}
-                                  className="font-bold text-sm text-text-primary hover:bg-white/5 cursor-pointer max-w-50"
+                                  className="font-bold text-xs text-text-primary hover:bg-white/5 cursor-pointer max-w-[130px]"
                                 />
-                                <span className="text-[9px] uppercase tracking-wider text-text-muted">
-                                  {adv.type === "flaw" ? "Defeito" : "Ficha de Saber"}
+                                <span className="text-[9px] uppercase tracking-wider text-hunger-red font-semibold">
+                                  Defeito (Flaw)
                                 </span>
                               </div>
 
                               <div className="flex space-x-1 items-center h-6">
                                 {Array.from({ length: 5 }).map((_, idx) => {
                                   const isActive = idx < adv.level;
-                                  const isBase = idx < adv.sumBefore;
+                                  let activeClass = isActive 
+                                    ? "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_6px_rgba(239,68,68,0.5)]" 
+                                    : "bg-bg-input border border-text-dim/80 hover:border-blood-red";
+
+                                  return (
+                                    <button
+                                      key={idx}
+                                      disabled={isSheetDisabled}
+                                      onClick={() => handleAdvantageLevelChange(adv.id, idx + 1)}
+                                      className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${isSheetDisabled ? "cursor-default" : "cursor-pointer"} ${activeClass}`}
+                                      title={`Nível ${idx + 1}`}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            
+                            <InlineEdit
+                              value={adv.description || ""}
+                              onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
+                              placeholder="Descrição do defeito..."
+                              disabled={isReadOnly}
+                              className="text-xs text-text-muted font-reading leading-relaxed w-full block"
+                            />
+                          </div>
+                        ))}
+                        {flaws.length === 0 && (
+                          <div className="text-xs text-amber-400/80 italic font-reading py-2">
+                            ⚠️ Exige pelo menos {requiredFlaws} pts em Defeitos.
+                          </div>
+                        )}
+                      </div>
+
+                      {(status !== "IN_PLAY" || isOverrideActive) && (
+                        <button
+                          onClick={() => handleAddAdvantage("flaw")}
+                          className="text-xs uppercase tracking-wider font-bold text-blood-red/80 hover:text-white bg-deep-crimson/30 hover:bg-deep-crimson/80 px-3 py-2 rounded-sm border border-blood-red/30 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
+                        >
+                          + Adicionar Defeito
+                        </button>
+                      )}
+                    </div>
+
+                    {/* BLOCO / COLUNA 3: FICHA DE SABER (LORESHEET) */}
+                    <div className="space-y-4 bg-bg-main/20 p-4 border border-white/5 rounded-sm">
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                        <h4 className="text-xs font-data uppercase tracking-wider text-purple-400 font-bold">
+                          Ficha de Saber (Loresheet)
+                        </h4>
+                        <span className="text-[10px] text-text-muted font-reading">
+                          ({loresheets.length}/1 máx)
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {loresheetsWithSum.map(adv => (
+                          <div key={adv.id} className="bg-bg-main/40 p-3 border border-purple-500/20 rounded-sm relative group">
+                            {(status !== "IN_PLAY" || isOverrideActive) && (
+                              <button
+                                onClick={() => handleDeleteAdvantage(adv.id)}
+                                className="absolute top-3 right-3 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-all duration-150 cursor-pointer select-none"
+                                title="Excluir"
+                              >
+                                ✕
+                              </button>
+                            )}
+
+                            <div className="flex justify-between items-center mb-1 pr-6">
+                              <div className="flex flex-col space-y-0.5">
+                                <InlineEdit
+                                  value={adv.name}
+                                  onChange={(val) => handleAdvantageNameChange(adv.id, val)}
+                                  placeholder="Nova Ficha de Saber"
+                                  disabled={isReadOnly}
+                                  className="font-bold text-xs text-purple-200 hover:bg-white/5 cursor-pointer max-w-[130px]"
+                                />
+                                <span className="text-[9px] uppercase tracking-wider text-purple-400">
+                                  Ficha de Saber (Loresheet)
+                                </span>
+                              </div>
+
+                              <div className="flex space-x-1 items-center h-6">
+                                {Array.from({ length: 5 }).map((_, idx) => {
+                                  const isActive = idx < adv.level;
+                                  const isBase = idx < (rules.advantages - adv.sumBefore);
                                   
                                   let activeClass = "";
                                   if (isActive) {
                                     if (isReadOnly) {
-                                      activeClass = "bg-hunger-red ring-1 ring-hunger-red/40 shadow-[0_0_8px_rgba(255,92,92,0.5)]";
+                                      activeClass = "bg-purple-600 ring-1 ring-purple-400 shadow-[0_0_8px_rgba(147,51,234,0.5)]";
                                     } else if (isBase) {
-                                      activeClass = "bg-blood-red ring-1 ring-blood-red/45 shadow-[0_0_66px_rgba(200,36,52,0.6)]";
+                                      activeClass = "bg-purple-600 ring-1 ring-purple-400 shadow-[0_0_6px_rgba(147,51,234,0.6)]";
                                     } else {
                                       activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
                                     }
                                   } else {
-                                    activeClass = "bg-bg-input border border-text-dim/80 hover:border-blood-red";
+                                    activeClass = "bg-bg-input border border-text-dim/80 hover:border-purple-400";
                                   }
 
                                   return (
@@ -2842,20 +2977,25 @@ export default function CharacterSheetClient({
                             <InlineEdit
                               value={adv.description || ""}
                               onChange={(val) => handleAdvantageDescriptionChange(adv.id, val)}
-                              placeholder="Adicionar descrição..."
+                              placeholder="Descrição da Ficha..."
                               disabled={isReadOnly}
                               className="text-xs text-text-muted font-reading leading-relaxed w-full block"
                             />
                           </div>
                         ))}
+                        {loresheets.length === 0 && (
+                          <div className="text-xs text-text-muted/60 italic font-reading py-2">Nenhuma Ficha de Saber selecionada (opcional).</div>
+                        )}
                       </div>
 
                       {(status !== "IN_PLAY" || isOverrideActive) && (
                         <button
-                          onClick={() => handleAddAdvantage("flaw")}
-                          className="text-xs uppercase tracking-wider font-bold text-blood-red/60 hover:text-blood-red bg-white/5 hover:bg-white/10 px-3 py-2 rounded-sm border border-white/5 transition-all duration-150 cursor-pointer w-full mt-3 flex items-center justify-center select-none"
+                          onClick={() => handleAddAdvantage("loresheet")}
+                          disabled={loresheets.length >= 1 && status === "DRAFT" && !isOverrideActive}
+                          className="text-xs uppercase tracking-wider font-bold text-purple-300 bg-purple-950/40 hover:bg-purple-900/60 disabled:opacity-40 disabled:hover:bg-purple-950/40 px-3 py-2 rounded-sm border border-purple-500/30 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed w-full mt-3 flex items-center justify-center select-none"
+                          title={loresheets.length >= 1 ? "Regra V5: É permitido selecionar apenas 1 Ficha de Saber na criação." : "Adicionar Ficha de Saber"}
                         >
-                          + Adicionar Defeito / Ficha de Saber
+                          + Adicionar Ficha de Saber
                         </button>
                       )}
                     </div>
