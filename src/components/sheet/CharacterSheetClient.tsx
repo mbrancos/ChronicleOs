@@ -24,6 +24,7 @@ import HumanityTracker from "@/components/sheet/HumanityTracker";
 import { useAutosave } from "@/hooks/useAutosave";
 import { updateCharacterSheet, getCharacterXpLedger, narratorOverrideSheetAction } from "@/app/actions/characterActions";
 import { spendCharacterXpAction } from "@/app/actions/xpActions";
+import { rollRouseCheck } from "@/lib/vtt/BloodEngine";
 import InlineEdit from "@/components/sheet/InlineEdit";
 import BloodPanel from "@/components/sheet/BloodPanel";
 import InventoryManager from "@/components/sheet/InventoryManager";
@@ -142,6 +143,14 @@ function generateRandomId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
+const V5_RECOMMENDED_MACROS: RollMacro[] = [
+  { id: "preset_melee", name: "🗡️ Ataque Corpo a Corpo", pool: ["strength", "brawl"], rouse_check: false },
+  { id: "preset_firearms", name: "🎯 Tiro de Precisão", pool: ["dexterity", "firearms"], rouse_check: false },
+  { id: "preset_dodge", name: "🏃 Esquiva & Evasão", pool: ["dexterity", "athletics"], rouse_check: false },
+  { id: "preset_perception", name: "👁️ Percepção Aguçada", pool: ["wits", "awareness"], rouse_check: false },
+  { id: "preset_stealth", name: "👤 Furtividade", pool: ["dexterity", "stealth"], rouse_check: false },
+];
+
 // Simulador fora do escopo do componente para evitar funções impuras (Math.random) no render
 function executeSimulationRoll(
   macro: RollMacro,
@@ -163,6 +172,13 @@ function executeSimulationRoll(
       poolSize += mental[key];
     } else if (skills[key] !== undefined) {
       poolSize += skills[key];
+    } else if (character.disciplines) {
+      const disc = character.disciplines.find(
+        d => d.id === key || d.name.toLowerCase() === key.toLowerCase() || DISCIPLINE_KEY_TO_NAME[key]?.toLowerCase() === d.name.toLowerCase()
+      );
+      if (disc) {
+        poolSize += disc.level;
+      }
     }
   });
 
@@ -726,6 +742,13 @@ export default function CharacterSheetClient({
   const [selectedSkill, setSelectedSkill] = useState<keyof CharacterSkills | "">("");
   const [newSpecialtyName, setNewSpecialtyName] = useState("");
   const [specialtySource, setSpecialtySource] = useState<string>("1ª Grátis");
+
+  // ESTADOS DO GERENCIADOR DE MACROS (SEÇÃO 8)
+  const [isCreatingMacro, setIsCreatingMacro] = useState(false);
+  const [newMacroName, setNewMacroName] = useState("");
+  const [selectedAttribute, setSelectedAttribute] = useState<string>("strength");
+  const [selectedSkillOrDiscipline, setSelectedSkillOrDiscipline] = useState<string>("brawl");
+  const [rouseCheckToggle, setRouseCheckToggle] = useState<boolean>(false);
 
   // Automação e Avanço de Cotas de Especialização
   useEffect(() => {
@@ -1581,6 +1604,99 @@ export default function CharacterSheetClient({
       ...prev,
       specialties: (prev.specialties || []).filter(s => s.id !== id)
     }));
+  };
+
+  // MANIPULADORES DA SEÇÃO 8 (ROUSE CHECK SOLO & GESTÃO DE MACROS)
+  const handleRouseCheckSolo = () => {
+    const result = rollRouseCheck();
+    if (!result.isSuccess) {
+      const nextHunger = Math.min(5, character.status.hunger + 1);
+      setCharacter(prev => ({
+        ...prev,
+        status: {
+          ...prev.status,
+          hunger: nextHunger
+        }
+      }));
+      showWarning(`🩸 A Besta exige mais Sangue! Fome aumentada para ${nextHunger}.`, "Teste de Despertar");
+    } else {
+      showSuccess(`🩸 O Sangue respondeu ao seu chamado! Fome mantida em ${character.status.hunger}.`, "Teste de Despertar");
+    }
+
+    setRollResult({
+      macroName: "🩸 Teste de Despertar (Rouse Check)",
+      totalPool: 1,
+      successes: result.isSuccess ? 1 : 0,
+      isCritical: false,
+      isMessianic: false,
+      isBestial: false,
+      diceList: [{ type: "hunger", value: result.dieResult }]
+    });
+  };
+
+  const handleGeneratePresets = () => {
+    let addedCount = 0;
+    setCharacter(prev => {
+      const existingIds = new Set((prev.macros || []).map(m => m.id));
+      const existingPoolKeys = new Set((prev.macros || []).map(m => m.pool.slice().sort().join("_")));
+      
+      const newPresets = V5_RECOMMENDED_MACROS.filter(preset => {
+        const poolKey = preset.pool.slice().sort().join("_");
+        return !existingIds.has(preset.id) && !existingPoolKeys.has(poolKey);
+      });
+
+      addedCount = newPresets.length;
+      if (newPresets.length === 0) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        macros: [...(prev.macros || []), ...newPresets]
+      };
+    });
+
+    if (addedCount === 0) {
+      showWarning("Todas as macros recomendadas V5 já foram adicionadas à ficha.");
+    } else {
+      showSuccess(`${addedCount} preset(s) recomendado(s) V5 adicionado(s) com sucesso!`);
+    }
+  };
+
+  const handleSaveMacro = () => {
+    if (!newMacroName.trim()) {
+      showWarning("Por favor, informe o nome da macro.");
+      return;
+    }
+    if (!selectedAttribute || !selectedSkillOrDiscipline) {
+      showWarning("Selecione um Atributo e uma Habilidade/Disciplina.");
+      return;
+    }
+
+    const newMac: RollMacro = {
+      id: generateRandomId("mac"),
+      name: newMacroName.trim(),
+      pool: [selectedAttribute, selectedSkillOrDiscipline],
+      rouse_check: rouseCheckToggle
+    };
+
+    setCharacter(prev => ({
+      ...prev,
+      macros: [...(prev.macros || []), newMac]
+    }));
+
+    showSuccess(`Macro "${newMac.name}" criada com sucesso!`);
+    setNewMacroName("");
+    setRouseCheckToggle(false);
+    setIsCreatingMacro(false);
+  };
+
+  const handleDeleteMacro = (id: string) => {
+    setCharacter(prev => ({
+      ...prev,
+      macros: (prev.macros || []).filter(m => m.id !== id)
+    }));
+    showSuccess("Macro removida com sucesso.");
   };
 
   // SIMULADOR DE ROLAGEM DE DADOS D10 GÓTICO (REGRAS V5)
@@ -3172,35 +3288,228 @@ export default function CharacterSheetClient({
                   </div>
                 </div>
 
-                <h3 className="text-sm font-data uppercase tracking-wider text-gold-accent font-semibold border-b border-white/5 pb-2">
-                  Macros de Dados Disponíveis
-                </h3>
+                {/* BOTÃO DEDICADO DE ROUSE CHECK */}
+                <div className="bg-deep-crimson/20 border border-blood-red/40 rounded-sm p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_15px_rgba(200,36,52,0.15)]">
+                  <div>
+                    <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold flex items-center gap-1.5">
+                      <span>🩸</span>
+                      <span>Teste de Despertar (Rouse Check 1d10)</span>
+                    </h4>
+                    <p className="text-[10px] text-text-muted font-reading">
+                      Rola o 1d10 de Fome. Se tirar 1 a 5, aumenta a Fome da ficha automaticamente (+1).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRouseCheckSolo}
+                    className="shrink-0 bg-deep-crimson/80 border border-blood-red text-white hover:bg-blood-red font-bold text-xs uppercase px-4 py-2.5 rounded-sm shadow-[0_0_10px_rgba(200,36,52,0.4)] flex items-center justify-center space-x-2 cursor-pointer transition-all duration-150 active:scale-95 select-none"
+                  >
+                    <span>🩸</span>
+                    <span>Rolar Rouse Check</span>
+                  </button>
+                </div>
+
+                {/* CABEÇALHO DE MACROS & BOTÕES DE AÇÃO */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-2 gap-2">
+                  <h3 className="text-sm font-data uppercase tracking-wider text-gold-accent font-semibold">
+                    Macros de Dados Disponíveis
+                  </h3>
+                  
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={handleGeneratePresets}
+                      className="text-[10px] uppercase font-bold tracking-wider text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/30 px-2.5 py-1.5 rounded-sm transition-all duration-150 cursor-pointer flex items-center gap-1"
+                      title="Preencher com 1-clique as 5 macros essenciais V5 (Ataque, Tiro, Esquiva, Percepção e Furtividade)"
+                    >
+                      <span>⚡ Presets V5</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingMacro(!isCreatingMacro)}
+                      className="text-[10px] uppercase font-bold tracking-wider text-gold-accent bg-gold-accent/10 hover:bg-gold-accent/20 border border-gold-accent/40 px-2.5 py-1.5 rounded-sm transition-all duration-150 cursor-pointer flex items-center gap-1"
+                    >
+                      <span>{isCreatingMacro ? "✕ Cancelar" : "+ Criar Macro"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* FORMULÁRIO INLINE DE CRIAÇÃO DE MACRO */}
+                {isCreatingMacro && (
+                  <div className="bg-bg-main/60 border border-gold-accent/30 p-4 rounded-sm space-y-3 animate-fade-in">
+                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">
+                      Nova Macro de Rolagem
+                    </h4>
+                    
+                    <div className="space-y-2 font-data text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase text-text-muted block mb-1">Nome da Macro</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Golpe de Espada, Encantar Multidão..."
+                          value={newMacroName}
+                          onChange={(e) => setNewMacroName(e.target.value)}
+                          className="w-full bg-bg-input border border-white/10 rounded p-2 text-text-primary outline-none focus:border-gold-accent font-reading text-xs"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] uppercase text-text-muted block mb-1">1º Dado (Atributo)</label>
+                          <select
+                            value={selectedAttribute}
+                            onChange={(e) => setSelectedAttribute(e.target.value)}
+                            className="w-full bg-bg-input border border-white/10 rounded p-2 text-text-primary outline-none focus:border-gold-accent font-reading text-xs cursor-pointer"
+                          >
+                            <optgroup label="Físicos">
+                              <option value="strength">Força</option>
+                              <option value="dexterity">Destreza</option>
+                              <option value="stamina">Vigor</option>
+                            </optgroup>
+                            <optgroup label="Sociais">
+                              <option value="charisma">Carisma</option>
+                              <option value="manipulation">Manipulação</option>
+                              <option value="composure">Autocontrole</option>
+                            </optgroup>
+                            <optgroup label="Mentais">
+                              <option value="intelligence">Inteligência</option>
+                              <option value="wits">Raciocínio</option>
+                              <option value="resolve">Determinação</option>
+                            </optgroup>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase text-text-muted block mb-1">2º Dado (Habilidade / Disciplina)</label>
+                          <select
+                            value={selectedSkillOrDiscipline}
+                            onChange={(e) => setSelectedSkillOrDiscipline(e.target.value)}
+                            className="w-full bg-bg-input border border-white/10 rounded p-2 text-text-primary outline-none focus:border-gold-accent font-reading text-xs cursor-pointer"
+                          >
+                            <optgroup label="Habilidades Físicas">
+                              <option value="athletics">Atletismo</option>
+                              <option value="brawl">Briga</option>
+                              <option value="craft">Ofícios</option>
+                              <option value="drive">Condução</option>
+                              <option value="firearms">Armas de Fogo</option>
+                              <option value="melee">Armas Brancas</option>
+                              <option value="larceny">Ladroagem</option>
+                              <option value="stealth">Furtividade</option>
+                              <option value="survival">Sobrevivência</option>
+                            </optgroup>
+                            <optgroup label="Habilidades Sociais">
+                              <option value="animal_ken">Empatia com Animais</option>
+                              <option value="etiquette">Etiqueta</option>
+                              <option value="insight">Sagacidade</option>
+                              <option value="intimidation">Intimidação</option>
+                              <option value="leadership">Liderança</option>
+                              <option value="performance">Performance</option>
+                              <option value="persuasion">Persuasão</option>
+                              <option value="streetwise">Manha</option>
+                              <option value="subterfuge">Subterfúgio</option>
+                            </optgroup>
+                            <optgroup label="Habilidades Mentais">
+                              <option value="academics">Erudição</option>
+                              <option value="awareness">Percepção</option>
+                              <option value="finance">Finanças</option>
+                              <option value="investigation">Investigação</option>
+                              <option value="medicine">Medicina</option>
+                              <option value="occult">Ocultismo</option>
+                              <option value="politics">Política</option>
+                              <option value="science">Ciência</option>
+                              <option value="technology">Tecnologia</option>
+                            </optgroup>
+                            {character.disciplines && character.disciplines.length > 0 && (
+                              <optgroup label="Disciplinas Ativas">
+                                {character.disciplines.map(d => (
+                                  <option key={d.id} value={d.id}>{d.name} (Nv {d.level})</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2 pt-1">
+                        <input
+                          type="checkbox"
+                          id="rouse_check_toggle"
+                          checked={rouseCheckToggle}
+                          onChange={(e) => setRouseCheckToggle(e.target.checked)}
+                          className="w-4 h-4 accent-blood-red cursor-pointer"
+                        />
+                        <label htmlFor="rouse_check_toggle" className="text-xs text-text-primary cursor-pointer select-none">
+                          Exigir Teste de Despertar (Rouse Check) nesta macro
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end space-x-2 pt-2 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingMacro(false)}
+                        className="px-3 py-1.5 border border-white/10 text-text-muted hover:text-white text-xs font-data uppercase tracking-wider rounded-xs cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveMacro}
+                        className="px-4 py-1.5 bg-burgundy border border-blood-red text-white text-xs font-bold font-data uppercase tracking-wider rounded-xs hover:bg-blood-red transition-all duration-150 cursor-pointer shadow-md"
+                      >
+                        Salvar Macro
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* GRADE DE MACROS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {character.macros.map(mac => (
-                    <button
+                    <div
                       key={mac.id}
-                      onClick={() => triggerRoll(mac)}
-                      className="bg-bg-main border border-blood-red/40 hover:border-blood-red hover:bg-burgundy/10 text-left p-3 rounded-sm cursor-pointer transition-all duration-150 group flex flex-col justify-between h-24 focus:outline-none focus:ring-1 focus:ring-gold-accent"
+                      className="bg-bg-main border border-blood-red/40 hover:border-blood-red hover:bg-burgundy/10 p-3 rounded-sm transition-all duration-150 group flex flex-col justify-between h-24 relative"
                     >
-                      <div className="space-y-0.5">
-                        <span className="font-data uppercase tracking-wider text-xs font-bold text-text-primary group-hover:text-gold-accent transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMacro(mac.id)}
+                        className="absolute top-2 right-2 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer p-1 text-xs select-none"
+                        title="Excluir Macro"
+                      >
+                        ✕
+                      </button>
+
+                      <div 
+                        onClick={() => triggerRoll(mac)}
+                        className="space-y-0.5 cursor-pointer pr-5"
+                      >
+                        <span className="font-data uppercase tracking-wider text-xs font-bold text-text-primary group-hover:text-gold-accent transition-colors block truncate">
                           {mac.name}
                         </span>
                         <div className="flex flex-wrap gap-1 pt-1">
                           {mac.pool.map((p, pIdx) => (
                             <span key={pIdx} className="bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-[8px] text-text-muted font-data uppercase">
-                              {TECHNICAL_NAMES[p] || p}
+                              {TECHNICAL_NAMES[p] || (character.disciplines?.find(d => d.id === p)?.name) || p}
                             </span>
                           ))}
                         </div>
                       </div>
                       
-                      <div className="flex justify-between items-center w-full text-[9px] uppercase tracking-wider font-semibold pt-2 border-t border-white/5 text-text-dim group-hover:text-text-muted transition-colors">
+                      <div 
+                        onClick={() => triggerRoll(mac)}
+                        className="flex justify-between items-center w-full text-[9px] uppercase tracking-wider font-semibold pt-2 border-t border-white/5 text-text-dim group-hover:text-text-muted transition-colors cursor-pointer select-none"
+                      >
                         <span>Rolagem D10</span>
-                        {mac.rouse_check && <span className="text-gold-accent">+ Despertar</span>}
+                        {mac.rouse_check && <span className="text-gold-accent font-bold">🩸 + Despertar</span>}
                       </div>
-                    </button>
+                    </div>
                   ))}
+                  {character.macros.length === 0 && (
+                    <div className="col-span-full text-center py-6 border border-dashed border-white/10 rounded-sm text-xs text-text-muted italic">
+                      Nenhuma macro criada. Clique no botão acima para adicionar presets V5 ou criar uma macro personalizada.
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2 pt-4">
