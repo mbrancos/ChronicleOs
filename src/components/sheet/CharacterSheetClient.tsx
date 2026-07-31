@@ -1888,7 +1888,7 @@ export default function CharacterSheetClient({
         <section id="sec-profile" className="bg-bg-card/90 border border-gold-accent/25 rounded-sm p-6 shadow-[0_0_30px_rgba(0,0,0,0.85)] relative overflow-hidden backdrop-blur-md space-y-5">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* PRIMEIRO TERÇO (1/3): FOTO + DADOS DE PERFIL DO VAMPIRO */}
+            {/* PRIMEIRO TERÇO (5 COLS): FOTO + DADOS DE PERFIL DO VAMPIRO */}
             <div className="lg:col-span-5 flex flex-col sm:flex-row items-center sm:items-start gap-5">
               {/* AVATAR DO VAMPIRO (INTERATIVO) */}
               <div className="shrink-0">
@@ -1899,8 +1899,8 @@ export default function CharacterSheetClient({
                       setIsAvatarModalOpen(true);
                     }
                   }}
-                  className={`relative w-24 h-24 rounded-full border-2 border-gold-accent/60 ring-2 ring-gold-accent/30 ring-offset-2 ring-offset-bg-card bg-bg-main flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.2)] group transition-all duration-300 ${
-                    !isReadOnly ? "cursor-pointer hover:border-gold-accent hover:scale-105 hover:shadow-[0_0_25px_rgba(212,175,55,0.4)]" : ""
+                  className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-gold-accent/50 ring-2 ring-gold-accent/20 ring-offset-2 ring-offset-bg-card bg-bg-main flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.15)] group transition-all duration-300 ${
+                    !isReadOnly ? "cursor-pointer hover:border-gold-accent hover:scale-105 hover:shadow-[0_0_25px_rgba(212,175,55,0.35)]" : ""
                   }`}
                   title={!isReadOnly ? "Clique para alterar a foto de perfil do personagem" : ""}
                 >
@@ -1939,9 +1939,9 @@ export default function CharacterSheetClient({
                 </h1>
 
                 {/* GRID MODULAR DE METADADOS DO PERFIL */}
-                <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 text-xs font-data uppercase">
-                  <div className="bg-bg-main/70 border border-white/10 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5">
-                    <span className="text-text-muted">Clã:</span>
+                <div className="grid grid-cols-2 gap-2 text-xs font-data uppercase">
+                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                    <span className="text-text-muted text-[10px]">Clã:</span>
                     <InlineEdit
                       value={character.profile.clan}
                       onChange={(val) => handleProfileChange("clan", val)}
@@ -1952,8 +1952,8 @@ export default function CharacterSheetClient({
                     />
                   </div>
 
-                  <div className="bg-bg-main/70 border border-white/10 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5">
-                    <span className="text-text-muted">Idade:</span>
+                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                    <span className="text-text-muted text-[10px]">Idade:</span>
                     <InlineEdit
                       value={character.profile.concept || "Neófito"}
                       onChange={(val) => handleProfileChange("concept", val)}
@@ -1964,8 +1964,8 @@ export default function CharacterSheetClient({
                     />
                   </div>
 
-                  <div className="bg-bg-main/70 border border-white/10 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5">
-                    <span className="text-text-muted">Geração:</span>
+                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                    <span className="text-text-muted text-[10px]">Geração:</span>
                     <InlineEdit
                       value={String(character.profile.generation)}
                       onChange={(val) => handleProfileChange("generation", Number(val) || 11)}
@@ -1973,11 +1973,11 @@ export default function CharacterSheetClient({
                       disabled={isReadOnly}
                       className="text-text-primary font-bold hover:bg-white/5 w-8"
                     />
-                    <span>ª</span>
+                    <span className="text-[10px] text-text-dim">ª</span>
                   </div>
 
-                  <div className="bg-bg-main/70 border border-white/10 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5">
-                    <span className="text-text-muted">Predador:</span>
+                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                    <span className="text-text-muted text-[10px]">Predador:</span>
                     <InlineEdit
                       value={character.profile.predator_type}
                       onChange={(val) => handleProfileChange("predator_type", val)}
@@ -1988,8 +1988,8 @@ export default function CharacterSheetClient({
                     />
                   </div>
 
-                  <div className="col-span-2 bg-bg-main/70 border border-white/10 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5">
-                    <span className="text-text-muted">Senhor:</span>
+                  <div className="col-span-2 bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                    <span className="text-text-muted text-[10px]">Senhor:</span>
                     <InlineEdit
                       value={character.profile.sire}
                       onChange={(val) => handleProfileChange("sire", val)}
@@ -2003,7 +2003,7 @@ export default function CharacterSheetClient({
                 {(() => {
                   const rules = getPowerLevelRules(character.profile.concept || "Neófito");
                   return (
-                    <div className="p-2 bg-amber-950/25 border border-amber-500/30 rounded-xs text-[10px] font-data text-amber-300 leading-tight">
+                    <div className="p-2.5 bg-amber-950/20 border border-amber-600/30 rounded-xs text-[10px] font-data text-amber-300 leading-tight">
                       <span className="text-amber-400 font-bold uppercase tracking-wider block mb-0.5">
                         💡 Regra V5 - Idade ({rules.name}):
                       </span>
@@ -2016,34 +2016,40 @@ export default function CharacterSheetClient({
               </div>
             </div>
 
-            {/* OUTROS DOIS TERÇOS (2/3): RASTREADORES RÁPIDOS MODULARIZADOS */}
+            {/* SEGUNDO TERÇO (7 COLS): RASTREADORES RÁPIDOS MODULARIZADOS */}
             <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-3.5 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
               
               {/* LINHA 1: VITALIDADE (HEALTH) & FORÇA DE VONTADE (WILLPOWER) */}
-              <DamageTracker 
-                characterId={characterId}
-                label="Vitalidade" 
-                value={character.status.health} 
-                onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, health: val } }))} 
-                variant="health" 
-              />
+              <div className="bg-black/30 border border-white/10 rounded-xs p-3 flex flex-col justify-between">
+                <DamageTracker 
+                  characterId={characterId}
+                  label="Vitalidade" 
+                  value={character.status.health} 
+                  onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, health: val } }))} 
+                  variant="health" 
+                />
+              </div>
 
-              <DamageTracker 
-                characterId={characterId}
-                label="Força de Vontade" 
-                value={character.status.willpower} 
-                onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, willpower: val } }))} 
-                variant="willpower" 
-              />
+              <div className="bg-black/30 border border-white/10 rounded-xs p-3 flex flex-col justify-between">
+                <DamageTracker 
+                  characterId={characterId}
+                  label="Força de Vontade" 
+                  value={character.status.willpower} 
+                  onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, willpower: val } }))} 
+                  variant="willpower" 
+                />
+              </div>
 
-              {/* LINHA 2: FOME & RESSONÂNCIA (LADO A LADO) */}
-              <DotSlider
-                label="Fome"
-                value={character.status.hunger}
-                onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
-                allowZero
-                variant="red"
-              />
+              {/* LINHA 2: FOME & RESSONÂNCIA */}
+              <div className="bg-black/30 border border-white/10 rounded-xs p-3 flex flex-col justify-between">
+                <DotSlider
+                  label="Fome"
+                  value={character.status.hunger}
+                  onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
+                  allowZero
+                  variant="red"
+                />
+              </div>
 
               <BloodPanel
                 value={character.bloodState}
@@ -2052,7 +2058,7 @@ export default function CharacterSheetClient({
               />
 
               {/* LINHA 3: BÚSSOLA MORAL & MÁCULAS (LARGURA TOTAL 2 COLUNAS) */}
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 bg-black/30 border border-white/10 rounded-xs p-3.5">
                 <HumanityTracker
                   characterId={characterId}
                   humanity={character.status.humanity}
@@ -2068,11 +2074,11 @@ export default function CharacterSheetClient({
 
           {/* EXIBIÇÃO DA MALDIÇÃO DO CLÃ (FOOTER ELEGANTE DA SEÇÃO) */}
           {character.profile.bane && (
-            <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-data">
+            <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs font-data">
               <span className="text-blood-red font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0 font-gothic">
                 <span>🩸 Maldição do Clã ({character.profile.clan || "Vampiro"}):</span>
               </span>
-              <span className="text-text-primary font-reading text-xs bg-burgundy/30 border border-blood-red/40 px-3 py-1 rounded-xs w-full sm:w-auto flex-1">
+              <span className="text-text-primary font-reading text-xs bg-burgundy/25 border border-blood-red/30 px-3 py-1.5 rounded-xs w-full sm:w-auto flex-1 leading-relaxed">
                 {character.profile.bane}
               </span>
             </div>
