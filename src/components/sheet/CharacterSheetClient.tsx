@@ -1885,11 +1885,11 @@ export default function CharacterSheetClient({
         {/* ======================================================== */}
         {/* CABEÇALHO FIXO - DADOS DO VAMPIRO & TRACKERS RÁPIDOS */}
         {/* ======================================================== */}
-        <section id="sec-profile" className="bg-bg-card/90 border border-gold-accent/25 rounded-sm p-6 shadow-[0_0_30px_rgba(0,0,0,0.85)] relative overflow-hidden backdrop-blur-md space-y-5">
+        <section id="sec-profile" className="bg-bg-card/90 border border-gold-accent/25 rounded-sm p-5 shadow-[0_0_30px_rgba(0,0,0,0.85)] relative overflow-hidden backdrop-blur-md space-y-4">
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             {/* PRIMEIRO TERÇO (5 COLS): FOTO + DADOS DE PERFIL DO VAMPIRO */}
-            <div className="lg:col-span-5 flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            <div className="lg:col-span-5 flex flex-col sm:flex-row items-center sm:items-start gap-4">
               {/* AVATAR DO VAMPIRO (INTERATIVO) */}
               <div className="shrink-0">
                 <div 
@@ -1899,8 +1899,8 @@ export default function CharacterSheetClient({
                       setIsAvatarModalOpen(true);
                     }
                   }}
-                  className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-gold-accent/50 ring-2 ring-gold-accent/20 ring-offset-2 ring-offset-bg-card bg-bg-main flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.15)] group transition-all duration-300 ${
-                    !isReadOnly ? "cursor-pointer hover:border-gold-accent hover:scale-105 hover:shadow-[0_0_25px_rgba(212,175,55,0.35)]" : ""
+                  className={`relative w-20 h-20 rounded-full border-2 border-gold-accent/50 ring-2 ring-gold-accent/20 ring-offset-2 ring-offset-bg-card bg-bg-main flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(212,175,55,0.15)] group transition-all duration-300 ${
+                    !isReadOnly ? "cursor-pointer hover:border-gold-accent hover:scale-105 hover:shadow-[0_0_20px_rgba(212,175,55,0.35)]" : ""
                   }`}
                   title={!isReadOnly ? "Clique para alterar a foto de perfil do personagem" : ""}
                 >
@@ -1913,34 +1913,34 @@ export default function CharacterSheetClient({
                       onError={() => setAvatarImageError(true)}
                     />
                   ) : (
-                    <svg className="w-12 h-12 text-text-dim/40 group-hover:text-gold-accent/60 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-10 h-10 text-text-dim/40 group-hover:text-gold-accent/60 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                     </svg>
                   )}
 
                   {!isReadOnly && (
                     <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center text-gold-accent font-data text-[9px] uppercase font-bold tracking-wider">
-                      <span className="text-sm mb-0.5">📷</span>
-                      <span>Alterar Foto</span>
+                      <span className="text-xs mb-0.5">📷</span>
+                      <span>Foto</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* DADOS DE PERFIL */}
-              <div className="space-y-3 flex-1 min-w-0 text-center sm:text-left">
-                <h1 className="text-2xl sm:text-3xl font-gothic tracking-wider text-blood-red leading-none flex items-center justify-center sm:justify-start gap-1">
+              <div className="space-y-2.5 flex-1 min-w-0 text-center sm:text-left">
+                <h1 className="text-xl sm:text-2xl font-gothic tracking-wider text-blood-red leading-none flex items-center justify-center sm:justify-start gap-1">
                   <InlineEdit
                     value={character.profile.name || "Novo Vampiro"}
                     onChange={(val) => handleProfileChange("name", val)}
                     disabled={isReadOnly}
-                    className="text-2xl sm:text-3xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                    className="text-xl sm:text-2xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                   />
                 </h1>
 
-                {/* GRID MODULAR DE METADADOS DO PERFIL */}
-                <div className="grid grid-cols-2 gap-2 text-xs font-data uppercase">
-                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                {/* GRID MODULAR DE METADADOS DO PERFIL (2 LINHAS) */}
+                <div className="grid grid-cols-2 gap-1.5 text-xs font-data uppercase">
+                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
                     <span className="text-text-muted text-[10px]">Clã:</span>
                     <InlineEdit
                       value={character.profile.clan}
@@ -1948,11 +1948,11 @@ export default function CharacterSheetClient({
                       type="select"
                       options={CLAN_OPTIONS}
                       disabled={isReadOnly}
-                      className="text-gold-accent font-bold hover:bg-white/5 truncate"
+                      className="text-gold-accent font-bold hover:bg-white/5 truncate text-[11px]"
                     />
                   </div>
 
-                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
                     <span className="text-text-muted text-[10px]">Idade:</span>
                     <InlineEdit
                       value={character.profile.concept || "Neófito"}
@@ -1960,23 +1960,23 @@ export default function CharacterSheetClient({
                       type="select"
                       options={POWER_LEVEL_OPTIONS}
                       disabled={isReadOnly}
-                      className="text-text-primary font-bold hover:bg-white/5 truncate"
+                      className="text-text-primary font-bold hover:bg-white/5 truncate text-[11px]"
                     />
                   </div>
 
-                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
                     <span className="text-text-muted text-[10px]">Geração:</span>
                     <InlineEdit
                       value={String(character.profile.generation)}
                       onChange={(val) => handleProfileChange("generation", Number(val) || 11)}
                       type="number"
                       disabled={isReadOnly}
-                      className="text-text-primary font-bold hover:bg-white/5 w-8"
+                      className="text-text-primary font-bold hover:bg-white/5 w-7 text-[11px]"
                     />
                     <span className="text-[10px] text-text-dim">ª</span>
                   </div>
 
-                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
                     <span className="text-text-muted text-[10px]">Predador:</span>
                     <InlineEdit
                       value={character.profile.predator_type}
@@ -1984,17 +1984,17 @@ export default function CharacterSheetClient({
                       type="select"
                       options={PREDATOR_OPTIONS}
                       disabled={isReadOnly}
-                      className="text-text-primary font-bold hover:bg-white/5 truncate"
+                      className="text-text-primary font-bold hover:bg-white/5 truncate text-[11px]"
                     />
                   </div>
 
-                  <div className="col-span-2 bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5 flex items-center gap-1.5 transition-colors">
+                  <div className="col-span-2 bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
                     <span className="text-text-muted text-[10px]">Senhor:</span>
                     <InlineEdit
                       value={character.profile.sire}
                       onChange={(val) => handleProfileChange("sire", val)}
                       disabled={isReadOnly}
-                      className="text-text-primary font-bold hover:bg-white/5 truncate"
+                      className="text-text-primary font-bold hover:bg-white/5 truncate text-[11px]"
                     />
                   </div>
                 </div>
@@ -2003,12 +2003,12 @@ export default function CharacterSheetClient({
                 {(() => {
                   const rules = getPowerLevelRules(character.profile.concept || "Neófito");
                   return (
-                    <div className="p-2.5 bg-amber-950/20 border border-amber-600/30 rounded-xs text-[10px] font-data text-amber-300 leading-tight">
+                    <div className="p-2 bg-amber-950/20 border border-amber-600/30 rounded-xs text-[10px] font-data text-amber-300 leading-tight">
                       <span className="text-amber-400 font-bold uppercase tracking-wider block mb-0.5">
                         💡 Regra V5 - Idade ({rules.name}):
                       </span>
                       <span>
-                        Atributos (13 pts) e Habilidades (20 pts) padrão. Nível <strong className="text-amber-200">{rules.name}</strong> concede: <strong>Potência de Sangue {rules.bloodPotency}</strong>, <strong>{rules.disciplines} bolinhas de Disciplinas</strong> e <strong>{rules.advantages} pts de Vantagens</strong>.
+                        Atributos (13 pts) e Habilidades (20 pts) padrão. Nível <strong className="text-amber-200">{rules.name}</strong> concede: <strong>Potência {rules.bloodPotency}</strong>, <strong>{rules.disciplines} Disc.</strong> e <strong>{rules.advantages} pts Vantagens</strong>.
                       </span>
                     </div>
                   );
@@ -2016,11 +2016,15 @@ export default function CharacterSheetClient({
               </div>
             </div>
 
-            {/* SEGUNDO TERÇO (7 COLS): RASTREADORES RÁPIDOS MODULARIZADOS */}
-            <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-3.5 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-6">
+            {/* SEGUNDO TERÇO (7 COLS): QUADRO ÚNICO DE RECURSOS VITAIS & SANGRIA */}
+            <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-5">
               
-              {/* LINHA 1: VITALIDADE (HEALTH) & FORÇA DE VONTADE (WILLPOWER) */}
-              <div className="bg-black/30 border border-white/10 rounded-xs p-3 flex flex-col justify-between">
+              {/* QUADRO ÚNICO DE RECURSOS VITAIS (VITALIDADE + FORÇA DE VONTADE + FOME) */}
+              <div className="bg-black/40 border border-white/10 rounded-xs p-3.5 space-y-3">
+                <div className="text-[10px] font-data uppercase tracking-widest text-blood-red font-bold flex items-center gap-1.5 pb-1 border-b border-white/5">
+                  <span>🩸 Recursos Vitais</span>
+                </div>
+
                 <DamageTracker 
                   characterId={characterId}
                   label="Vitalidade" 
@@ -2028,9 +2032,7 @@ export default function CharacterSheetClient({
                   onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, health: val } }))} 
                   variant="health" 
                 />
-              </div>
 
-              <div className="bg-black/30 border border-white/10 rounded-xs p-3 flex flex-col justify-between">
                 <DamageTracker 
                   characterId={characterId}
                   label="Força de Vontade" 
@@ -2038,10 +2040,7 @@ export default function CharacterSheetClient({
                   onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, willpower: val } }))} 
                   variant="willpower" 
                 />
-              </div>
 
-              {/* LINHA 2: FOME & RESSONÂNCIA */}
-              <div className="bg-black/30 border border-white/10 rounded-xs p-3 flex flex-col justify-between">
                 <DotSlider
                   label="Fome"
                   value={character.status.hunger}
@@ -2051,14 +2050,14 @@ export default function CharacterSheetClient({
                 />
               </div>
 
-              <BloodPanel
-                value={character.bloodState}
-                onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
-                disabled={isSheetDisabled}
-              />
+              {/* COLUNA DE RESSONÂNCIA E BÚSSOLA MORAL */}
+              <div className="flex flex-col gap-3 justify-between">
+                <BloodPanel
+                  value={character.bloodState}
+                  onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
+                  disabled={isSheetDisabled}
+                />
 
-              {/* LINHA 3: BÚSSOLA MORAL & MÁCULAS (LARGURA TOTAL 2 COLUNAS) */}
-              <div className="md:col-span-2 bg-black/30 border border-white/10 rounded-xs p-3.5">
                 <HumanityTracker
                   characterId={characterId}
                   humanity={character.status.humanity}
@@ -2074,11 +2073,11 @@ export default function CharacterSheetClient({
 
           {/* EXIBIÇÃO DA MALDIÇÃO DO CLÃ (FOOTER ELEGANTE DA SEÇÃO) */}
           {character.profile.bane && (
-            <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs font-data">
-              <span className="text-blood-red font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0 font-gothic">
-                <span>🩸 Maldição do Clã ({character.profile.clan || "Vampiro"}):</span>
+            <div className="pt-2.5 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-data">
+              <span className="text-blood-red font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0 font-gothic text-[11px]">
+                <span>🩸 Maldição do ClÃ ({character.profile.clan || "Vampiro"}):</span>
               </span>
-              <span className="text-text-primary font-reading text-xs bg-burgundy/25 border border-blood-red/30 px-3 py-1.5 rounded-xs w-full sm:w-auto flex-1 leading-relaxed">
+              <span className="text-text-primary font-reading text-xs bg-burgundy/25 border border-blood-red/30 px-3 py-1 rounded-xs w-full sm:w-auto flex-1 leading-relaxed text-[11px]">
                 {character.profile.bane}
               </span>
             </div>
