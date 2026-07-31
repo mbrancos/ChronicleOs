@@ -266,3 +266,16 @@ O sistema dita a atmosfera da mesa em tempo real de forma automatizada baseado n
    - **Gatilhos**: Falha Pura (0 sucessos totais) ou Massacre (4 ou mais sucessos).
    - **Visual**: Mascote clássico do "Toasty!" (Dan Forden) com sua imagem PNG estática padrão (`https://i.imgur.com/xVp4CqV.png`) deslizando horizontalmente no canto inferior direito da tela por 1.5 segundos.
    - **Áudio**: Efeito sonoro do grito agudo clássico de "Toasty!".
+
+---
+
+## 9. Escudo do Narrador & Mini Cards de Personagem (`CharacterMiniCard.tsx`)
+
+### A. Avatar e Identificação do Jogador Humano
+- **Avatar do Personagem**: Moldura circular de `40x40px` (`w-10 h-10 rounded-full`) com fundo escuro e borda fina `border-gold-accent/40`, exibindo a imagem `avatarUrl` com fallback de ícone gótico.
+- **Rótulo do Jogador Humano**: Texto em caixa de dados (`text-[10px] text-gold-accent/90 font-data tracking-wider`) posicionado logo abaixo do nome do personagem para identificação tática imediata do Narrador (ex: `Jogador: @Moises`).
+
+### B. Gaveta Lateral de Inspeção (`SheetDrawer`)
+- Ação `ABRIR FICHA →` na antessala dispara a gaveta deslizante lateral `SheetDrawer` (`max-w-4xl`) sem mudar de rota nem forçar redirecionamento para fora da crônica.
+- Renderização com a flag `isStoryteller={true}` ativada, habilitando o controle de **Edição Divina ⚡** para o Narrador realizar correções imediatas na ficha.
+

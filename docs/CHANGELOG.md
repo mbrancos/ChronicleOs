@@ -2,6 +2,16 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo. O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
+## [0.28.0] - 2026-07-31
+
+### Adicionado
+- **Experiência do Escudo do Narrador (Antessala da Crônica):**
+  - **Identificação de Jogador e Avatar:** Renderização da foto de perfil/avatar do personagem (`avatarUrl`) em moldura gótica circular e exibição do nome do jogador humano (`Jogador: @nome`) nos mini cards dos personagens (`CharacterMiniCard.tsx`).
+  - **Gaveta Lateral (`SheetDrawer`):** Ação de `ABRIR FICHA →` na antessala agora abre a ficha diretamente em uma gaveta lateral deslizante sem redirecionar a tela nem forçar navegações indesejadas para o Hub.
+  - **Edição Divina ⚡ Habilitada:** Ao abrir qualquer ficha de jogador ou NPC pela antessala, a flag `isStoryteller={true}` é fornecida ao `CharacterSheetClient`, disponibilizando o botão de Edição Divina no topo da ficha.
+- **Gestão de Macros e Rouse Check na Ficha:**
+  - Botão dedicado `🩸 Teste de Despertar (1d10)` e gerador de presets recomendados V5 na Seção 8 da ficha (`CharacterSheetClient.tsx`).
+
 ## [0.27.0] - 2026-07-02
 
 ### Adicionado
