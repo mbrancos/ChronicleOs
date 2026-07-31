@@ -284,11 +284,12 @@ O sistema dita a atmosfera da mesa em tempo real de forma automatizada baseado n
 ## 10. Cabeçalho Fixo do Perfil da Ficha (`#sec-profile` em `CharacterSheetClient.tsx`)
 
 ### A. Cartão de Identidade Gótico (Esquerda)
-- **Avatar Ampliado**: Moldura circular de `100x100px` (`w-24 h-24 sm:w-28 sm:h-28 rounded-full`) com anel duplo em dourado e carmesim (`border-2 border-gold-accent/50 ring-2 ring-gold-accent/20`).
-- **Pílulas de Metadados**: Mapeamento dos 5 campos de perfil (`Clã`, `Idade`, `Geração`, `Predador`, `Senhor`) em pílulas pretas translúcidas (`bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2.5 py-1.5`) com rótulos `text-[10px] text-text-muted font-data uppercase` e valores destacados em `text-gold-accent`.
+- **Avatar Compacto**: Moldura circular de `80x80px` (`w-20 h-20 rounded-full`) com anel duplo em dourado e carmesim (`border-2 border-gold-accent/50 ring-2 ring-gold-accent/20`).
+- **Pílulas de Metadados**: 5 campos de perfil (`Clã`, `Idade`, `Geração`, `Predador`, `Senhor`) dispostos em 2 linhas compactas (`bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1`).
 
-### B. HUD Tático de Vitais (Direita)
-- **Container Dividido**: Divisor vertical `border-l border-white/10 pl-6`.
-- **Vitais Modulares**: Vitalidade, Força de Vontade, Fome, Ressonância e Bússola Moral contidos em cartões modulares pretos translúcidos de altura uniforme (`bg-black/30 border border-white/10 p-3 rounded-xs`).
+### B. Quadro Único de Recursos Vitais (Direita)
+- **Container Unificado**: `bg-black/40 border border-white/10 p-3.5 rounded-xs space-y-3` agrupando Vitalidade, Força de Vontade e Fome no mesmo quadro tático.
+- **Ressonância e Bússola Moral**: Contidos em blocos diretos (`bg-black/30 border border-white/10 p-3 rounded-xs`) sem aninhamento de bordas duplicadas.
+
 
 
