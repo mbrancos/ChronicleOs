@@ -858,6 +858,7 @@ export default function NarratorDashboardClient({
             initialStatus={selectedSheetChar.status}
             characterType={selectedSheetChar.type as any}
             isStoryteller={true}
+            hideBackToHub={true}
             chronicle={campaign}
           />
         )}

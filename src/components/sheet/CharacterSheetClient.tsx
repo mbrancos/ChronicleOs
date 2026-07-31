@@ -530,6 +530,7 @@ interface CharacterSheetClientProps {
   characterType?: "jogador" | "npc" | "coterie";
   isStoryteller?: boolean;
   chronicle?: any;
+  hideBackToHub?: boolean;
 }
 
 export default function CharacterSheetClient({
@@ -544,7 +545,8 @@ export default function CharacterSheetClient({
   initialBuildState = {},
   characterType = "jogador",
   isStoryteller = false,
-  chronicle
+  chronicle,
+  hideBackToHub = false
 }: CharacterSheetClientProps) {
   const { showSuccess, showWarning, showError } = useToast();
 
@@ -1745,15 +1747,19 @@ export default function CharacterSheetClient({
         
         {/* NAV VOLTAR AO HUB E FEEDBACK DE AUTOSAVE */}
         <div className="flex justify-between items-center pb-2 border-b border-white/10">
-          <Link 
-            href="/hub" 
-            className="flex items-center space-x-2 text-xs uppercase tracking-widest text-text-muted hover:text-gold-accent transition-colors font-data"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            <span>Voltar ao Hub</span>
-          </Link>
+          {!hideBackToHub && !isStoryteller ? (
+            <Link 
+              href="/hub" 
+              className="flex items-center space-x-2 text-xs uppercase tracking-widest text-text-muted hover:text-gold-accent transition-colors font-data"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Voltar ao Hub</span>
+            </Link>
+          ) : (
+            <div />
+          )}
 
           {/* INDICADOR VISUAL DE AUTOSAVE DEBOUNCED */}
           <div className="flex items-center space-x-4 font-data text-xs select-none">
