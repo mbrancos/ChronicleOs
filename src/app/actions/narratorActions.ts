@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { campaigns, characters } from "@/db/schema";
+import { campaigns, characters, users } from "@/db/schema";
 import { auth } from "@/lib/auth/server";
 import { eq, and, isNull, or, ne } from "drizzle-orm";
 
@@ -36,11 +36,22 @@ export async function getCampaignDashboard(campaignId: string) {
       return { success: false, error: "Acesso negado: Você não é o Narrador desta crônica.", isForbidden: true };
     }
 
-    // 3. Buscar todos os personagens pertencentes a essa campanha
-    const campaignCharacters = await db
-      .select()
+    // 3. Buscar todos os personagens pertencentes a essa campanha com o nome do usuário associado
+    const rawCharacters = await db
+      .select({
+        character: characters,
+        userName: users.name,
+        userEmail: users.email
+      })
       .from(characters)
+      .leftJoin(users, eq(characters.userId, users.id))
       .where(eq(characters.campaignId, campaignId));
+
+    const campaignCharacters = rawCharacters.map(row => ({
+      ...row.character,
+      userName: row.userName || null,
+      userEmail: row.userEmail || null
+    }));
 
     const players = campaignCharacters.filter(c => c.type === "jogador");
     const npcs = campaignCharacters.filter(c => c.type === "npc");

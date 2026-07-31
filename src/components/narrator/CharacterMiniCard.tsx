@@ -14,11 +14,14 @@ interface CharacterMiniCardProps {
     sheetData: any; // JSONB
     status?: "DRAFT" | "READY" | "IN_PLAY";
     userId?: string | null;
+    userName?: string | null;
+    userEmail?: string | null;
   };
   isOnline?: boolean;
+  onOpenSheet?: (character: any) => void;
 }
 
-export default function CharacterMiniCard({ character, isOnline }: CharacterMiniCardProps) {
+export default function CharacterMiniCard({ character, isOnline, onOpenSheet }: CharacterMiniCardProps) {
   const { showSuccess, showError } = useToast();
   const [isUnlockConfirmOpen, setIsUnlockConfirmOpen] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -26,6 +29,7 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
 
   const clan = sheet?.profile?.clan || "Sem Clã";
   const concept = sheet?.profile?.concept || "Conceito não definido";
+  const avatarUrl = sheet?.profile?.avatarUrl || sheet?.profile?.portrait_url;
   const hunger = sheet?.status?.hunger ?? 0;
   const health = sheet?.status?.health || { max: 5, superficial: 0, aggravated: 0 };
   const willpower = sheet?.status?.willpower || { max: 5, superficial: 0, aggravated: 0 };
@@ -82,30 +86,53 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
     <div className="bg-bg-card border border-white/10 hover:border-blood-red/30 p-5 rounded-sm flex flex-col justify-between transition-all duration-200 gap-4 group">
       
       {/* Informações Básicas */}
-      <div className="space-y-1">
+      <div className="space-y-2">
         <div className="flex justify-between items-start">
-          <div className="flex items-center gap-2 truncate pr-2">
-            {isOnline !== undefined && (
-              <span 
-                className={`w-2 h-2 rounded-full shrink-0 ${
-                  isOnline 
-                    ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" 
-                    : "bg-zinc-600"
-                }`}
-                title={isOnline ? "Membro Online" : "Membro Offline"}
-              />
-            )}
-            <h3 className="text-xl font-gothic tracking-wide text-text-primary group-hover:text-gold-accent transition-colors truncate">
-              {character.name.toUpperCase()}
-            </h3>
+          <div className="flex items-center gap-3 truncate pr-2">
+            {/* AVATAR DO PERSONAGEM */}
+            <div className="w-10 h-10 rounded-full border border-gold-accent/40 bg-black overflow-hidden shrink-0 flex items-center justify-center shadow-inner">
+              {avatarUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={avatarUrl}
+                  alt={character.name}
+                  className="w-full h-full object-cover object-center"
+                />
+              ) : (
+                <span className="text-xs text-text-dim font-gothic">🩸</span>
+              )}
+            </div>
+
+            <div className="flex flex-col truncate">
+              <div className="flex items-center gap-1.5 truncate">
+                {isOnline !== undefined && (
+                  <span 
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      isOnline 
+                        ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" 
+                        : "bg-zinc-600"
+                    }`}
+                    title={isOnline ? "Membro Online" : "Membro Offline"}
+                  />
+                )}
+                <h3 className="text-lg font-gothic tracking-wide text-text-primary group-hover:text-gold-accent transition-colors truncate leading-tight">
+                  {character.name.toUpperCase()}
+                </h3>
+              </div>
+              <span className="text-[10px] text-gold-accent/90 font-data tracking-wider truncate">
+                {character.userName ? `Jogador: @${character.userName}` : character.type === "npc" ? "Figurante / Antagonista" : "Sem jogador humano"}
+              </span>
+            </div>
           </div>
-          <span className={`text-[9px] font-data uppercase tracking-widest px-2 py-0.5 rounded-sm ${
+
+          <span className={`text-[9px] font-data uppercase tracking-widest px-2 py-0.5 rounded-sm shrink-0 ${
             character.type === "npc" ? "bg-hunger-red/10 text-hunger-red border border-hunger-red/20" : "bg-gold-accent/10 text-gold-accent border border-gold-accent/20"
           }`}>
             {character.type}
           </span>
         </div>
-        <p className="text-[10px] uppercase tracking-widest text-text-muted font-data">
+
+        <p className="text-[10px] uppercase tracking-widest text-text-muted font-data pt-0.5">
           Clã {clan} • <span className="text-text-dim">{concept}</span>
         </p>
       </div>
@@ -192,12 +219,22 @@ export default function CharacterMiniCard({ character, isOnline }: CharacterMini
               Destravar 🔓
             </button>
           )}
-          <Link
-            href={character.campaignId ? `/campanhas/${character.campaignId}/personagens/${character.id}` : `/cofre/personagens/${character.id}`}
-            className="text-xs uppercase tracking-widest font-bold text-blood-red hover:text-white transition-colors"
-          >
-            Abrir Ficha →
-          </Link>
+          {onOpenSheet ? (
+            <button
+              type="button"
+              onClick={() => onOpenSheet(character)}
+              className="text-xs uppercase tracking-widest font-bold text-blood-red hover:text-white transition-colors cursor-pointer"
+            >
+              Abrir Ficha →
+            </button>
+          ) : (
+            <Link
+              href={character.campaignId ? `/campanhas/${character.campaignId}/personagens/${character.id}` : `/cofre/personagens/${character.id}`}
+              className="text-xs uppercase tracking-widest font-bold text-blood-red hover:text-white transition-colors"
+            >
+              Abrir Ficha →
+            </Link>
+          )}
         </div>
       </div>
 

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import CharacterMiniCard from "./CharacterMiniCard";
+import SheetDrawer from "@/components/vtt/SheetDrawer";
+import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import { createCharacterAction, updateCampaignSettingsAction, updateCampaignSessionAction } from "@/app/actions/hubActions";
 import { usePresence } from "@/hooks/usePresence";
 import { ChronicleSystemRules, DEFAULT_CHRONICLE_RULES } from "@/db/schema";
@@ -29,6 +31,8 @@ interface Character {
   sheetData: any;
   status?: "DRAFT" | "READY" | "IN_PLAY";
   userId?: string | null;
+  userName?: string | null;
+  userEmail?: string | null;
 }
 
 interface NarratorDashboardClientProps {
@@ -46,6 +50,15 @@ export default function NarratorDashboardClient({
 }: NarratorDashboardClientProps) {
   const onlineUsers = usePresence(campaign.id);
   const [activeTab, setActiveTab] = useState<"players" | "npcs">("players");
+
+  // Estados para Gaveta da Ficha na antessala
+  const [isSheetDrawerOpen, setIsSheetDrawerOpen] = useState(false);
+  const [selectedSheetChar, setSelectedSheetChar] = useState<Character | null>(null);
+
+  const handleOpenSheetDrawer = (char: Character) => {
+    setSelectedSheetChar(char);
+    setIsSheetDrawerOpen(true);
+  };
 
   // Estados para cópia do convite
   const [copied, setCopied] = useState(false);
@@ -284,6 +297,7 @@ export default function NarratorDashboardClient({
                       key={char.id}
                       character={char}
                       isOnline={char.userId ? onlineUsers.includes(char.userId) : false}
+                      onOpenSheet={handleOpenSheetDrawer}
                     />
                   ))}
                 </div>
@@ -338,7 +352,11 @@ export default function NarratorDashboardClient({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {npcs.map(char => (
-                    <CharacterMiniCard key={char.id} character={char} />
+                    <CharacterMiniCard
+                      key={char.id}
+                      character={char}
+                      onOpenSheet={handleOpenSheetDrawer}
+                    />
                   ))}
                 </div>
               )}
@@ -823,6 +841,27 @@ export default function NarratorDashboardClient({
           </div>
         </div>
       )}
+      {/* GAVETA LATERAL DA FICHA DO PERSONAGEM COM EDIÇÃO DIVINA HABILITADA */}
+      <SheetDrawer
+        isOpen={isSheetDrawerOpen}
+        onClose={() => {
+          setIsSheetDrawerOpen(false);
+          setSelectedSheetChar(null);
+        }}
+      >
+        {selectedSheetChar && (
+          <CharacterSheetClient
+            characterId={selectedSheetChar.id}
+            campaignId={campaign.id}
+            initialData={selectedSheetChar.sheetData}
+            initialName={selectedSheetChar.name}
+            initialStatus={selectedSheetChar.status}
+            characterType={selectedSheetChar.type as any}
+            isStoryteller={true}
+            chronicle={campaign}
+          />
+        )}
+      </SheetDrawer>
     </main>
   );
 }
