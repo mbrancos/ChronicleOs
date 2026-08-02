@@ -66,7 +66,7 @@ export const MacroSection: React.FC<MacroSectionProps> = React.memo(({
         {/* COLUNA ESQUERDA (65%): ROUSE CHECK + MACROS */}
         <div className="lg:col-span-8 space-y-6">
           {/* BANNER COMPACTO DE ROUSE CHECK */}
-          <div className="bg-gradient-to-r from-deep-crimson/30 via-bg-main/60 to-bg-main/40 border border-blood-red/40 rounded-sm p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="bg-linear-to-r from-deep-crimson/30 via-bg-main/60 to-bg-main/40 border border-blood-red/40 rounded-sm p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
             <div className="space-y-1">
               <span className="text-xs font-data font-bold uppercase tracking-wider text-blood-red flex items-center gap-1.5">
                 🩸 Teste de Despertar (Rouse Check 1d10)
@@ -162,7 +162,7 @@ export const MacroSection: React.FC<MacroSectionProps> = React.memo(({
         </div>
 
         {/* COLUNA DIREITA (35%): HUD COMPACTO DE RESULTADO DA ROLAGEM */}
-        <div className="lg:col-span-4 bg-bg-main border border-white/10 rounded-sm p-4 flex flex-col justify-between min-h-[260px] max-h-[420px] shadow-inner">
+        <div className="lg:col-span-4 bg-bg-main border border-white/10 rounded-sm p-4 flex flex-col justify-between min-h-65 max-h-105 shadow-inner">
           {!rollResult ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-4 space-y-2 text-text-dim">
               <svg className="w-10 h-10 text-text-dim/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
