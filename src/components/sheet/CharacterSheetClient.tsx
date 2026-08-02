@@ -1870,32 +1870,24 @@ export default function CharacterSheetClient({
               )}
             </div>
           )}
-           {status === "READY" && (
-            <div className="flex items-center gap-4 text-xs font-data uppercase">
-              <div className="flex items-center space-x-2">
-                <span className="text-text-muted">XP Consumido em Compras:</span>
-                <span className="text-gold-accent font-bold text-sm tracking-wider">{alloc.totalSpentXp} XP</span>
-              </div>
-              {campaignId && campaignId !== "cofre" && characterType === "jogador" && (
-                <button
-                  onClick={async () => {
-                    setStatus("IN_PLAY");
-                    const response = await updateCharacterSheet(characterId, character, buildStateRef.current, "IN_PLAY");
-                    if (response.success) {
-                      showSuccess("Ficha concluída e trancada para a crônica!", "Pronto para Jogar");
-                      setTimeout(() => {
-                        window.location.reload();
-                      }, 1000);
-                    } else {
-                      showError("Erro ao trancar ficha: " + response.error);
-                    }
-                  }}
-                  className="px-3 py-1 bg-blood-red hover:bg-burgundy text-white text-[10px] font-bold font-data uppercase tracking-wider rounded-xs cursor-pointer shadow-md transition-colors"
-                >
-                  Confirmar Alterações & Voltar ao Jogo 🔒
-                </button>
-              )}
-            </div>
+          {status === "READY" && campaignId && campaignId !== "cofre" && characterType === "jogador" && (
+            <button
+              onClick={async () => {
+                setStatus("IN_PLAY");
+                const response = await updateCharacterSheet(characterId, character, buildStateRef.current, "IN_PLAY");
+                if (response.success) {
+                  showSuccess("Ficha concluída e trancada para a crônica!", "Pronto para Jogar");
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1000);
+                } else {
+                  showError("Erro ao trancar ficha: " + response.error);
+                }
+              }}
+              className="px-3 py-1 bg-blood-red hover:bg-burgundy text-white text-[10px] font-bold font-data uppercase tracking-wider rounded-xs cursor-pointer shadow-md transition-colors"
+            >
+              Confirmar Alterações & Voltar ao Jogo 🔒
+            </button>
           )}
         </div>
 
