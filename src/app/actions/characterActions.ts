@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { characters, campaigns, users, xpLedgers } from "@/db/schema";
-import { eq, desc, asc, and, isNull, inArray } from "drizzle-orm";
+import { eq, desc, asc, and, isNull, inArray, sql, or, like } from "drizzle-orm";
 import { CharacterSheetData } from "@/types/character";
 import { auth } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
@@ -100,21 +100,11 @@ export async function updateCharacterSheet(
       .set(updatePayload)
       .where(eq(characters.id, characterId));
 
-    // 4. Auditoria de XP baseada na transição de estados
+    // 4. Auditoria de XP baseada na transição de estados (apenas quando o personagem está ativamente em jogo)
     const targetStatus = status || oldStatus;
 
-    if (oldStatus === "DRAFT" && targetStatus === "READY") {
-      // Caso 1: Consolidação da criação do personagem (transição DRAFT -> READY)
-      const spentXp = calculateSpentXp(clan, buildState || oldBuildState);
-      if (spentXp > 0) {
-        await db.insert(xpLedgers).values({
-          characterId,
-          description: "Gastos de criação inicial (Fechamento de Ficha)",
-          xpChange: -spentXp,
-        });
-      }
-    } else if (oldStatus !== "DRAFT" && buildState && oldBuildState) {
-      // Caso 2: Auditoria de novas compras de XP em tempo real (para READY ou IN_PLAY)
+    if (oldStatus === "IN_PLAY" && buildState && oldBuildState) {
+      // Auditoria de compras de XP em tempo real durante o jogo
       await auditXpChanges(characterId, oldBuildState, buildState, clan);
     }
 
@@ -595,6 +585,41 @@ export async function getCharacterXpLedger(characterId: string) {
   } catch (err: any) {
     console.error("Erro em getCharacterXpLedger:", err);
     return { success: false, error: err?.message || "Falha ao buscar histórico de XP." };
+  }
+}
+
+// Server Action para limpar o histórico indevido de rascunho de criação
+export async function cleanupDraftXpLedgerAction(characterId: string) {
+  try {
+    const { data: session } = await auth.getSession();
+    if (!session?.user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(characterId)) {
+      return { success: false, error: "ID de personagem inválido." };
+    }
+
+    // Apagar do banco registros indevidos gerados na fase de criação (Cofre)
+    await db
+      .delete(xpLedgers)
+      .where(
+        and(
+          eq(xpLedgers.characterId, characterId),
+          or(
+            like(xpLedgers.description, "%criação%"),
+            like(xpLedgers.description, "%Vantagem%"),
+            like(xpLedgers.description, "%Criacão%")
+          )
+        )
+      );
+
+    revalidatePath(`/cofre/personagens/${characterId}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Erro em cleanupDraftXpLedgerAction:", err);
+    return { success: false, error: err?.message || "Falha ao limpar histórico de rascunho." };
   }
 }
 

@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import InlineEdit from "./InlineEdit";
 import { CharacterSheetData } from "@/types/character";
 
 interface XpDiarySectionProps {
+  characterId: string;
   character: CharacterSheetData;
+  status: "DRAFT" | "READY" | "IN_PLAY";
   onCharacterChange: (updater: (prev: CharacterSheetData) => CharacterSheetData) => void;
   xpLedger: Array<{
     id: string;
@@ -16,18 +18,46 @@ interface XpDiarySectionProps {
   }>;
   isLoadingLedger: boolean;
   isReadOnly: boolean;
+  onCleanupDraftLedger?: () => Promise<void>;
 }
 
 export const XpDiarySection: React.FC<XpDiarySectionProps> = React.memo(({
+  characterId,
   character,
+  status,
   onCharacterChange,
   xpLedger,
   isLoadingLedger,
   isReadOnly,
+  onCleanupDraftLedger,
 }) => {
-  const spentXp = character.status.experience.spent || 0;
-  const totalXp = character.status.experience.total || 0;
+  const [isCleaning, setIsCleaning] = useState(false);
+
+  // Fonte Única da Verdade: Derivar XP Total, XP Gasto e Saldo a partir das movimentações reais do extrato
+  const positiveSum = xpLedger.reduce((acc, item) => acc + (item.xpChange > 0 ? item.xpChange : 0), 0);
+  const negativeSum = xpLedger.reduce((acc, item) => acc + (item.xpChange < 0 ? Math.abs(item.xpChange) : 0), 0);
+
+  // Se houver lançamentos no extrato, os cards derivam da matemática do extrato. Caso contrário, usam os valores armazenados.
+  const totalXp = xpLedger.length > 0 ? positiveSum : (character.status.experience.total || 0);
+  const spentXp = xpLedger.length > 0 ? negativeSum : (character.status.experience.spent || 0);
   const balanceXp = totalXp - spentXp;
+
+  const hasLegacyDraftEntries = xpLedger.some(
+    (item) =>
+      item.description.toLowerCase().includes("criação") ||
+      item.description.toLowerCase().includes("vantagem") ||
+      item.description.toLowerCase().includes("criacão")
+  );
+
+  const handleCleanup = async () => {
+    if (!onCleanupDraftLedger) return;
+    setIsCleaning(true);
+    try {
+      await onCleanupDraftLedger();
+    } finally {
+      setIsCleaning(false);
+    }
+  };
 
   return (
     <section id="xp_diary" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 scroll-mt-24 space-y-6">
@@ -40,7 +70,34 @@ export const XpDiarySection: React.FC<XpDiarySectionProps> = React.memo(({
             Histórico auditável completo de investimentos, concessões do Narrador e transações de experiência estilo extrato bancário.
           </p>
         </div>
+
+        {hasLegacyDraftEntries && onCleanupDraftLedger && (
+          <button
+            type="button"
+            disabled={isCleaning}
+            onClick={handleCleanup}
+            className="text-xs font-data uppercase tracking-wider font-bold bg-amber-950/60 hover:bg-amber-900 border border-amber-500/40 text-amber-300 px-3 py-1.5 rounded-sm transition-all cursor-pointer shadow-sm select-none flex items-center gap-1.5"
+            title="Apaga os registros indevidos gerados automaticamente durante a fase de criação no Cofre"
+          >
+            <span>{isCleaning ? "Limpando..." : "🧹 Limpar Lançamentos de Rascunho"}</span>
+          </button>
+        )}
       </div>
+
+      {/* BANNER EXPLICATIVO DE FASE DE CRIAÇÃO (COFRE) */}
+      {status !== "IN_PLAY" && (
+        <div className="bg-bg-main/60 border border-gold-accent/40 rounded-sm p-4 text-xs font-reading text-text-primary space-y-1.5 shadow-sm">
+          <div className="flex items-center justify-between font-gothic text-gold-accent uppercase font-bold text-sm">
+            <span>📜 Ficha em Fase de Criação no Cofre</span>
+            <span className="text-[10px] font-data bg-gold-accent/10 border border-gold-accent/30 text-gold-accent px-2 py-0.5 rounded-xs">
+              Pontos Iniciais Gratuitos (0 XP)
+            </span>
+          </div>
+          <p className="text-text-muted leading-relaxed">
+            Os pontos distribuídos no esqueleto inicial do personagem (Atributos, Habilidades, Disciplinas e Vantagens da idade) pertencem à cota padrão do livro V5 e são <strong>100% gratuitos (0 XP)</strong>. O extrato de auditoria passará a registrar os prêmios de sessão e investimentos por XP assim que a ficha entrar em jogo na crônica!
+          </p>
+        </div>
+      )}
 
       {/* CARD FINANCEIRO DE XP NO TOPO DO MÓDULO */}
       <div className="bg-bg-main/60 border border-gold-accent/30 rounded-sm p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 shadow-sm">

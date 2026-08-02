@@ -22,7 +22,7 @@ import DotSlider from "@/components/sheet/DotSlider";
 import DamageTracker from "@/components/sheet/DamageTracker";
 import HumanityTracker from "@/components/sheet/HumanityTracker";
 import { useAutosave } from "@/hooks/useAutosave";
-import { updateCharacterSheet, getCharacterXpLedger, narratorOverrideSheetAction } from "@/app/actions/characterActions";
+import { updateCharacterSheet, getCharacterXpLedger, narratorOverrideSheetAction, cleanupDraftXpLedgerAction } from "@/app/actions/characterActions";
 import { spendCharacterXpAction } from "@/app/actions/xpActions";
 import { rollRouseCheck } from "@/lib/vtt/BloodEngine";
 import InlineEdit from "@/components/sheet/InlineEdit";
@@ -3253,11 +3253,22 @@ export default function CharacterSheetClient({
 
           {/* SEÇÃO 10: DIÁRIO DE XP */}
           <XpDiarySection
+            characterId={characterId}
             character={character}
+            status={status}
             onCharacterChange={setCharacter}
             xpLedger={xpLedger}
             isLoadingLedger={isLoadingLedger}
             isReadOnly={isReadOnly}
+            onCleanupDraftLedger={async () => {
+              const res = await cleanupDraftXpLedgerAction(characterId);
+              if (res.success) {
+                showSuccess("Lançamentos de rascunho limpos com sucesso!", "Diário de XP Atualizado");
+                fetchXpLedger();
+              } else {
+                showError("Erro ao limpar histórico: " + res.error);
+              }
+            }}
           />
 
         </div>
