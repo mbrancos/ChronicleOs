@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { characters, campaigns, users, xpLedgers } from "@/db/schema";
-import { eq, desc, and, isNull, inArray } from "drizzle-orm";
+import { eq, desc, asc, and, isNull, inArray } from "drizzle-orm";
 import { CharacterSheetData } from "@/types/character";
 import { auth } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
@@ -558,13 +558,40 @@ export async function getCharacterXpLedger(characterId: string) {
       return { success: false, error: "ID de personagem inválido." };
     }
 
-    const ledger = await db
+    // Buscar lançamentos na ordem cronológica crescente para acumular o saldo
+    const rawLedger = await db
       .select()
       .from(xpLedgers)
       .where(eq(xpLedgers.characterId, characterId))
-      .orderBy(desc(xpLedgers.createdAt));
+      .orderBy(asc(xpLedgers.createdAt));
 
-    return { success: true, data: ledger };
+    let runningBalance = 0;
+    const enrichedLedger = rawLedger.map((item) => {
+      const initialBalance = runningBalance;
+      const finalBalance = initialBalance + item.xpChange;
+      runningBalance = finalBalance;
+
+      let typeCategory: "REWARD" | "EVOLUTION" | "ADJUSTMENT" = "EVOLUTION";
+      if (item.xpChange > 0) {
+        typeCategory = "REWARD";
+      } else if (
+        item.description.toLowerCase().includes("ajuste") ||
+        item.description.toLowerCase().includes("narrador") ||
+        item.description.toLowerCase().includes("divina")
+      ) {
+        typeCategory = "ADJUSTMENT";
+      }
+
+      return {
+        ...item,
+        initialBalance,
+        finalBalance,
+        typeCategory
+      };
+    });
+
+    // Retornar os lançamentos na ordem decrescente (mais recente primeiro)
+    return { success: true, data: enrichedLedger.reverse() };
   } catch (err: any) {
     console.error("Erro em getCharacterXpLedger:", err);
     return { success: false, error: err?.message || "Falha ao buscar histórico de XP." };
