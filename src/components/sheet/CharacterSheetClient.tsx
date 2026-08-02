@@ -743,15 +743,29 @@ export default function CharacterSheetClient({
     }
   }, [character, alloc, buildState]);
 
-  // Carregar histórico de XP do banco ao abrir a aba "xp_diary"
+  // Carregar histórico de XP do banco ao abrir a aba "xp_diary" (com limpeza automática no Cofre)
   const fetchXpLedger = useCallback(async () => {
     setIsLoadingLedger(true);
     const res = await getCharacterXpLedger(characterId);
     if (res.success && res.data) {
-      setXpLedger(res.data);
+      const hasDraftEntries = res.data.some(
+        (item: any) =>
+          item.description.toLowerCase().includes("criação") ||
+          item.description.toLowerCase().includes("vantagem") ||
+          item.description.toLowerCase().includes("criacão")
+      );
+      if (status !== "IN_PLAY" && hasDraftEntries) {
+        await cleanupDraftXpLedgerAction(characterId);
+        const cleanRes = await getCharacterXpLedger(characterId);
+        if (cleanRes.success && cleanRes.data) {
+          setXpLedger(cleanRes.data);
+        }
+      } else {
+        setXpLedger(res.data);
+      }
     }
     setIsLoadingLedger(false);
-  }, [characterId, getCharacterXpLedger]);
+  }, [characterId, status, getCharacterXpLedger]);
 
   useEffect(() => {
     fetchXpLedger();
