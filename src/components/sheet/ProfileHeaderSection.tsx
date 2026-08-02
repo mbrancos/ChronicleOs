@@ -2,6 +2,8 @@ import React from "react";
 import InlineEdit from "./InlineEdit";
 import DamageTracker from "./DamageTracker";
 import HumanityTracker from "./HumanityTracker";
+import DotSlider from "./DotSlider";
+import BloodPanel from "./BloodPanel";
 import { CharacterSheetData } from "@/types/character";
 
 interface ProfileHeaderSectionProps {
@@ -101,7 +103,7 @@ export const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = React.m
           </div>
         </div>
 
-        {/* TERÇO 2 (4 COLS): TRACKERS RÁPIDOS DE VITALIDADE & FORÇA DE VONTADE */}
+        {/* TERÇO 2 (4 COLS): TRACKERS RÁPIDOS DE RECURSOS VITAIS (VITALIDADE + FORÇA DE VONTADE + FOME) */}
         <div className="lg:col-span-4 space-y-3 bg-black/40 border border-white/5 rounded-xs p-3.5">
           <span className="text-[10px] font-data font-bold uppercase tracking-wider text-blood-red block border-b border-white/5 pb-1">
             🩸 Recursos Vitais
@@ -128,10 +130,28 @@ export const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = React.m
               variant="willpower" 
             />
           </div>
+
+          {/* FOME (RÉGUA DE FOME 0 A 5) */}
+          <div className="space-y-1 pt-1 border-t border-white/5">
+            <DotSlider
+              label="Fome"
+              value={character.status?.hunger || 0}
+              onChange={(val) => onCharacterChange(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
+              allowZero
+              variant="red"
+              disabled={isReadOnly}
+            />
+          </div>
         </div>
 
-        {/* TERÇO 3 (3 COLS): BÚSSOLA MORAL & HUMANIDADE */}
+        {/* TERÇO 3 (3 COLS): RESSONÂNCIA DO SANGUE & HUMANIDADE */}
         <div className="lg:col-span-3 space-y-3 bg-black/40 border border-white/5 rounded-xs p-3.5 flex flex-col justify-between">
+          <BloodPanel
+            value={character.bloodState}
+            onChange={(newBloodState) => onCharacterChange(prev => ({ ...prev, bloodState: newBloodState }))}
+            disabled={isReadOnly}
+          />
+
           <HumanityTracker
             characterId={characterId}
             humanity={character.status?.humanity || 7}
