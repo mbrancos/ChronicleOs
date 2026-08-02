@@ -5,6 +5,7 @@ import { rolls } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { rerollV5 } from "@/lib/vtt/BloodEngine";
 import { pusherServer } from "@/lib/pusher";
+import { requireUser } from "@/lib/auth/guards";
 
 /**
  * Persiste uma nova rolagem (padrão ou teste de despertar) no banco de dados e notifica via WebSocket.
@@ -18,6 +19,11 @@ export async function saveRoll(
   isSecret: boolean = false
 ) {
   try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(campaignId)) {
       return { success: false, error: "ID de campanha inválido (não é um UUID válido)" };
@@ -146,6 +152,11 @@ export async function executeWillpowerReroll(
   characterId: string
 ) {
   try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(originalRollId) || !uuidRegex.test(characterId)) {
       return { success: false, error: "IDs inválidos fornecidos." };

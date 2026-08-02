@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { CharacterSheetData, getMaxHealth, getMaxWillpower } from "@/types/character";
 import { pusherServer } from "@/lib/pusher";
 import { revalidatePath } from "next/cache";
+import { requireUser, requireCharacterAccess } from "@/lib/auth/guards";
 
 export async function applyDamageAction(
   characterId: string,
@@ -14,6 +15,16 @@ export async function applyDamageAction(
   damageType: "superficial" | "aggravated"
 ) {
   try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
+    const accessCheck = await requireCharacterAccess(characterId, userCheck.user.id);
+    if (!accessCheck.success) {
+      return { success: false, error: accessCheck.error };
+    }
+
     // 1. Validar UUID do personagem
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(characterId)) {
@@ -213,6 +224,16 @@ export async function setTrackerDamageAction(
   aggravated: number
 ) {
   try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
+    const accessCheck = await requireCharacterAccess(characterId, userCheck.user.id);
+    if (!accessCheck.success) {
+      return { success: false, error: accessCheck.error };
+    }
+
     // 1. Validar UUID do personagem
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(characterId)) {

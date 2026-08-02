@@ -29,6 +29,8 @@ import InlineEdit from "@/components/sheet/InlineEdit";
 import BloodPanel from "@/components/sheet/BloodPanel";
 import InventoryManager from "@/components/sheet/InventoryManager";
 import ConvictionsPanel from "@/components/sheet/ConvictionsPanel";
+import AttributeGroup from "@/components/sheet/AttributeGroup";
+import SkillGroup from "@/components/sheet/SkillGroup";
 import { useToast } from "@/context/ToastContext";
 
 const CLAN_OPTIONS = [
@@ -123,18 +125,30 @@ const TECHNICAL_NAMES: Record<string, string> = {
 // Helper de mesclagem recursiva para garantir resiliência da ficha contra dados parciais no banco
 function deepMerge<T extends object>(target: T, source: any): T {
   if (!source || typeof source !== "object") return target;
-  const output = { ...target };
-  Object.keys(target).forEach((key) => {
+  if (!target || typeof target !== "object") return source;
+
+  const output: any = Array.isArray(target) ? [...target] : { ...target };
+
+  Object.keys(source).forEach((key) => {
     const targetVal = (target as any)[key];
     const sourceVal = source[key];
+
     if (sourceVal === undefined) return;
-    
-    if (targetVal && typeof targetVal === "object" && !Array.isArray(targetVal)) {
-      (output as any)[key] = deepMerge(targetVal, sourceVal);
+
+    if (
+      targetVal &&
+      typeof targetVal === "object" &&
+      !Array.isArray(targetVal) &&
+      sourceVal &&
+      typeof sourceVal === "object" &&
+      !Array.isArray(sourceVal)
+    ) {
+      output[key] = deepMerge(targetVal, sourceVal);
     } else {
-      (output as any)[key] = sourceVal;
+      output[key] = sourceVal;
     }
   });
+
   return output;
 }
 
@@ -2175,59 +2189,42 @@ export default function CharacterSheetClient({
               )}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* FÍSICOS */}
-              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Físicos</h4>
-                {Object.entries(character.attributes.physical).map(([key, val]) => (
-                  <DotSlider 
-                    key={key}
-                    label={TECHNICAL_NAMES[key] || key}
-                    value={val}
-                    onChange={(newVal) => handleAttributeChange("physical", key, newVal)}
-                    isSelected={dicePool.some(p => p.id === key)}
-                    onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
-                    baseValue={alloc.attributesBase[key]}
-                    showXpDistinction={status !== "IN_PLAY"}
-                    disabled={isSheetDisabled}
-                  />
-                ))}
-              </div>
-
-              {/* SOCIAIS */}
-              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Sociais</h4>
-                {Object.entries(character.attributes.social).map(([key, val]) => (
-                  <DotSlider 
-                    key={key}
-                    label={TECHNICAL_NAMES[key] || key}
-                    value={val}
-                    onChange={(newVal) => handleAttributeChange("social", key, newVal)}
-                    isSelected={dicePool.some(p => p.id === key)}
-                    onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
-                    baseValue={alloc.attributesBase[key]}
-                    showXpDistinction={status !== "IN_PLAY"}
-                    disabled={isSheetDisabled}
-                  />
-                ))}
-              </div>
-
-              {/* MENTAIS */}
-              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold mb-2">Mentais</h4>
-                {Object.entries(character.attributes.mental).map(([key, val]) => (
-                  <DotSlider 
-                    key={key}
-                    label={TECHNICAL_NAMES[key] || key}
-                    value={val}
-                    onChange={(newVal) => handleAttributeChange("mental", key, newVal)}
-                    isSelected={dicePool.some(p => p.id === key)}
-                    onLabelClick={onTraitClick ? () => onTraitClick({ id: key, label: TECHNICAL_NAMES[key] || key, value: val }) : undefined}
-                    baseValue={alloc.attributesBase[key]}
-                    showXpDistinction={status !== "IN_PLAY"}
-                    disabled={isSheetDisabled}
-                  />
-                ))}
-              </div>
+              <AttributeGroup
+                title="Físicos"
+                category="physical"
+                attributes={character.attributes.physical}
+                technicalNames={TECHNICAL_NAMES}
+                attributesBase={alloc.attributesBase}
+                dicePool={dicePool}
+                onAttributeChange={handleAttributeChange}
+                onTraitClick={onTraitClick}
+                showXpDistinction={status !== "IN_PLAY"}
+                disabled={isSheetDisabled}
+              />
+              <AttributeGroup
+                title="Sociais"
+                category="social"
+                attributes={character.attributes.social}
+                technicalNames={TECHNICAL_NAMES}
+                attributesBase={alloc.attributesBase}
+                dicePool={dicePool}
+                onAttributeChange={handleAttributeChange}
+                onTraitClick={onTraitClick}
+                showXpDistinction={status !== "IN_PLAY"}
+                disabled={isSheetDisabled}
+              />
+              <AttributeGroup
+                title="Mentais"
+                category="mental"
+                attributes={character.attributes.mental}
+                technicalNames={TECHNICAL_NAMES}
+                attributesBase={alloc.attributesBase}
+                dicePool={dicePool}
+                onAttributeChange={handleAttributeChange}
+                onTraitClick={onTraitClick}
+                showXpDistinction={status !== "IN_PLAY"}
+                disabled={isSheetDisabled}
+              />
             </div>
           </section>
 
@@ -2254,65 +2251,45 @@ export default function CharacterSheetClient({
               )}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* HABILIDADES FÍSICAS */}
-              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Físicas</h4>
-                {(["melee", "firearms", "athletics", "brawl", "drive", "stealth", "larceny", "craft", "survival"] as const).map(skill => (
-                  <DotSlider 
-                    key={skill}
-                    label={TECHNICAL_NAMES[skill] || skill}
-                    value={character.skills[skill]}
-                    onChange={(newVal) => handleSkillChange(skill, newVal)}
-                    specialties={character.specialties.filter(s => s.skill === skill)}
-                    allowZero
-                    isSelected={dicePool.some(p => p.id === skill)}
-                    onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
-                    baseValue={alloc.skillsBase[skill]}
-                    showXpDistinction={status !== "IN_PLAY"}
-                    disabled={isSheetDisabled}
-                  />
-                ))}
-              </div>
-
-              {/* HABILIDADES SOCIAIS */}
-              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Sociais</h4>
-                {(["animal_ken", "etiquette", "intimidation", "leadership", "streetwise", "performance", "persuasion", "insight", "subterfuge"] as const).map(skill => (
-                  <DotSlider 
-                    key={skill}
-                    label={TECHNICAL_NAMES[skill] || skill}
-                    value={character.skills[skill]}
-                    onChange={(newVal) => handleSkillChange(skill, newVal)}
-                    specialties={character.specialties.filter(s => s.skill === skill)}
-                    allowZero
-                    isSelected={dicePool.some(p => p.id === skill)}
-                    onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
-                    baseValue={alloc.skillsBase[skill]}
-                    showXpDistinction={status !== "IN_PLAY"}
-                    disabled={isSheetDisabled}
-                  />
-                ))}
-              </div>
-
-              {/* HABILIDADES MENTAIS */}
-              <div className="space-y-1 bg-bg-main/40 p-4 border border-white/5 rounded-sm">
-                <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold mb-2">Mentais</h4>
-                {(["science", "academics", "finance", "investigation", "medicine", "occult", "awareness", "politics", "technology"] as const).map(skill => (
-                  <DotSlider 
-                    key={skill}
-                    label={TECHNICAL_NAMES[skill] || skill}
-                    value={character.skills[skill]}
-                    onChange={(newVal) => handleSkillChange(skill, newVal)}
-                    specialties={character.specialties.filter(s => s.skill === skill)}
-                    allowZero
-                    isSelected={dicePool.some(p => p.id === skill)}
-                    onLabelClick={onTraitClick ? () => onTraitClick({ id: skill, label: TECHNICAL_NAMES[skill] || skill, value: character.skills[skill] }) : undefined}
-                    baseValue={alloc.skillsBase[skill]}
-                    showXpDistinction={status !== "IN_PLAY"}
-                    disabled={isSheetDisabled}
-                  />
-                ))}
-              </div>
+              <SkillGroup
+                title="Físicas"
+                skillKeys={["melee", "firearms", "athletics", "brawl", "drive", "stealth", "larceny", "craft", "survival"] as const}
+                skills={character.skills}
+                technicalNames={TECHNICAL_NAMES}
+                specialties={character.specialties}
+                skillsBase={alloc.skillsBase}
+                dicePool={dicePool}
+                onSkillChange={handleSkillChange}
+                onTraitClick={onTraitClick}
+                showXpDistinction={status !== "IN_PLAY"}
+                disabled={isSheetDisabled}
+              />
+              <SkillGroup
+                title="Sociais"
+                skillKeys={["animal_ken", "etiquette", "intimidation", "leadership", "streetwise", "performance", "persuasion", "insight", "subterfuge"] as const}
+                skills={character.skills}
+                technicalNames={TECHNICAL_NAMES}
+                specialties={character.specialties}
+                skillsBase={alloc.skillsBase}
+                dicePool={dicePool}
+                onSkillChange={handleSkillChange}
+                onTraitClick={onTraitClick}
+                showXpDistinction={status !== "IN_PLAY"}
+                disabled={isSheetDisabled}
+              />
+              <SkillGroup
+                title="Mentais"
+                skillKeys={["science", "academics", "finance", "investigation", "medicine", "occult", "awareness", "politics", "technology"] as const}
+                skills={character.skills}
+                technicalNames={TECHNICAL_NAMES}
+                specialties={character.specialties}
+                skillsBase={alloc.skillsBase}
+                dicePool={dicePool}
+                onSkillChange={handleSkillChange}
+                onTraitClick={onTraitClick}
+                showXpDistinction={status !== "IN_PLAY"}
+                disabled={isSheetDisabled}
+              />
             </div>
           </section>
 
@@ -2375,7 +2352,7 @@ export default function CharacterSheetClient({
             {(status !== "IN_PLAY" || isOverrideActive) && (
               <div className="flex flex-wrap items-end gap-3 bg-bg-main/30 p-4 border border-white/5 rounded-sm max-w-3xl shadow-none">
                 {/* DROPDOWN 1: MOTIVO / ORIGEM */}
-                <div className="flex flex-col space-y-1 min-w-[130px]">
+                <div className="flex flex-col space-y-1 min-w-32.5">
                   <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Motivo / Origem</label>
                   <select
                     value={specialtySource}
@@ -2397,7 +2374,7 @@ export default function CharacterSheetClient({
                 </div>
 
                 {/* DROPDOWN 2: HABILIDADE BASE */}
-                <div className="flex flex-col space-y-1 min-w-[150px]">
+                <div className="flex flex-col space-y-1 min-w-37.5">
                   <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Habilidade Base</label>
                   <select
                     value={selectedSkill}
@@ -2452,7 +2429,7 @@ export default function CharacterSheetClient({
                 </div>
 
                 {/* INPUT 3: NOME DA ESPECIALIZAÇÃO */}
-                <div className="flex flex-col space-y-1 flex-1 min-w-[180px]">
+                <div className="flex flex-col space-y-1 flex-1 min-w-45">
                   <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nome da Especialização</label>
                   <input
                     type="text"
@@ -2978,7 +2955,7 @@ export default function CharacterSheetClient({
                                   placeholder="Nova Vantagem"
                                   datalistOptions={[...V5_ADVANTAGES_PRESETS.merit, ...V5_ADVANTAGES_PRESETS.background]}
                                   disabled={isReadOnly}
-                                  className="font-bold text-xs text-text-primary hover:bg-white/5 cursor-pointer max-w-[130px]"
+                                  className="font-bold text-xs text-text-primary hover:bg-white/5 cursor-pointer max-w-32.5"
                                 />
                                 <div className="flex items-center space-x-1.5 flex-wrap">
                                   <span className="text-[9px] uppercase tracking-wider text-text-muted">
@@ -3082,7 +3059,7 @@ export default function CharacterSheetClient({
                                   placeholder="Novo Defeito"
                                   datalistOptions={V5_ADVANTAGES_PRESETS.flaw}
                                   disabled={isReadOnly}
-                                  className="font-bold text-xs text-text-primary hover:bg-white/5 cursor-pointer max-w-[130px]"
+                                  className="font-bold text-xs text-text-primary hover:bg-white/5 cursor-pointer max-w-32.5"
                                 />
                                 <span className="text-[9px] uppercase tracking-wider text-hunger-red font-semibold">
                                   Defeito (Flaw)
@@ -3167,7 +3144,7 @@ export default function CharacterSheetClient({
                                   placeholder="Nova Ficha de Saber"
                                   datalistOptions={V5_ADVANTAGES_PRESETS.loresheet}
                                   disabled={isReadOnly}
-                                  className="font-bold text-xs text-purple-200 hover:bg-white/5 cursor-pointer max-w-[130px]"
+                                  className="font-bold text-xs text-purple-200 hover:bg-white/5 cursor-pointer max-w-32.5"
                                 />
                                 <div className="flex items-center space-x-1.5 flex-wrap">
                                   <span className="text-[9px] uppercase tracking-wider text-purple-400">

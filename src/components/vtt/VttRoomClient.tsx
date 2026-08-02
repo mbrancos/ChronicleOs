@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import PlayerDock from "./PlayerDock";
-import DamageModal from "./DamageModal";
 import SheetDrawer from "./SheetDrawer";
 import { useToast } from "@/context/ToastContext";
-import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import ActionFeed, { RollItem } from "./ActionFeed";
 import DirectorBoard from "./DirectorBoard";
 import { TokenData } from "./Token";
@@ -16,7 +15,20 @@ import { updateCharacterSheet } from "@/app/actions/characterActions";
 import { getSceneTokens } from "@/app/actions/sceneActions";
 import { CharacterSheetData } from "@/types/character";
 import Pusher from "pusher-js";
-import RollEffects from "./RollEffects";
+
+// Carregamento dinâmico sob demanda (next/dynamic) para otimização de bundle
+const CharacterSheetClient = dynamic(
+  () => import("@/components/sheet/CharacterSheetClient"),
+  { ssr: false }
+);
+const DamageModal = dynamic(
+  () => import("./DamageModal"),
+  { ssr: false }
+);
+const RollEffects = dynamic(
+  () => import("./RollEffects"),
+  { ssr: false }
+);
 
 interface VttRoomClientProps {
   character: {

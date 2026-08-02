@@ -4,21 +4,37 @@ import { db } from "@/db";
 import { sceneTokens, campaigns } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { pusherServer } from "@/lib/pusher";
+import { requireUser } from "@/lib/auth/guards";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Busca todos os tokens associados a uma campanha.
- * Jogadores comuns só visualizam tokens onde isVisible === true.
+ * Valida a sessão do usuário no servidor para determinar se tem acesso aos tokens ocultos do Narrador.
  */
-export async function getSceneTokens(campaignId: string, isNarrator: boolean) {
+export async function getSceneTokens(campaignId: string, clientIsNarrator?: boolean) {
   try {
     if (!uuidRegex.test(campaignId)) {
       return { success: false, error: "ID de campanha inválido" };
     }
 
+    const userCheck = await requireUser();
+    let isServerNarrator = false;
+
+    if (userCheck.success) {
+      const campResult = await db
+        .select({ narratorId: campaigns.narratorId })
+        .from(campaigns)
+        .where(eq(campaigns.id, campaignId))
+        .limit(1);
+
+      if (campResult.length > 0 && campResult[0].narratorId === userCheck.user.id) {
+        isServerNarrator = true;
+      }
+    }
+
     let result;
-    if (isNarrator) {
+    if (isServerNarrator) {
       result = await db
         .select()
         .from(sceneTokens)

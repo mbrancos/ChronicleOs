@@ -8,6 +8,7 @@ import { applyDamageAction } from "@/app/actions/damageActions";
 import { saveRoll } from "@/app/actions/rolls";
 import { pusherServer } from "@/lib/pusher";
 import { revalidatePath } from "next/cache";
+import { requireUser, requireCharacterAccess } from "@/lib/auth/guards";
 
 /**
  * Server Action para adicionar ou remover Máculas (Stains) de um personagem,
@@ -15,6 +16,16 @@ import { revalidatePath } from "next/cache";
  */
 export async function addStainAction(characterId: string, amount: number) {
   try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
+    const accessCheck = await requireCharacterAccess(characterId, userCheck.user.id);
+    if (!accessCheck.success) {
+      return { success: false, error: accessCheck.error };
+    }
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(characterId)) {
       return { success: false, error: "ID de personagem inválido." };
@@ -115,6 +126,16 @@ export async function addStainAction(characterId: string, amount: number) {
  */
 export async function rollRemorseAction(characterId: string) {
   try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
+    const accessCheck = await requireCharacterAccess(characterId, userCheck.user.id);
+    if (!accessCheck.success) {
+      return { success: false, error: accessCheck.error };
+    }
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(characterId)) {
       return { success: false, error: "ID de personagem inválido." };
@@ -236,6 +257,16 @@ export async function rollRemorseAction(characterId: string) {
  */
 export async function setHumanityAction(characterId: string, newHumanity: number) {
   try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
+    const accessCheck = await requireCharacterAccess(characterId, userCheck.user.id);
+    if (!accessCheck.success) {
+      return { success: false, error: accessCheck.error };
+    }
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(characterId)) {
       return { success: false, error: "ID de personagem inválido." };

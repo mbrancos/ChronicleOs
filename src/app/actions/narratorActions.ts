@@ -36,16 +36,30 @@ export async function getCampaignDashboard(campaignId: string) {
       return { success: false, error: "Acesso negado: Você não é o Narrador desta crônica.", isForbidden: true };
     }
 
-    // 3. Buscar todos os personagens pertencentes a essa campanha com o nome do usuário associado
-    const rawCharacters = await db
-      .select({
-        character: characters,
-        userName: users.name,
-        userEmail: users.email
-      })
-      .from(characters)
-      .leftJoin(users, eq(characters.userId, users.id))
-      .where(eq(characters.campaignId, campaignId));
+    // 3. Executar as buscas de personagens da campanha e do cofre em paralelo (Eliminação de Waterfalls)
+    const [rawCharacters, vaultCharacters] = await Promise.all([
+      db
+        .select({
+          character: characters,
+          userName: users.name,
+          userEmail: users.email
+        })
+        .from(characters)
+        .leftJoin(users, eq(characters.userId, users.id))
+        .where(eq(characters.campaignId, campaignId)),
+      db
+        .select()
+        .from(characters)
+        .where(
+          and(
+            eq(characters.userId, session.user.id),
+            or(
+              isNull(characters.campaignId),
+              ne(characters.campaignId, campaignId)
+            )
+          )
+        )
+    ]);
 
     const campaignCharacters = rawCharacters.map(row => ({
       ...row.character,
@@ -55,20 +69,6 @@ export async function getCampaignDashboard(campaignId: string) {
 
     const players = campaignCharacters.filter(c => c.type === "jogador");
     const npcs = campaignCharacters.filter(c => c.type === "npc");
-
-    // 4. Buscar personagens do Narrador (pertencem a ele, no cofre ou em outras crônicas)
-    const vaultCharacters = await db
-      .select()
-      .from(characters)
-      .where(
-        and(
-          eq(characters.userId, session.user.id),
-          or(
-            isNull(characters.campaignId),
-            ne(characters.campaignId, campaignId)
-          )
-        )
-      );
 
     return JSON.parse(
       JSON.stringify({

@@ -19,47 +19,45 @@ export async function getUserHubData() {
 
     const userId = session.user.id;
 
-    // 1. Buscar campanhas criadas pelo usuário (Narrador)
-    const narratorCampaigns = await db
-      .select()
-      .from(campaigns)
-      .where(eq(campaigns.narratorId, userId));
-
-    // 2. Buscar campanhas onde o usuário joga (possui personagem de jogador vinculado)
-    const playerCampaigns = await db
-      .select({
-        id: campaigns.id,
-        name: campaigns.name,
-        description: campaigns.description,
-        status: campaigns.status,
-        powerLevel: campaigns.powerLevel,
-        narratorName: users.name, // Nome do Narrador da crônica
-        characterName: characters.name, // Nome do personagem do jogador nesta campanha
-        characterId: characters.id, // ID do personagem do jogador nesta campanha
-      })
-      .from(campaigns)
-      .innerJoin(characters, eq(campaigns.id, characters.campaignId))
-      .innerJoin(users, eq(campaigns.narratorId, users.id))
-      .where(
-        and(
-          eq(characters.userId, userId),
-          eq(characters.type, "jogador")
-        )
-      );
-
-    // 3. Buscar todos os personagens criados pelo usuário (Cofre / Geral)
-    const userCharacters = await db
-      .select({
-        id: characters.id,
-        name: characters.name,
-        type: characters.type,
-        campaignId: characters.campaignId,
-        campaignName: campaigns.name,
-        sheetData: characters.sheetData,
-      })
-      .from(characters)
-      .leftJoin(campaigns, eq(characters.campaignId, campaigns.id))
-      .where(eq(characters.userId, userId));
+    // Executar as 3 consultas independentes do Hub em paralelo (Eliminação de Waterfalls)
+    const [narratorCampaigns, playerCampaigns, userCharacters] = await Promise.all([
+      db
+        .select()
+        .from(campaigns)
+        .where(eq(campaigns.narratorId, userId)),
+      db
+        .select({
+          id: campaigns.id,
+          name: campaigns.name,
+          description: campaigns.description,
+          status: campaigns.status,
+          powerLevel: campaigns.powerLevel,
+          narratorName: users.name, // Nome do Narrador da crônica
+          characterName: characters.name, // Nome do personagem do jogador nesta campanha
+          characterId: characters.id, // ID do personagem do jogador nesta campanha
+        })
+        .from(campaigns)
+        .innerJoin(characters, eq(campaigns.id, characters.campaignId))
+        .innerJoin(users, eq(campaigns.narratorId, users.id))
+        .where(
+          and(
+            eq(characters.userId, userId),
+            eq(characters.type, "jogador")
+          )
+        ),
+      db
+        .select({
+          id: characters.id,
+          name: characters.name,
+          type: characters.type,
+          campaignId: characters.campaignId,
+          campaignName: campaigns.name,
+          sheetData: characters.sheetData,
+        })
+        .from(characters)
+        .leftJoin(campaigns, eq(characters.campaignId, campaigns.id))
+        .where(eq(characters.userId, userId)),
+    ]);
 
     return {
       success: true,
