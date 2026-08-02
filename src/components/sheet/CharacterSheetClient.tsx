@@ -31,6 +31,9 @@ import InventoryManager from "@/components/sheet/InventoryManager";
 import ConvictionsPanel from "@/components/sheet/ConvictionsPanel";
 import AttributeGroup from "@/components/sheet/AttributeGroup";
 import SkillGroup from "@/components/sheet/SkillGroup";
+import MacroSection from "@/components/sheet/MacroSection";
+import NotesSection from "@/components/sheet/NotesSection";
+import XpDiarySection from "@/components/sheet/XpDiarySection";
 import { useToast } from "@/context/ToastContext";
 
 const CLAN_OPTIONS = [
@@ -593,7 +596,7 @@ export default function CharacterSheetClient({
   const [activeTabId, setActiveTabId] = useState<string>("atributos");
 
   useEffect(() => {
-    const sectionIds = ["atributos", "habilidades", "disciplinas", "conviccoes", "vantagens", "inventario", "macros", "xp_diary"];
+    const sectionIds = ["atributos", "habilidades", "disciplinas", "conviccoes", "vantagens", "inventario", "macros", "anotacoes", "xp_diary"];
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 130;
       for (let i = sectionIds.length - 1; i >= 0; i--) {
@@ -2111,7 +2114,8 @@ export default function CharacterSheetClient({
               { id: "conviccoes", label: "⚖️ Convicções" },
               { id: "vantagens", label: "⭐ Vantagens" },
               { id: "inventario", label: "🎒 Inventário" },
-              { id: "macros", label: "📜 Macros" },
+              { id: "macros", label: "🎲 Rolagens & Macros" },
+              { id: "anotacoes", label: "📜 Anotações" },
               { id: "xp_diary", label: "💎 Diário de XP" },
             ] as const
           ).map((item) => {
@@ -3173,7 +3177,8 @@ export default function CharacterSheetClient({
                                     } else if (isBase) {
                                       activeClass = "bg-purple-600 ring-1 ring-purple-400 shadow-[0_0_6px_rgba(147,51,234,0.6)]";
                                     } else {
-                                      activeClass = "bg-yellow-400 ring-2 ring-yellow-300 shadow-[0_0_12px_rgba(255,223,0,0.9)] animate-pulse-subtle";
+                                      // Ficha de Saber mantém a cor roxa temática com um anel dourado de destaque se estiver além da cota
+                                      activeClass = "bg-purple-600 ring-2 ring-yellow-400 shadow-[0_0_10px_rgba(147,51,234,0.8)] animate-pulse-subtle";
                                     }
                                   } else {
                                     activeClass = "bg-bg-input border border-text-dim/80 hover:border-purple-400";
@@ -3232,445 +3237,36 @@ export default function CharacterSheetClient({
             />
           </section>
 
-          {/* SEÇÃO 8: SISTEMA E MACROS */}
-          <section id="macros" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 scroll-mt-24 space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
-              <div className="lg:col-span-6 space-y-4">
-                {/* GESTÃO DE EXPERIÊNCIA (XP) */}
-                <div className="bg-bg-main/30 border border-white/5 rounded-sm p-4 flex justify-between items-center shadow-none">
-                  <div>
-                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">Pontos de Experiência (XP)</h4>
-                    <p className="text-[10px] text-text-muted font-reading">Clique nos números para editar o gasto e o total.</p>
-                  </div>
-                  <div className="flex items-center space-x-2 font-data text-sm">
-                    <span className="text-text-muted">Gasto:</span>
-                    <InlineEdit
-                      value={String(character.status.experience.spent)}
-                      onChange={(val) => setCharacter(prev => ({
-                        ...prev,
-                        status: {
-                          ...prev.status,
-                          experience: { ...prev.status.experience, spent: Math.max(0, Number(val) || 0) }
-                        }
-                      }))}
-                      type="number"
-                      disabled={isReadOnly}
-                      className="font-bold text-blood-red hover:bg-white/5 text-center w-12 border-b border-white/10"
-                    />
-                    <span className="text-text-muted">/</span>
-                    <span className="text-text-muted">Total:</span>
-                    <InlineEdit
-                      value={String(character.status.experience.total)}
-                      onChange={(val) => setCharacter(prev => ({
-                        ...prev,
-                        status: {
-                          ...prev.status,
-                          experience: { ...prev.status.experience, total: Math.max(0, Number(val) || 0) }
-                        }
-                      }))}
-                      type="number"
-                      disabled={isReadOnly}
-                      className="font-bold text-gold-accent hover:bg-white/5 text-center w-12 border-b border-white/10"
-                    />
-                  </div>
-                </div>
+          {/* SEÇÃO 8: ROLAGENS & MACROS */}
+          <MacroSection
+            character={character}
+            status={status}
+            isReadOnly={isReadOnly}
+            isOverrideActive={isOverrideActive}
+            onRouseCheck={handleRouseCheckSolo}
+            onExecuteMacro={triggerRoll}
+            onAddMacro={() => setIsCreatingMacro(!isCreatingMacro)}
+            onDeleteMacro={handleDeleteMacro}
+            onApplyV5Presets={handleGeneratePresets}
+            rollResult={rollResult}
+            onClearRollResult={() => setRollResult(null)}
+          />
 
-                {/* BOTÃO DEDICADO DE ROUSE CHECK */}
-                <div className="bg-deep-crimson/20 border border-blood-red/40 rounded-sm p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_15px_rgba(200,36,52,0.15)]">
-                  <div>
-                    <h4 className="text-xs font-data uppercase tracking-wider text-blood-red font-bold flex items-center gap-1.5">
-                      <span>🩸</span>
-                      <span>Teste de Despertar (Rouse Check 1d10)</span>
-                    </h4>
-                    <p className="text-[10px] text-text-muted font-reading">
-                      Rola o 1d10 de Fome. Se tirar 1 a 5, aumenta a Fome da ficha automaticamente (+1).
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRouseCheckSolo}
-                    className="shrink-0 bg-deep-crimson/80 border border-blood-red text-white hover:bg-blood-red font-bold text-xs uppercase px-4 py-2.5 rounded-sm shadow-[0_0_10px_rgba(200,36,52,0.4)] flex items-center justify-center space-x-2 cursor-pointer transition-all duration-150 active:scale-95 select-none"
-                  >
-                    <span>🩸</span>
-                    <span>Rolar Rouse Check</span>
-                  </button>
-                </div>
+          {/* SEÇÃO 9: ANOTAÇÕES & BIOGRAFIA */}
+          <NotesSection
+            notes={character.notes}
+            onNotesChange={(val) => setCharacter(prev => ({ ...prev, notes: val }))}
+            disabled={isReadOnly}
+          />
 
-                {/* CABEÇALHO DE MACROS & BOTÕES DE AÇÃO */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-2 gap-2">
-                  <h3 className="text-sm font-data uppercase tracking-wider text-gold-accent font-semibold">
-                    Macros de Dados Disponíveis
-                  </h3>
-                  
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <button
-                      type="button"
-                      onClick={handleGeneratePresets}
-                      className="text-[10px] uppercase font-bold tracking-wider text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/30 px-2.5 py-1.5 rounded-sm transition-all duration-150 cursor-pointer flex items-center gap-1"
-                      title="Preencher com 1-clique as 5 macros essenciais V5 (Ataque, Tiro, Esquiva, Percepção e Furtividade)"
-                    >
-                      <span>⚡ Presets V5</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsCreatingMacro(!isCreatingMacro)}
-                      className="text-[10px] uppercase font-bold tracking-wider text-gold-accent bg-gold-accent/10 hover:bg-gold-accent/20 border border-gold-accent/40 px-2.5 py-1.5 rounded-sm transition-all duration-150 cursor-pointer flex items-center gap-1"
-                    >
-                      <span>{isCreatingMacro ? "✕ Cancelar" : "+ Criar Macro"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* FORMULÁRIO INLINE DE CRIAÇÃO DE MACRO */}
-                {isCreatingMacro && (
-                  <div className="bg-bg-main/60 border border-gold-accent/30 p-4 rounded-sm space-y-3 animate-fade-in">
-                    <h4 className="text-xs font-data uppercase tracking-wider text-gold-accent font-bold">
-                      Nova Macro de Rolagem
-                    </h4>
-                    
-                    <div className="space-y-2 font-data text-xs">
-                      <div>
-                        <label className="text-[10px] uppercase text-text-muted block mb-1">Nome da Macro</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: Golpe de Espada, Encantar Multidão..."
-                          value={newMacroName}
-                          onChange={(e) => setNewMacroName(e.target.value)}
-                          className="w-full bg-bg-input border border-white/10 rounded p-2 text-text-primary outline-none focus:border-gold-accent font-reading text-xs"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[10px] uppercase text-text-muted block mb-1">1º Dado (Atributo)</label>
-                          <select
-                            value={selectedAttribute}
-                            onChange={(e) => setSelectedAttribute(e.target.value)}
-                            className="w-full bg-bg-input border border-white/10 rounded p-2 text-text-primary outline-none focus:border-gold-accent font-reading text-xs cursor-pointer"
-                          >
-                            <optgroup label="Físicos">
-                              <option value="strength">Força</option>
-                              <option value="dexterity">Destreza</option>
-                              <option value="stamina">Vigor</option>
-                            </optgroup>
-                            <optgroup label="Sociais">
-                              <option value="charisma">Carisma</option>
-                              <option value="manipulation">Manipulação</option>
-                              <option value="composure">Autocontrole</option>
-                            </optgroup>
-                            <optgroup label="Mentais">
-                              <option value="intelligence">Inteligência</option>
-                              <option value="wits">Raciocínio</option>
-                              <option value="resolve">Determinação</option>
-                            </optgroup>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase text-text-muted block mb-1">2º Dado (Habilidade / Disciplina)</label>
-                          <select
-                            value={selectedSkillOrDiscipline}
-                            onChange={(e) => setSelectedSkillOrDiscipline(e.target.value)}
-                            className="w-full bg-bg-input border border-white/10 rounded p-2 text-text-primary outline-none focus:border-gold-accent font-reading text-xs cursor-pointer"
-                          >
-                            <optgroup label="Habilidades Físicas">
-                              <option value="athletics">Atletismo</option>
-                              <option value="brawl">Briga</option>
-                              <option value="craft">Ofícios</option>
-                              <option value="drive">Condução</option>
-                              <option value="firearms">Armas de Fogo</option>
-                              <option value="melee">Armas Brancas</option>
-                              <option value="larceny">Ladroagem</option>
-                              <option value="stealth">Furtividade</option>
-                              <option value="survival">Sobrevivência</option>
-                            </optgroup>
-                            <optgroup label="Habilidades Sociais">
-                              <option value="animal_ken">Empatia com Animais</option>
-                              <option value="etiquette">Etiqueta</option>
-                              <option value="insight">Sagacidade</option>
-                              <option value="intimidation">Intimidação</option>
-                              <option value="leadership">Liderança</option>
-                              <option value="performance">Performance</option>
-                              <option value="persuasion">Persuasão</option>
-                              <option value="streetwise">Manha</option>
-                              <option value="subterfuge">Subterfúgio</option>
-                            </optgroup>
-                            <optgroup label="Habilidades Mentais">
-                              <option value="academics">Erudição</option>
-                              <option value="awareness">Percepção</option>
-                              <option value="finance">Finanças</option>
-                              <option value="investigation">Investigação</option>
-                              <option value="medicine">Medicina</option>
-                              <option value="occult">Ocultismo</option>
-                              <option value="politics">Política</option>
-                              <option value="science">Ciência</option>
-                              <option value="technology">Tecnologia</option>
-                            </optgroup>
-                            {character.disciplines && character.disciplines.length > 0 && (
-                              <optgroup label="Disciplinas Ativas">
-                                {character.disciplines.map(d => (
-                                  <option key={d.id} value={d.id}>{d.name} (Nv {d.level})</option>
-                                ))}
-                              </optgroup>
-                            )}
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2 pt-1">
-                        <input
-                          type="checkbox"
-                          id="rouse_check_toggle"
-                          checked={rouseCheckToggle}
-                          onChange={(e) => setRouseCheckToggle(e.target.checked)}
-                          className="w-4 h-4 accent-blood-red cursor-pointer"
-                        />
-                        <label htmlFor="rouse_check_toggle" className="text-xs text-text-primary cursor-pointer select-none">
-                          Exigir Teste de Despertar (Rouse Check) nesta macro
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-2 pt-2 border-t border-white/10">
-                      <button
-                        type="button"
-                        onClick={() => setIsCreatingMacro(false)}
-                        className="px-3 py-1.5 border border-white/10 text-text-muted hover:text-white text-xs font-data uppercase tracking-wider rounded-xs cursor-pointer"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveMacro}
-                        className="px-4 py-1.5 bg-burgundy border border-blood-red text-white text-xs font-bold font-data uppercase tracking-wider rounded-xs hover:bg-blood-red transition-all duration-150 cursor-pointer shadow-md"
-                      >
-                        Salvar Macro
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* GRADE DE MACROS */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {character.macros.map(mac => (
-                    <div
-                      key={mac.id}
-                      className="bg-bg-main border border-blood-red/40 hover:border-blood-red hover:bg-burgundy/10 p-3 rounded-sm transition-all duration-150 group flex flex-col justify-between h-24 relative"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMacro(mac.id)}
-                        className="absolute top-2 right-2 text-text-muted/40 hover:text-hunger-red opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer p-1 text-xs select-none"
-                        title="Excluir Macro"
-                      >
-                        ✕
-                      </button>
-
-                      <div 
-                        onClick={() => triggerRoll(mac)}
-                        className="space-y-0.5 cursor-pointer pr-5"
-                      >
-                        <span className="font-data uppercase tracking-wider text-xs font-bold text-text-primary group-hover:text-gold-accent transition-colors block truncate">
-                          {mac.name}
-                        </span>
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {mac.pool.map((p, pIdx) => (
-                            <span key={pIdx} className="bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-[8px] text-text-muted font-data uppercase">
-                              {TECHNICAL_NAMES[p] || (character.disciplines?.find(d => d.id === p)?.name) || p}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div 
-                        onClick={() => triggerRoll(mac)}
-                        className="flex justify-between items-center w-full text-[9px] uppercase tracking-wider font-semibold pt-2 border-t border-white/5 text-text-dim group-hover:text-text-muted transition-colors cursor-pointer select-none"
-                      >
-                        <span>Rolagem D10</span>
-                        {mac.rouse_check && <span className="text-gold-accent font-bold">🩸 + Despertar</span>}
-                      </div>
-                    </div>
-                  ))}
-                  {character.macros.length === 0 && (
-                    <div className="col-span-full text-center py-6 border border-dashed border-white/10 rounded-sm text-xs text-text-muted italic">
-                      Nenhuma macro criada. Clique no botão acima para adicionar presets V5 ou criar uma macro personalizada.
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2 pt-4">
-                  <h4 className="text-xs font-data uppercase tracking-wider text-text-muted font-bold">Anotações do Narrador & Histórico</h4>
-                  <textarea
-                    value={character.notes}
-                    onChange={(e) => setCharacter(prev => ({ ...prev, notes: e.target.value }))}
-                    disabled={isReadOnly}
-                    className="w-full h-32 bg-bg-main border border-white/10 rounded p-3 text-sm font-reading text-text-primary focus:border-gold-accent outline-none resize-none transition-colors duration-150 disabled:opacity-60"
-                    placeholder="Histórico livre, anotações de NPCs e metas..."
-                  />
-                </div>
-              </div>
-
-              <div className="lg:col-span-6 bg-bg-main border border-white/10 rounded-sm p-4 space-y-4 min-h-75 flex flex-col justify-between">
-                
-                {!rollResult ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-2 text-text-dim">
-                    <svg className="w-12 h-12 text-text-dim/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <p className="font-data uppercase tracking-wider text-xs">Aguardando Rolagem</p>
-                    <p className="text-xs font-reading max-w-xs">Clique em qualquer uma das macros à esquerda para disparar a rolagem de dados com base na matemática de Fome e Atributos.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4 flex-1">
-                    <div className="border-b border-white/10 pb-2 flex justify-between items-center">
-                      <span className="font-data uppercase tracking-wider text-xs text-gold-accent font-bold">
-                        Resultado da Ação
-                      </span>
-                      <button 
-                        onClick={() => setRollResult(null)}
-                        className="text-[10px] uppercase tracking-widest text-text-muted hover:text-white cursor-pointer"
-                      >
-                        Limpar
-                      </button>
-                    </div>
-
-                    <div className="space-y-1">
-                      <h4 className="font-gothic text-2xl text-blood-red tracking-wide uppercase leading-none">
-                        {rollResult.macroName}
-                      </h4>
-                      <p className="text-xs text-text-muted font-data uppercase">
-                        Pool Sorteado: {rollResult.totalPool} Dados • Sucessos Totais: <span className="text-text-primary font-bold">{rollResult.successes}</span>
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 py-3 bg-bg-card/40 p-3 border border-white/5 rounded-sm">
-                      {rollResult.diceList.map((d, dIdx) => {
-                        const isHunger = d.type === "hunger";
-                        const isTen = d.value === 10;
-                        const isOne = d.value === 1;
-                        
-                        let bgStyle = "bg-bg-main border-blood-red text-text-primary";
-                        let ringStyle = "";
-
-                        if (isHunger) {
-                          bgStyle = "bg-hunger-red border-white text-bg-main font-bold";
-                          if (isTen) ringStyle = "ring-2 ring-gold-accent shadow-[0_0_10px_rgba(255,216,77,0.8)]";
-                          else if (isOne) ringStyle = "ring-2 ring-deep-crimson shadow-[0_0_10px_rgba(128,0,8,0.8)] animate-pulse";
-                        } else {
-                          if (isTen) {
-                            bgStyle = "bg-gold-accent border-gold-accent text-bg-main font-bold";
-                            ringStyle = "ring-2 ring-gold-accent/40 shadow-[0_0_8px_rgba(255,216,77,0.5)]";
-                          }
-                        }
-
-                        return (
-                          <div
-                            key={dIdx}
-                            className={`w-9 h-9 border rounded-sm flex items-center justify-center font-data text-sm tracking-tighter ${bgStyle} ${ringStyle}`}
-                          >
-                            {isTen ? "10" : d.value}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="space-y-2">
-                      {rollResult.isMessianic && (
-                        <div className="p-3 bg-gold-accent/10 border border-gold-accent/40 rounded-sm text-xs text-gold-accent font-reading">
-                          <strong>Crítico Messiânico (Messianic Critical)!</strong> O Sangue atendeu ao seu comando com força irresistível. Um sucesso espetacular com consequências dramáticas atreladas ao seu clã.
-                        </div>
-                      )}
-                      {rollResult.isBestial && (
-                        <div className="p-3 bg-deep-crimson/10 border border-deep-crimson/40 rounded-sm text-xs text-hunger-red font-reading">
-                          <strong>Falha Bestial (Bestial Failure)!</strong> Seus instintos monstruosos afloraram. Você falhou na ação e a Besta tomou o controle parcial de sua mente ou atitudes temporariamente.
-                        </div>
-                      )}
-                      {!rollResult.isMessianic && rollResult.isCritical && (
-                        <div className="p-3 bg-bg-card border border-gold-accent/20 rounded-sm text-xs text-gold-accent font-reading">
-                          <strong>Sucesso Crítico!</strong> Resultados excepcionais alcançados.
-                        </div>
-                      )}
-                      {rollResult.successes > 0 && !rollResult.isMessianic && !rollResult.isBestial && (
-                        <div className="p-3 bg-bg-card border border-white/10 rounded-sm text-xs text-text-muted font-reading">
-                          A ação obteve <strong>{rollResult.successes}</strong> sucesso(s).
-                        </div>
-                      )}
-                      {rollResult.successes === 0 && !rollResult.isBestial && (
-                        <div className="p-3 bg-deep-crimson/5 border border-deep-crimson/10 rounded-sm text-xs text-text-dim font-reading">
-                          A rolagem falhou. Nenhum sucesso foi obtido.
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-                )}
-                
-                <div className="text-[10px] text-text-dim border-t border-white/5 pt-3 leading-snug font-sans">
-                  * A rolagens do V5 consideram sucessos dados de valor 6 ou maior. Pares de 10 geram sucessos críticos (+2 adicionais). Dados de Fome podem gerar falhas bestiais ou vitórias messiânicas.
-                </div>
-
-              </div>
-
-            </div>
-          </section>
-
-          {/* SEÇÃO 9: DIÁRIO DE XP */}
-          <section id="xp_diary" style={{ scrollMarginTop: "70px" }} className="bg-bg-card border border-white/10 rounded-sm p-6 scroll-mt-24 space-y-6">
-            <div>
-              <h3 className="text-lg font-gothic tracking-wider text-blood-red uppercase">
-                Livro-Razão de Auditoria de Experiência (XP)
-              </h3>
-              <p className="text-xs text-text-muted font-reading">
-                Registro histórico completo de todos os gastos, devoluções e transações financeiras de pontos de XP deste personagem na crônica.
-              </p>
-            </div>
-            
-            {isLoadingLedger ? (
-              <div className="text-center py-12 text-text-muted animate-pulse font-data uppercase tracking-wider text-xs">
-                Carregando diário de XP...
-              </div>
-            ) : xpLedger.length === 0 ? (
-              <div className="text-center py-12 border border-white/5 bg-bg-main/20 rounded-sm text-text-dim/60 italic text-sm font-reading">
-                Nenhum lançamento de XP registrado neste personagem até o momento.
-              </div>
-            ) : (
-              <div className="overflow-x-auto border border-white/10 rounded-sm bg-bg-main/30">
-                <table className="w-full text-left border-collapse font-data text-xs uppercase">
-                  <thead>
-                    <tr className="border-b border-white/10 bg-bg-card-dark text-text-muted">
-                      <th className="p-3 tracking-wider font-bold">Data / Hora</th>
-                      <th className="p-3 tracking-wider font-bold">Descrição da Alteração</th>
-                      <th className="p-3 tracking-wider font-bold text-right">Lançamento (XP)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {xpLedger.map((item) => {
-                      const dateFormatted = new Date(item.createdAt).toLocaleString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      });
-                      const isNegative = item.xpChange < 0;
-                      return (
-                        <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                          <td className="p-3 text-text-muted whitespace-nowrap">{dateFormatted}</td>
-                          <td className="p-3 text-text-primary font-reading normal-case">{item.description}</td>
-                          <td className={`p-3 font-bold text-right text-sm ${isNegative ? "text-hunger-red" : "text-emerald-400"}`}>
-                            {isNegative ? "" : "+"}{item.xpChange} XP
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+          {/* SEÇÃO 10: DIÁRIO DE XP */}
+          <XpDiarySection
+            character={character}
+            onCharacterChange={setCharacter}
+            xpLedger={xpLedger}
+            isLoadingLedger={isLoadingLedger}
+            isReadOnly={isReadOnly}
+          />
 
         </div>
       </div>
