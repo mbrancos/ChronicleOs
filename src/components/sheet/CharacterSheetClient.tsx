@@ -34,6 +34,9 @@ import SkillGroup from "@/components/sheet/SkillGroup";
 import MacroSection from "@/components/sheet/MacroSection";
 import NotesSection from "@/components/sheet/NotesSection";
 import XpDiarySection from "@/components/sheet/XpDiarySection";
+import ProfileHeaderSection from "@/components/sheet/ProfileHeaderSection";
+import CreationProgressHUD from "@/components/sheet/CreationProgressHUD";
+import PredatorSelectionModal from "@/components/sheet/PredatorSelectionModal";
 import { useToast } from "@/context/ToastContext";
 
 const CLAN_OPTIONS = [
@@ -634,6 +637,8 @@ export default function CharacterSheetClient({
   const [evolutionJustification, setEvolutionJustification] = useState("");
   const [evolutionError, setEvolutionError] = useState<string | null>(null);
   const [evolutionLoading, setEvolutionLoading] = useState(false);
+  const [isPredatorModalOpen, setIsPredatorModalOpen] = useState(false);
+  const [isLocking, setIsLocking] = useState(false);
 
   const [prevWillpower, setPrevWillpower] = useState(initialData?.status?.willpower);
 
@@ -1562,6 +1567,15 @@ export default function CharacterSheetClient({
       return;
     }
 
+    // 1. REGRA V5: Especializações exigem no mínimo nível 1 na Habilidade
+    if (skillLevel < 1) {
+      showWarning(
+        `Regra V5: Especializações só podem ser associadas a Habilidades com no mínimo 1 ponto (nível 1+). A habilidade ${skillLabel} possui nível 0.`,
+        "Habilidade Requer Nível 1+"
+      );
+      return;
+    }
+
     // 2. REGRA V5: Motivo "Hab. 4" exige nível 4 na habilidade
     if (specialtySource === "Hab. 4" && skillLevel < 4) {
       showWarning(
@@ -1908,204 +1922,40 @@ export default function CharacterSheetClient({
         {/* ======================================================== */}
         {/* CABEÇALHO FIXO - DADOS DO VAMPIRO & TRACKERS RÁPIDOS */}
         {/* ======================================================== */}
-        <section id="sec-profile" className="bg-bg-card/90 border border-gold-accent/25 rounded-sm p-5 shadow-[0_0_30px_rgba(0,0,0,0.85)] relative overflow-hidden backdrop-blur-md space-y-4">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            {/* PRIMEIRO TERÇO (5 COLS): FOTO + DADOS DE PERFIL DO VAMPIRO */}
-            <div className="lg:col-span-5 flex flex-col sm:flex-row items-center sm:items-start gap-4">
-              {/* AVATAR DO VAMPIRO (INTERATIVO) */}
-              <div className="shrink-0">
-                <div 
-                  onClick={() => {
-                    if (!isReadOnly) {
-                      setAvatarUrlInput(character.profile.avatarUrl || character.profile.portrait_url || "");
-                      setIsAvatarModalOpen(true);
-                    }
-                  }}
-                  className={`relative w-20 h-20 rounded-full border-2 border-gold-accent/50 ring-2 ring-gold-accent/20 ring-offset-2 ring-offset-bg-card bg-bg-main flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(212,175,55,0.15)] group transition-all duration-300 ${
-                    !isReadOnly ? "cursor-pointer hover:border-gold-accent hover:scale-105 hover:shadow-[0_0_20px_rgba(212,175,55,0.35)]" : ""
-                  }`}
-                  title={!isReadOnly ? "Clique para alterar a foto de perfil do personagem" : ""}
-                >
-                  {(character.profile.avatarUrl || character.profile.portrait_url) && !avatarImageError ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img 
-                      src={character.profile.avatarUrl || character.profile.portrait_url} 
-                      alt={character.profile.name || "Vampiro"} 
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                      onError={() => setAvatarImageError(true)}
-                    />
-                  ) : (
-                    <svg className="w-10 h-10 text-text-dim/40 group-hover:text-gold-accent/60 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                    </svg>
-                  )}
+        <ProfileHeaderSection
+          characterId={characterId}
+          character={character}
+          status={status}
+          isReadOnly={isSheetDisabled}
+          onCharacterChange={setCharacter}
+          onOpenAvatarModal={() => {
+            setAvatarUrlInput(character.profile.avatarUrl || character.profile.portrait_url || "");
+            setIsAvatarModalOpen(true);
+          }}
+        />
 
-                  {!isReadOnly && (
-                    <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center text-gold-accent font-data text-[9px] uppercase font-bold tracking-wider">
-                      <span className="text-xs mb-0.5">📷</span>
-                      <span>Foto</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* DADOS DE PERFIL */}
-              <div className="space-y-2.5 flex-1 min-w-0 text-center sm:text-left">
-                <h1 className="text-xl sm:text-2xl font-gothic tracking-wider text-blood-red leading-none flex items-center justify-center sm:justify-start gap-1">
-                  <InlineEdit
-                    value={character.profile.name || "Novo Vampiro"}
-                    onChange={(val) => handleProfileChange("name", val)}
-                    disabled={isReadOnly}
-                    className="text-xl sm:text-2xl font-gothic tracking-wider text-blood-red hover:bg-white/5 uppercase truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                  />
-                </h1>
-
-                {/* GRID MODULAR DE METADADOS DO PERFIL (2 LINHAS) */}
-                <div className="grid grid-cols-2 gap-1.5 text-xs font-data uppercase">
-                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
-                    <span className="text-text-muted text-[10px]">Clã:</span>
-                    <InlineEdit
-                      value={character.profile.clan}
-                      onChange={(val) => handleProfileChange("clan", val)}
-                      type="select"
-                      options={CLAN_OPTIONS}
-                      disabled={isReadOnly}
-                      className="text-gold-accent font-bold hover:bg-white/5 truncate text-[11px]"
-                    />
-                  </div>
-
-                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
-                    <span className="text-text-muted text-[10px]">Idade:</span>
-                    <InlineEdit
-                      value={character.profile.concept || "Neófito"}
-                      onChange={(val) => handleProfileChange("concept", val)}
-                      type="select"
-                      options={POWER_LEVEL_OPTIONS}
-                      disabled={isReadOnly}
-                      className="text-text-primary font-bold hover:bg-white/5 truncate text-[11px]"
-                    />
-                  </div>
-
-                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
-                    <span className="text-text-muted text-[10px]">Geração:</span>
-                    <InlineEdit
-                      value={String(character.profile.generation)}
-                      onChange={(val) => handleProfileChange("generation", Number(val) || 11)}
-                      type="number"
-                      disabled={isReadOnly}
-                      className="text-text-primary font-bold hover:bg-white/5 w-7 text-[11px]"
-                    />
-                    <span className="text-[10px] text-text-dim">ª</span>
-                  </div>
-
-                  <div className="bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
-                    <span className="text-text-muted text-[10px]">Predador:</span>
-                    <InlineEdit
-                      value={character.profile.predator_type}
-                      onChange={(val) => handleProfileChange("predator_type", val)}
-                      type="select"
-                      options={PREDATOR_OPTIONS}
-                      disabled={isReadOnly}
-                      className="text-text-primary font-bold hover:bg-white/5 truncate text-[11px]"
-                    />
-                  </div>
-
-                  <div className="col-span-2 bg-black/40 border border-white/10 hover:border-gold-accent/40 rounded-xs px-2 py-1 flex items-center gap-1 transition-colors">
-                    <span className="text-text-muted text-[10px]">Senhor:</span>
-                    <InlineEdit
-                      value={character.profile.sire}
-                      onChange={(val) => handleProfileChange("sire", val)}
-                      disabled={isReadOnly}
-                      className="text-text-primary font-bold hover:bg-white/5 truncate text-[11px]"
-                    />
-                  </div>
-                </div>
-
-                {/* CARD EXPLICATIVO DAS REGRAS V5 PARA O NÍVEL DE PODER */}
-                {(() => {
-                  const rules = getPowerLevelRules(character.profile.concept || "Neófito");
-                  return (
-                    <div className="p-2 bg-amber-950/20 border border-amber-600/30 rounded-xs text-[10px] font-data text-amber-300 leading-tight">
-                      <span className="text-amber-400 font-bold uppercase tracking-wider block mb-0.5">
-                        💡 Regra V5 - Idade ({rules.name}):
-                      </span>
-                      <span>
-                        Atributos (13 pts) e Habilidades (20 pts) padrão. Nível <strong className="text-amber-200">{rules.name}</strong> concede: <strong>Potência {rules.bloodPotency}</strong>, <strong>{rules.disciplines} Disc.</strong> e <strong>{rules.advantages} pts Vantagens</strong>.
-                      </span>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* SEGUNDO TERÇO (7 COLS): QUADRO ÚNICO DE RECURSOS VITAIS & SANGRIA */}
-            <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4 border-t lg:border-t-0 lg:border-l border-white/10 pt-4 lg:pt-0 lg:pl-5">
-              
-              {/* QUADRO ÚNICO DE RECURSOS VITAIS (VITALIDADE + FORÇA DE VONTADE + FOME) */}
-              <div className="bg-black/40 border border-white/10 rounded-xs p-3.5 space-y-3">
-                <div className="text-[10px] font-data uppercase tracking-widest text-blood-red font-bold flex items-center gap-1.5 pb-1 border-b border-white/5">
-                  <span>🩸 Recursos Vitais</span>
-                </div>
-
-                <DamageTracker 
-                  characterId={characterId}
-                  label="Vitalidade" 
-                  value={character.status.health} 
-                  onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, health: val } }))} 
-                  variant="health" 
-                />
-
-                <DamageTracker 
-                  characterId={characterId}
-                  label="Força de Vontade" 
-                  value={character.status.willpower} 
-                  onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, willpower: val } }))} 
-                  variant="willpower" 
-                />
-
-                <DotSlider
-                  label="Fome"
-                  value={character.status.hunger}
-                  onChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, hunger: val } }))}
-                  allowZero
-                  variant="red"
-                />
-              </div>
-
-              {/* COLUNA DE RESSONÂNCIA E BÚSSOLA MORAL */}
-              <div className="flex flex-col gap-3 justify-between">
-                <BloodPanel
-                  value={character.bloodState}
-                  onChange={(newBloodState) => setCharacter(prev => ({ ...prev, bloodState: newBloodState }))}
-                  disabled={isSheetDisabled}
-                />
-
-                <HumanityTracker
-                  characterId={characterId}
-                  humanity={character.status.humanity}
-                  stains={character.status.stains}
-                  onHumanityChange={handleHumanityChange}
-                  onStainsChange={(val) => setCharacter(prev => ({ ...prev, status: { ...prev.status, stains: val } }))}
-                  disabled={isSheetDisabled}
-                />
-              </div>
-
-            </div>
-          </div>
-
-          {/* EXIBIÇÃO DA MALDIÇÃO DO CLÃ (FOOTER ELEGANTE DA SEÇÃO) */}
-          {character.profile.bane && (
-            <div className="pt-2.5 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-data">
-              <span className="text-blood-red font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0 font-gothic text-[11px]">
-                <span>🩸 Maldição do ClÃ ({character.profile.clan || "Vampiro"}):</span>
-              </span>
-              <span className="text-text-primary font-reading text-xs bg-burgundy/25 border border-blood-red/30 px-3 py-1 rounded-xs w-full sm:w-auto flex-1 leading-relaxed text-[11px]">
-                {character.profile.bane}
-              </span>
-            </div>
-          )}
-        </section>
+        {/* BARRA DE PROGRESSO FLUTUANTE DA CRIAÇÃO (MODO DRAFT) */}
+        {status === "DRAFT" && (
+          <CreationProgressHUD
+            attributesRemaining={alloc.attributesRemaining}
+            skillsRemaining={alloc.skillsRemaining}
+            disciplinesRemaining={alloc.disciplinesRemaining}
+            advantagesRemaining={alloc.advantagesRemaining}
+            hasPredator={Boolean(character.profile?.predator_type && character.profile?.predator_type !== "Nenhum")}
+            isLocking={isLocking}
+            onLockCharacter={async () => {
+              setIsLocking(true);
+              setStatus("READY");
+              const res = await updateCharacterSheet(characterId, character, buildStateRef.current, "READY");
+              setIsLocking(false);
+              if (res.success) {
+                showSuccess("Ficha concluída e pronta no cofre!", "Criação Concluída");
+              } else {
+                showError("Erro ao trancar ficha: " + res.error);
+              }
+            }}
+          />
+        )}
 
         {/* ======================================================== */}
         {/* MENU DE NAVEGAÇÃO FIXO (STICKY HEADER) */}
