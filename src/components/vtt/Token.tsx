@@ -65,6 +65,8 @@ export default function Token({
 }: TokenProps) {
   const [showPopover, setShowPopover] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const pointerDownCoordRef = useRef({ x: 0, y: 0 });
+  const hasDraggedRef = useRef(false);
 
   // Fechar o popover se clicar fora dele
   useEffect(() => {
@@ -100,8 +102,20 @@ export default function Token({
     if ((e.target as HTMLElement).closest(".popover-container")) {
       return;
     }
+    pointerDownCoordRef.current = { x: e.clientX, y: e.clientY };
+    hasDraggedRef.current = false;
     if (isStoryteller && onDragStart) {
       onDragStart(e, token.id);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const dist = Math.hypot(
+      e.clientX - pointerDownCoordRef.current.x,
+      e.clientY - pointerDownCoordRef.current.y
+    );
+    if (dist > 5) {
+      hasDraggedRef.current = true;
     }
   };
 
@@ -124,6 +138,12 @@ export default function Token({
 
   const handleTokenClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Se foi um arrasto (movimento > 5px), NÃO abre o popover nem o modal de inspeção
+    if (hasDraggedRef.current) {
+      hasDraggedRef.current = false;
+      return;
+    }
+
     if (token.type === "item") {
       if (onInspectItem && token.quickStats?.imageUrl) {
         onInspectItem({
@@ -219,6 +239,7 @@ export default function Token({
       {/* Círculo do Medalhão */}
       <div
         onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
         onDoubleClick={handleDoubleClick}
         onClick={handleTokenClick}
         style={{
