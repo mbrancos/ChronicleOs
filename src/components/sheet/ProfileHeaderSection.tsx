@@ -41,19 +41,30 @@ export const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = React.m
               }`}
             >
               {(character.profile?.avatarUrl || character.profile?.portrait_url) ? (
-                <img 
-                  src={character.profile.avatarUrl || character.profile.portrait_url} 
-                  alt={character.profile?.name || "Vampiro"} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                <div className="relative w-full h-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={character.profile.avatarUrl || character.profile.portrait_url} 
+                    alt={character.profile?.name || "Vampiro"} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  {!isReadOnly && (
+                    <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity">
+                      <span className="text-sm">📷</span>
+                      <span className="text-[9px] font-data uppercase tracking-wider text-gold-accent font-bold mt-0.5">
+                        Alterar
+                      </span>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-text-dim group-hover:text-gold-accent">
+                <div className="w-full h-full flex flex-col items-center justify-center text-text-dim group-hover:text-gold-accent transition-colors">
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   {!isReadOnly && (
-                    <span className="text-[9px] font-data uppercase tracking-wider text-gold-accent opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-1">
-                      Alterar
+                    <span className="text-[9px] font-data uppercase tracking-wider text-gold-accent opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-1 font-bold">
+                      Adicionar
                     </span>
                   )}
                 </div>
