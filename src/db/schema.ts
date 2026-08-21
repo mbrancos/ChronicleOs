@@ -111,3 +111,23 @@ export const xpLedgers = pgTable("xp_ledgers", {
   }>(),
 });
 
+export const mediaAssets = pgTable("media_assets", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  campaignId: uuid("campaign_id")
+    .references(() => campaigns.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  name: text("name").notNull(),
+  category: text("category").$type<"avatar" | "scene" | "token" | "prop">().notNull(),
+  mimeType: text("mime_type").default("image/webp").notNull(),
+  data: text("data").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type MediaAsset = typeof mediaAssets.$inferSelect;
+export type NewMediaAsset = typeof mediaAssets.$inferInsert;
+
