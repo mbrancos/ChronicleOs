@@ -8,6 +8,7 @@ import CharacterSheetClient from "@/components/sheet/CharacterSheetClient";
 import { createCharacterAction, updateCampaignSettingsAction, updateCampaignSessionAction } from "@/app/actions/hubActions";
 import { usePresence } from "@/hooks/usePresence";
 import { ChronicleSystemRules, DEFAULT_CHRONICLE_RULES } from "@/db/schema";
+import AssetVaultModal from "@/components/media/AssetVaultModal";
 
 interface Campaign {
   id: string;
@@ -62,6 +63,7 @@ export default function NarratorDashboardClient({
 
   // Estados para cópia do convite
   const [copied, setCopied] = useState(false);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
 
   // Estados para modal de NPC
   const [isNpcModalOpen, setIsNpcModalOpen] = useState(false);
@@ -233,6 +235,13 @@ export default function NarratorDashboardClient({
             >
               🦇 Abrir Mesa de Jogo
             </Link>
+            <button
+              onClick={() => setIsVaultOpen(true)}
+              className="px-3.5 py-1.5 border border-gold-accent/40 hover:border-gold-accent text-xs uppercase tracking-widest font-data text-gold-accent hover:text-white transition-all duration-200 rounded-sm bg-bg-card/45 cursor-pointer flex items-center gap-1.5"
+            >
+              <span>🗂️</span>
+              <span>Mídias & Ativos</span>
+            </button>
             <button
               onClick={() => setIsSettingsModalOpen(true)}
               className="px-3.5 py-1.5 border border-white/10 hover:border-gold-accent text-xs uppercase tracking-widest font-data text-text-muted hover:text-white transition-all duration-200 rounded-sm bg-bg-card/45 cursor-pointer"
@@ -863,6 +872,14 @@ export default function NarratorDashboardClient({
           />
         )}
       </SheetDrawer>
+
+      {/* MODAL DO ASSET VAULT DA CRÔNICA */}
+      <AssetVaultModal
+        isOpen={isVaultOpen}
+        campaignId={campaign.id}
+        userId="narrador"
+        onClose={() => setIsVaultOpen(false)}
+      />
     </main>
   );
 }

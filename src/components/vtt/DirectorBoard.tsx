@@ -5,6 +5,9 @@ import Token, { TokenData } from "./Token";
 import { updateTokenPosition, showSceneImageAction, updateSceneBackground } from "@/app/actions/sceneActions";
 import { CharacterSheetData } from "@/types/character";
 import { useToast } from "@/context/ToastContext";
+import ImageCropModal from "@/components/common/ImageCropModal";
+import AssetVaultModal from "@/components/media/AssetVaultModal";
+import { uploadMediaAssetAction } from "@/app/actions/mediaActions";
 
 interface DirectorBoardProps {
   tokens: TokenData[];
@@ -70,6 +73,50 @@ export default function DirectorBoard({
   const [isImageError, setIsImageError] = useState(false);
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [sceneBackgroundInput, setSceneBackgroundInput] = useState(sceneBackground || "");
+
+  // Estados para Asset Vault e Crop de Cenários
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [vaultTargetType, setVaultTargetType] = useState<"scene" | "background">("scene");
+  const [selectedFileForCrop, setSelectedFileForCrop] = useState<File | null>(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const [cropTargetType, setCropTargetType] = useState<"scene" | "background">("scene");
+
+  const handleSceneCropUpload = async (result: { base64: string; sizeBytes: number; width: number; height: number }) => {
+    if (!campaignId) return;
+    try {
+      const uploadRes = await uploadMediaAssetAction({
+        campaignId,
+        userId: "narrador",
+        name: selectedFileForCrop?.name.replace(/\.[^/.]+$/, "") || "Cenário da Mesa",
+        category: "scene",
+        base64: result.base64,
+        sizeBytes: result.sizeBytes,
+        width: result.width,
+        height: result.height,
+      });
+
+      if (uploadRes.success && uploadRes.data) {
+        const url = uploadRes.data.url;
+        if (cropTargetType === "scene") {
+          setCurrentSceneImage(url);
+          setIsShowingSceneImage(true);
+          await showSceneImageAction(campaignId, url);
+          if (onShowSceneImage) onShowSceneImage(url);
+          showSuccess("Cenário projetado ao vivo!");
+        } else {
+          setSceneBackgroundInput(url);
+          if (onChangeSceneBackground) onChangeSceneBackground(url);
+          await updateSceneBackground(campaignId, url);
+          showSuccess("Fundo do tabuleiro atualizado!");
+        }
+      } else {
+        showError(uploadRes.error || "Falha ao salvar cenário.");
+      }
+    } catch (err) {
+      console.error("Erro ao subir cenário:", err);
+      showError("Erro inesperado ao salvar cenário.");
+    }
+  };
 
   useEffect(() => {
     if (activeSceneImage !== undefined) {
@@ -415,7 +462,7 @@ export default function DirectorBoard({
                   value={sceneBackgroundInput}
                   onChange={(e) => setSceneBackgroundInput(e.target.value)}
                   placeholder="URL do cenário..."
-                  className="w-28 px-1.5 py-0.5 text-[9px] border border-white/5 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-reading"
+                  className="w-24 px-1.5 py-0.5 text-[9px] border border-white/5 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-reading"
                   onKeyDown={async (e) => {
                     if (e.key === "Enter" && sceneBackgroundInput.trim()) {
                       const url = sceneBackgroundInput.trim();
@@ -436,7 +483,7 @@ export default function DirectorBoard({
                       await updateSceneBackground(campaignId, url);
                     }
                   }}
-                  className="px-2 py-0.5 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
+                  className="px-1.5 py-0.5 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
                 >
                   ✓
                 </button>
@@ -455,6 +502,42 @@ export default function DirectorBoard({
                     ✕
                   </button>
                 )}
+              </div>
+
+              {/* Botões Rápidos de Galeria e Crop */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setVaultTargetType("scene");
+                    setIsVaultOpen(true);
+                  }}
+                  className="px-2 py-1 bg-black/80 hover:bg-black border border-gold-accent/40 hover:border-gold-accent text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shadow-md flex items-center gap-1 shrink-0"
+                  title="Abrir Biblioteca de Ativos"
+                >
+                  <span>🗂️</span>
+                  <span>Galeria</span>
+                </button>
+
+                <label
+                  className="px-2 py-1 bg-blood-red/80 hover:bg-blood-red border border-blood-red text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shadow-md flex items-center gap-1 shrink-0"
+                  title="Subir imagem com recorte 16:9"
+                >
+                  <span>✂️</span>
+                  <span>+ Cenário (16:9)</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setSelectedFileForCrop(e.target.files[0]);
+                        setCropTargetType("scene");
+                        setIsCropOpen(true);
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
               </div>
             </div>
           )}
@@ -516,6 +599,40 @@ export default function DirectorBoard({
         ))}
       </div>
       </div>
+
+      {/* Modal de Crop de Cenário */}
+      <ImageCropModal
+        isOpen={isCropOpen}
+        file={selectedFileForCrop}
+        aspectRatioType="16:9"
+        title={cropTargetType === "scene" ? "Enquadrar Imagem de Cena (16:9)" : "Enquadrar Fundo do Tabuleiro (16:9)"}
+        onClose={() => setIsCropOpen(false)}
+        onCropped={handleSceneCropUpload}
+      />
+
+      {/* Modal do Asset Vault */}
+      <AssetVaultModal
+        isOpen={isVaultOpen}
+        campaignId={campaignId}
+        userId="narrador"
+        targetCategory="scene"
+        onClose={() => setIsVaultOpen(false)}
+        onSelectImage={async (url) => {
+          if (!campaignId) return;
+          if (vaultTargetType === "scene") {
+            setCurrentSceneImage(url);
+            setIsShowingSceneImage(true);
+            await showSceneImageAction(campaignId, url);
+            if (onShowSceneImage) onShowSceneImage(url);
+            showSuccess("Cenário projetado da biblioteca!");
+          } else {
+            setSceneBackgroundInput(url);
+            if (onChangeSceneBackground) onChangeSceneBackground(url);
+            await updateSceneBackground(campaignId, url);
+            showSuccess("Fundo do tabuleiro atualizado da biblioteca!");
+          }
+        }}
+      />
     </div>
   );
 }
