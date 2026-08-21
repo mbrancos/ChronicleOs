@@ -37,6 +37,9 @@ import XpDiarySection from "@/components/sheet/XpDiarySection";
 import ProfileHeaderSection from "@/components/sheet/ProfileHeaderSection";
 import CreationProgressHUD from "@/components/sheet/CreationProgressHUD";
 import PredatorSelectionModal from "@/components/sheet/PredatorSelectionModal";
+import ImageCropModal from "@/components/common/ImageCropModal";
+import AssetVaultModal from "@/components/media/AssetVaultModal";
+import { uploadMediaAssetAction } from "@/app/actions/mediaActions";
 import { useToast } from "@/context/ToastContext";
 
 const CLAN_OPTIONS = [
@@ -594,6 +597,39 @@ export default function CharacterSheetClient({
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [avatarUrlInput, setAvatarUrlInput] = useState("");
   const [avatarImageError, setAvatarImageError] = useState(false);
+  const [selectedFileForCrop, setSelectedFileForCrop] = useState<File | null>(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+
+  const handleAvatarCropUpload = async (result: { base64: string; sizeBytes: number; width: number; height: number }) => {
+    try {
+      const uploadRes = await uploadMediaAssetAction({
+        campaignId: campaignId || null,
+        userId: character.profile?.name || "jogador",
+        name: `Avatar - ${character.profile?.name || "Personagem"}`,
+        category: "avatar",
+        base64: result.base64,
+        sizeBytes: result.sizeBytes,
+        width: result.width,
+        height: result.height,
+      });
+
+      if (uploadRes.success && uploadRes.data) {
+        const url = uploadRes.data.url;
+        handleProfileChange("avatarUrl", url);
+        handleProfileChange("portrait_url", url);
+        setAvatarUrlInput(url);
+        setAvatarImageError(false);
+        setIsAvatarModalOpen(false);
+        showSuccess("Avatar otimizado e atualizado com sucesso!");
+      } else {
+        showError(uploadRes.error || "Falha ao salvar avatar.");
+      }
+    } catch (err) {
+      console.error("Erro ao subir avatar:", err);
+      showError("Erro inesperado ao salvar avatar.");
+    }
+  };
 
   // Estado para Scrollspy de Navegação Fixa (Aba Ativa)
   const [activeTabId, setActiveTabId] = useState<string>("atributos");
@@ -3272,21 +3308,56 @@ export default function CharacterSheetClient({
         <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-bg-card border border-gold-accent/40 max-w-md w-full p-6 rounded-sm shadow-[0_0_30px_rgba(0,0,0,0.9)] space-y-4 font-data">
             <div className="border-b border-white/10 pb-3 flex items-center justify-between">
-              <h3 className="text-lg font-gothic tracking-wider text-gold-accent uppercase flex items-center gap-2">
+              <h3 className="text-sm font-gothic tracking-wider text-gold-accent uppercase flex items-center gap-2">
                 <span>📷 Alterar Foto do Personagem</span>
               </h3>
               <button 
                 onClick={() => setIsAvatarModalOpen(false)}
-                className="text-text-muted hover:text-white transition-colors cursor-pointer"
+                className="text-text-muted hover:text-white transition-colors cursor-pointer text-xs"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-xs uppercase tracking-wider text-text-muted font-bold block">
-                Link/URL da Imagem (JPEG, PNG, WebP)
+            {/* OPÇÕES RÁPIDAS DE ATUALIZAÇÃO */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <label className="flex flex-col items-center justify-center p-3 bg-linear-to-b from-white/10 to-white/5 hover:from-white/15 hover:to-white/10 border border-gold-accent/30 rounded-xs cursor-pointer text-center transition-all group shadow-sm">
+                <span className="text-lg mb-1 group-hover:scale-110 transition-transform">✂️</span>
+                <span className="text-[10px] font-bold text-gold-accent uppercase tracking-wider">Subir & Recortar</span>
+                <span className="text-[8px] text-text-dim mt-0.5">Enquadrar rosto (1:1 WebP)</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setSelectedFileForCrop(e.target.files[0]);
+                      setIsCropOpen(true);
+                    }
+                    e.target.value = "";
+                  }}
+                />
               </label>
+
+              <button
+                type="button"
+                onClick={() => setIsVaultOpen(true)}
+                className="flex flex-col items-center justify-center p-3 bg-linear-to-b from-white/10 to-white/5 hover:from-white/15 hover:to-white/10 border border-white/15 hover:border-gold-accent/40 rounded-xs cursor-pointer text-center transition-all group shadow-sm"
+              >
+                <span className="text-lg mb-1 group-hover:scale-110 transition-transform">🗂️</span>
+                <span className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Biblioteca da Mesa</span>
+                <span className="text-[8px] text-text-dim mt-0.5">Escolher mídia salva</span>
+              </button>
+            </div>
+
+            {/* DIVISOR OU URL */}
+            <div className="relative flex py-1 items-center">
+              <div className="grow border-t border-white/10"></div>
+              <span className="shrink mx-2 text-[9px] uppercase tracking-widest text-text-muted font-bold">ou link externo</span>
+              <div className="grow border-t border-white/10"></div>
+            </div>
+
+            <div className="space-y-2">
               <input 
                 type="text"
                 placeholder="https://exemplo.com/minha-foto.png"
@@ -3295,13 +3366,12 @@ export default function CharacterSheetClient({
                   setAvatarUrlInput(e.target.value);
                   setAvatarImageError(false);
                 }}
-                className="w-full bg-bg-input border border-white/15 text-text-primary text-xs p-2.5 rounded-sm outline-none focus:border-gold-accent font-reading"
+                className="w-full bg-bg-input border border-white/15 text-text-primary text-xs p-2 rounded-xs outline-none focus:border-gold-accent font-reading"
               />
 
               {/* PRÉ-VISUALIZAÇÃO DA FOTO */}
               <div className="pt-2 flex flex-col items-center justify-center">
-                <span className="text-[10px] uppercase text-text-dim mb-2">Pré-visualização:</span>
-                <div className="w-24 h-24 rounded-full border-2 border-gold-accent/40 bg-black overflow-hidden flex items-center justify-center shadow-inner">
+                <div className="w-20 h-20 rounded-full border-2 border-gold-accent/40 bg-black overflow-hidden flex items-center justify-center shadow-inner">
                   {avatarUrlInput.trim() && !avatarImageError ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img 
@@ -3312,8 +3382,8 @@ export default function CharacterSheetClient({
                     />
                   ) : (
                     <div className="text-center p-2">
-                      <span className="text-xs text-text-dim">
-                        {avatarImageError ? "⚠️ Link inválido ou bloqueado (CORS)" : "Nenhuma foto"}
+                      <span className="text-[10px] text-text-dim">
+                        {avatarImageError ? "⚠️ Link inválido" : "Sem foto"}
                       </span>
                     </div>
                   )}
@@ -3333,9 +3403,9 @@ export default function CharacterSheetClient({
                     setIsAvatarModalOpen(false);
                     showSuccess("Foto de perfil removida com sucesso!");
                   }}
-                  className="px-3 py-1.5 border border-hunger-red/40 text-hunger-red hover:bg-hunger-red/10 text-xs font-bold uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
+                  className="px-2.5 py-1 border border-hunger-red/40 text-hunger-red hover:bg-hunger-red/10 text-[10px] font-bold uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
                 >
-                  Remover Foto
+                  Remover
                 </button>
               ) : <div />}
 
@@ -3343,7 +3413,7 @@ export default function CharacterSheetClient({
                 <button
                   type="button"
                   onClick={() => setIsAvatarModalOpen(false)}
-                  className="px-3 py-1.5 border border-white/10 text-text-muted hover:text-white text-xs uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
+                  className="px-3 py-1 border border-white/10 text-text-muted hover:text-white text-[10px] uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -3357,15 +3427,42 @@ export default function CharacterSheetClient({
                     setIsAvatarModalOpen(false);
                     showSuccess("Foto de perfil atualizada com sucesso!");
                   }}
-                  className="px-4 py-1.5 bg-burgundy border border-blood-red text-white text-xs font-bold uppercase tracking-wider rounded-xs hover:bg-blood-red transition-colors cursor-pointer shadow-md"
+                  className="px-3 py-1 bg-burgundy border border-blood-red text-white text-[10px] font-bold uppercase tracking-wider rounded-xs hover:bg-blood-red transition-colors cursor-pointer shadow-md"
                 >
-                  Salvar Foto
+                  Salvar
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* MODAL DE CROP DE AVATAR */}
+      <ImageCropModal
+        isOpen={isCropOpen}
+        file={selectedFileForCrop}
+        aspectRatioType="1:1"
+        title="Enquadrar Rosto do Vampiro (1:1)"
+        onClose={() => setIsCropOpen(false)}
+        onCropped={handleAvatarCropUpload}
+      />
+
+      {/* MODAL DO ASSET VAULT */}
+      <AssetVaultModal
+        isOpen={isVaultOpen}
+        campaignId={campaignId}
+        userId={character.profile?.name || "jogador"}
+        targetCategory="avatar"
+        onClose={() => setIsVaultOpen(false)}
+        onSelectImage={(url) => {
+          handleProfileChange("avatarUrl", url);
+          handleProfileChange("portrait_url", url);
+          setAvatarUrlInput(url);
+          setAvatarImageError(false);
+          setIsAvatarModalOpen(false);
+          showSuccess("Avatar atualizado da biblioteca!");
+        }}
+      />
     </main>
   );
 }
