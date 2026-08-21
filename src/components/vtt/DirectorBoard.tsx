@@ -68,9 +68,14 @@ export default function DirectorBoard({
   const [isShowingSceneImage, setIsShowingSceneImage] = useState(!!activeSceneImage);
   const [isImageError, setIsImageError] = useState(false);
 
-  // Estados para Asset Vault
+  // Estados para Asset Vault e Inspeção de Item
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [vaultTargetType, setVaultTargetType] = useState<"scene" | "background">("scene");
+  const [inspectedItem, setInspectedItem] = useState<{
+    name: string;
+    imageUrl: string;
+    description?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (activeSceneImage !== undefined) {
@@ -457,6 +462,7 @@ export default function DirectorBoard({
             onUpdateQuickHealth={onUpdateQuickHealth}
             onUpdateCharacterStatus={onUpdateCharacterStatus}
             onOpenDamageModal={onOpenDamageModal}
+            onInspectItem={(item) => setInspectedItem(item)}
           />
         ))}
       </div>
@@ -484,6 +490,47 @@ export default function DirectorBoard({
           }
         }}
       />
+
+      {/* Modal de Inspeção de Item em Tela Cheia */}
+      {inspectedItem && (
+        <div
+          onClick={() => setInspectedItem(null)}
+          className="fixed inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center z-50 p-4 select-none animate-fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-2xl max-h-[85vh] bg-bg-card-dark border border-gold-accent/40 rounded-sm shadow-2xl flex flex-col overflow-hidden animate-scale-in cursor-default"
+          >
+            <div className="flex justify-between items-center px-4 py-2.5 bg-black/60 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="text-gold-accent text-sm">🗡️</span>
+                <span className="font-gothic text-xs uppercase tracking-widest text-text-primary font-bold">
+                  {inspectedItem.name}
+                </span>
+              </div>
+              <button
+                onClick={() => setInspectedItem(null)}
+                className="text-text-muted hover:text-white text-xs cursor-pointer px-1 py-0.5"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 bg-black flex items-center justify-center max-h-[70vh] overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={inspectedItem.imageUrl}
+                alt={inspectedItem.name}
+                className="max-h-[65vh] max-w-full object-contain rounded-xs border border-white/10"
+              />
+            </div>
+
+            <div className="px-4 py-2 bg-black/40 border-t border-white/10 text-center text-[10px] font-data text-text-muted">
+              Clique fora da imagem para fechar
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

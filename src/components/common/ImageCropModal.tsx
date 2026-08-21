@@ -8,14 +8,14 @@ export interface CropResult {
   sizeBytes: number;
   width: number;
   height: number;
-  category: "avatar" | "scene" | "token" | "prop";
+  category: "avatar" | "scene" | "item" | "other";
   name: string;
 }
 
 interface ImageCropModalProps {
   file: File | string | null;
   aspectRatioType?: "1:1" | "16:9" | "free";
-  initialCategory?: "avatar" | "scene" | "token" | "prop";
+  initialCategory?: "avatar" | "scene" | "item" | "other";
   title?: string;
   isOpen: boolean;
   onClose: () => void;
@@ -36,7 +36,7 @@ export default function ImageCropModal({
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Categoria e Proporção selecionadas
-  const [selectedCategory, setSelectedCategory] = useState<"avatar" | "scene" | "token" | "prop">(initialCategory);
+  const [selectedCategory, setSelectedCategory] = useState<"avatar" | "scene" | "item" | "other">(initialCategory);
   const [currentAspect, setCurrentAspect] = useState<"1:1" | "16:9" | "free">(aspectRatioType);
   const [assetName, setAssetName] = useState<string>("");
 
@@ -117,9 +117,9 @@ export default function ImageCropModal({
     applyAspectRatio(currentAspect, nw, nh);
   };
 
-  const handleCategoryChange = (cat: "avatar" | "scene" | "token" | "prop") => {
+  const handleCategoryChange = (cat: "avatar" | "scene" | "item" | "other") => {
     setSelectedCategory(cat);
-    const newAspect = cat === "avatar" || cat === "token" ? "1:1" : cat === "scene" ? "16:9" : "free";
+    const newAspect = cat === "avatar" ? "1:1" : cat === "scene" ? "16:9" : "free";
     setCurrentAspect(newAspect);
     applyAspectRatio(newAspect);
   };
@@ -156,6 +156,8 @@ export default function ImageCropModal({
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
     const deltaXPercent = ((e.clientX - dragStartRef.current.mouseX) / rect.width) * 100;
     const deltaYPercent = ((e.clientY - dragStartRef.current.mouseY) / rect.height) * 100;
 
@@ -204,7 +206,7 @@ export default function ImageCropModal({
         newH = (newW / targetRatio) * imgRatio;
         if (newY + newH > 100) {
           newH = 100 - newY;
-          newW = newH * targetRatio / imgRatio;
+          newW = (newH * targetRatio) / imgRatio;
         }
       }
 
@@ -267,13 +269,13 @@ export default function ImageCropModal({
 
         {/* Barra de Categorização e Nome */}
         <div className="px-4 py-2.5 bg-black/30 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[9px] font-data uppercase tracking-wider text-text-muted font-bold">Tipo:</span>
             {[
               { id: "avatar", label: "Avatar (1:1)" },
               { id: "scene", label: "Cenário (16:9)" },
-              { id: "token", label: "Token (1:1)" },
-              { id: "prop", label: "Prop / Livre" },
+              { id: "item", label: "Item (Livre)" },
+              { id: "other", label: "Outros" },
             ].map((cat) => (
               <button
                 key={cat.id}
@@ -302,48 +304,52 @@ export default function ImageCropModal({
           </div>
         </div>
 
-        {/* Viewport de Recorte */}
+        {/* Viewport de Recorte com Envoltório Justo da Imagem */}
         <div
-          ref={containerRef}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          className="relative w-full h-88 bg-black/90 flex items-center justify-center overflow-hidden touch-none"
+          className="relative w-full h-88 bg-black/95 flex items-center justify-center overflow-hidden touch-none p-4"
         >
-          {/* Imagem Original de Fundo */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            ref={imageRef}
-            src={imageSrc}
-            alt="Upload"
-            onLoad={handleImageLoaded}
-            className="max-h-full max-w-full object-contain pointer-events-none opacity-35 select-none"
-          />
-
-          {/* Máscara Iluminada do Crop Box */}
+          {/* Wrapper proporcional direto na imagem renderizada */}
           <div
-            onPointerDown={handlePointerDownDrag}
-            style={{
-              left: `${cropBox.x}%`,
-              top: `${cropBox.y}%`,
-              width: `${cropBox.width}%`,
-              height: `${cropBox.height}%`,
-            }}
-            className={`absolute border-2 border-gold-accent bg-transparent shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] cursor-move ${
-              selectedCategory === "avatar" ? "rounded-full" : "rounded-xs"
-            }`}
+            ref={containerRef}
+            className="relative max-h-full max-w-full inline-block select-none shadow-2xl"
           >
-            {/* Alças de Redimensionamento */}
-            <div onPointerDown={(e) => handlePointerDownResize("tl", e)} className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-gold-accent rounded-full cursor-nwse-resize border border-black shadow" />
-            <div onPointerDown={(e) => handlePointerDownResize("tr", e)} className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-gold-accent rounded-full cursor-nesw-resize border border-black shadow" />
-            <div onPointerDown={(e) => handlePointerDownResize("bl", e)} className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-gold-accent rounded-full cursor-nesw-resize border border-black shadow" />
-            <div onPointerDown={(e) => handlePointerDownResize("br", e)} className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-gold-accent rounded-full cursor-nwse-resize border border-black shadow" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imageRef}
+              src={imageSrc}
+              alt="Upload"
+              onLoad={handleImageLoaded}
+              className="max-h-80 max-w-full block object-contain pointer-events-none opacity-40 select-none"
+            />
+
+            {/* Máscara Iluminada do Crop Box */}
+            <div
+              onPointerDown={handlePointerDownDrag}
+              style={{
+                left: `${cropBox.x}%`,
+                top: `${cropBox.y}%`,
+                width: `${cropBox.width}%`,
+                height: `${cropBox.height}%`,
+              }}
+              className={`absolute border-2 border-gold-accent bg-transparent shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] cursor-move ${
+                selectedCategory === "avatar" ? "rounded-full" : "rounded-xs"
+              }`}
+            >
+              {/* Alças de Redimensionamento */}
+              <div onPointerDown={(e) => handlePointerDownResize("tl", e)} className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-gold-accent rounded-full cursor-nwse-resize border border-black shadow" />
+              <div onPointerDown={(e) => handlePointerDownResize("tr", e)} className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-gold-accent rounded-full cursor-nesw-resize border border-black shadow" />
+              <div onPointerDown={(e) => handlePointerDownResize("bl", e)} className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-gold-accent rounded-full cursor-nesw-resize border border-black shadow" />
+              <div onPointerDown={(e) => handlePointerDownResize("br", e)} className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-gold-accent rounded-full cursor-nwse-resize border border-black shadow" />
+            </div>
           </div>
         </div>
 
         {/* Barra Inferior com Informações e Ações */}
         <div className="px-4 py-2.5 bg-black/40 border-t border-white/10 flex items-center justify-between">
           <div className="text-[10px] text-text-muted font-data">
-            Formato: <span className="text-gold-accent font-bold uppercase">{selectedCategory} WebP</span> • Otimização automática
+            Formato: <span className="text-gold-accent font-bold uppercase">{selectedCategory} WebP</span> • Otimização sob demanda
           </div>
           <div className="flex items-center gap-2">
             <button

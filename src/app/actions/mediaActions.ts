@@ -15,7 +15,7 @@ function isValidUuid(val?: string | null): val is string {
 export interface UploadMediaPayload {
   campaignId?: string | null;
   name: string;
-  category: "avatar" | "scene" | "token" | "prop";
+  category: "avatar" | "scene" | "item" | "other";
   base64: string;
   sizeBytes: number;
   width: number;
@@ -204,5 +204,35 @@ export async function updateCharacterAvatarAction(characterId: string, avatarUrl
   } catch (error: any) {
     console.error("Erro ao atualizar avatar do personagem:", error);
     return { success: false, error: error?.message || "Falha ao atualizar avatar." };
+  }
+}
+
+/**
+ * Atualiza a categoria e/ou nome de uma mídia existente
+ */
+export async function updateMediaAssetCategoryAction(
+  id: string,
+  category: "avatar" | "scene" | "item" | "other",
+  name?: string
+) {
+  try {
+    if (!isValidUuid(id)) {
+      return { success: false, error: "ID de mídia inválido." };
+    }
+
+    const updateData: any = { category };
+    if (name && name.trim()) {
+      updateData.name = name.trim();
+    }
+
+    await db
+      .update(mediaAssets)
+      .set(updateData)
+      .where(eq(mediaAssets.id, id));
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Erro ao atualizar categoria da mídia:", error);
+    return { success: false, error: error?.message || "Falha ao atualizar categoria." };
   }
 }

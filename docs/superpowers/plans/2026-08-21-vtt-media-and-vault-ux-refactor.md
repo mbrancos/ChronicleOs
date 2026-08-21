@@ -1,43 +1,34 @@
-# Refatoração de UI/UX da Barra do VTT e Fluxo Unificado de Upload no Asset Vault
+# Plano: Gestão de Categorias, Tokens de Itens no VTT e Correção Geométrica do Crop
 
-Este plano implementa as diretrizes do **UI/UX Pro Max** para eliminar a poluição visual na barra superior do Tabuleiro VTT (`DirectorBoard`), unificar o botão de upload na Biblioteca de Ativos (`AssetVaultModal`) e permitir categorização e enquadramento dinâmico no modal de recorte (`ImageCropModal`).
-
----
-
-## Proposta de Mudanças
-
-### 1. `src/components/common/ImageCropModal.tsx`
-- Adicionar seletor de proporção / categoria interativo dentro do modal:
-  - **Avatar / Retrato (1:1)**
-  - **Cenário / Telão (16:9)**
-  - **Token / Item (Livre / 1:1)**
-- Adicionar campo opcional de nome da mídia.
-- Retornar `{ base64, sizeBytes, width, height, category, name }`.
-
-### 2. `src/components/media/AssetVaultModal.tsx`
-- Substituir os 2 botões de upload por **1 único botão `+ Subir Imagem`** com ícone SVG.
-- Ao selecionar a imagem, abre o `ImageCropModal` dinâmico.
-- Tratar o contexto de seleção (`contextTitle`, `targetCategory`) para que o clique em uma imagem aplique de forma transparente no destino (Cena, Fundo do Tabuleiro ou Ficha).
-
-### 3. `src/components/vtt/DirectorBoard.tsx`
-- **Remover totalmente os inputs manuais de URL e botões avulsos**.
-- **Slot 1 (Projeção de Cena):**
-  - Vazio: Botão minimalista gótico `🎭 Projetar Imagem`.
-  - Ativo: Thumbnail + badge `AO VIVO` + botão `✕` para encerrar projeção.
-- **Slot 2 (Fundo do Tabuleiro):**
-  - Vazio: Botão minimalista gótico `🖼️ Fundo do Tabuleiro`.
-  - Ativo: Mini thumbnail + botão `✕` para remover fundo.
-- **Controle de Rodada:** `↺ Nova Rodada`.
+Este plano atende às solicitações do usuário e aplica as diretrizes de **UI/UX Pro Max**:
+1. **Alteração Dinâmica de Categoria:** Permitir mudar a categoria de qualquer mídia existente na biblioteca sem re-upload.
+2. **Padronização das Categorias:** `Avatar` (perfil), `Cenários` (ambientes), `Itens` (objetos), `Outros` (geral).
+3. **Filtro Padrão:** O `AssetVaultModal` sempre abre na aba `Todos`.
+4. **Itens no Tabuleiro VTT:** Adicionar imagem de itens como tokens no tabuleiro (arrastáveis, visíveis aos jogadores) com inspeção em tela cheia ao clicar.
+5. **Correção do Recorte (Crop):** Corrigir o mapeamento do `cropBox` para ser relativo estritamente às dimensões da imagem, eliminando o erro de corte indesejado na projeção.
 
 ---
 
-## Plano de Verificação
+## Modificações
 
-### Testes Manuais & Validação
-1. **Compilação:** Executar `npm run build` para garantir integridade de tipagem.
-2. **Fluxo VTT:**
-   - Clicar em `🎭 Projetar Imagem` -> abre o Vault -> selecionar ou subir imagem -> projeta no palco.
-   - Clicar em `🖼️ Fundo do Tabuleiro` -> abre o Vault -> selecionar ou subir imagem -> altera fundo.
-   - Clicar em `✕` em qualquer um -> remove o item de cena ou o fundo.
-3. **Fluxo de Upload Unificado no Vault:**
-   - Clicar em `+ Subir Imagem` -> selecionar arquivo -> alternar entre 1:1 e 16:9 no Crop -> salvar.
+### 1. `src/db/schema.ts`
+- Atualizar tipos de `mediaAssets.category` para `"avatar" | "scene" | "item" | "other"`.
+- Atualizar `sceneTokens.type` para suportar `"item"`.
+
+### 2. `src/app/actions/mediaActions.ts`
+- Adicionar `updateMediaAssetCategoryAction(id, category, name)`.
+- Atualizar `UploadMediaPayload` com as novas categorias.
+
+### 3. `src/components/common/ImageCropModal.tsx`
+- Corrigir o container para envolver a imagem diretamente (proporção 1:1 com o canvas).
+- Atualizar seletores de categorias: `Avatar (1:1)`, `Cenário (16:9)`, `Item (Livre)`, `Outros (Livre)`.
+
+### 4. `src/components/media/AssetVaultModal.tsx`
+- Inicializar sempre com `activeTab = "todos"`.
+- Abas: `Todos`, `Avatares (1:1)`, `Cenários (16:9)`, `Itens`, `Outros`.
+- Seletor de categoria em cada card para alterar instantaneamente.
+- Botão `🗡️ Colocar no Tabuleiro` para instanciar como Token de Item na cena.
+
+### 5. `src/components/vtt/Token.tsx` & `DirectorBoard.tsx`
+- Suporte a token de `type === "item"` com renderização da miniatura da imagem.
+- Modal de ampliação em tela cheia ao clicar no item no tabuleiro (para jogadores e narrador).

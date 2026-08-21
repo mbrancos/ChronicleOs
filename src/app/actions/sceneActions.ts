@@ -67,15 +67,17 @@ export async function createSceneToken(
   campaignId: string,
   characterId: string | null,
   name: string,
-  type: "player" | "full_npc" | "quick_npc",
+  type: "player" | "full_npc" | "quick_npc" | "item",
   x: number,
   y: number,
   isVisible: boolean,
   quickStats?: {
-    physical: number;
-    social: number;
-    combat: number;
-    health: {
+    imageUrl?: string;
+    description?: string;
+    physical?: number;
+    social?: number;
+    combat?: number;
+    health?: {
       max: number;
       superficial: number;
       aggravated: number;

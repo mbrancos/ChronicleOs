@@ -77,13 +77,13 @@ export default function TokenPopover({
                   </div>
                   <div className="grid grid-cols-2 gap-1">
                     <button
-                      onClick={() => onQuickRoll?.(token.id, token.name, "Físico", token.quickStats!.physical, false)}
+                      onClick={() => onQuickRoll?.(token.id, token.name, "Físico", token.quickStats?.physical ?? 0, false)}
                       className="py-0.5 bg-white/5 hover:bg-white/15 text-[9px] font-bold text-text-primary uppercase border border-white/5 rounded-xs transition-colors cursor-pointer"
                     >
                       Público
                     </button>
                     <button
-                      onClick={() => onQuickRoll?.(token.id, token.name, "Físico (Secreto)", token.quickStats!.physical, true)}
+                      onClick={() => onQuickRoll?.(token.id, token.name, "Físico (Secreto)", token.quickStats?.physical ?? 0, true)}
                       className="py-0.5 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-[9px] font-bold text-willpower-blue border border-willpower-blue/30 rounded-xs transition-colors cursor-pointer"
                     >
                       Secreto
@@ -95,17 +95,17 @@ export default function TokenPopover({
                 <div className="flex flex-col space-y-1">
                   <div className="flex justify-between text-[10px] text-text-muted">
                     <span className="font-bold">SOCIAL</span>
-                    <span className="font-mono text-text-primary font-bold">{token.quickStats.social} Dados</span>
+                    <span className="font-mono text-text-primary font-bold">{token.quickStats.social ?? 0} Dados</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1">
                     <button
-                      onClick={() => onQuickRoll?.(token.id, token.name, "Social", token.quickStats!.social, false)}
+                      onClick={() => onQuickRoll?.(token.id, token.name, "Social", token.quickStats?.social ?? 0, false)}
                       className="py-0.5 bg-white/5 hover:bg-white/15 text-[9px] font-bold text-text-primary uppercase border border-white/5 rounded-xs transition-colors cursor-pointer"
                     >
                       Público
                     </button>
                     <button
-                      onClick={() => onQuickRoll?.(token.id, token.name, "Social (Secreto)", token.quickStats!.social, true)}
+                      onClick={() => onQuickRoll?.(token.id, token.name, "Social (Secreto)", token.quickStats?.social ?? 0, true)}
                       className="py-0.5 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-[9px] font-bold text-willpower-blue border border-willpower-blue/30 rounded-xs transition-colors cursor-pointer"
                     >
                       Secreto
@@ -117,17 +117,17 @@ export default function TokenPopover({
                 <div className="flex flex-col space-y-1">
                   <div className="flex justify-between text-[10px] text-text-muted">
                     <span className="font-bold">COMBATE</span>
-                    <span className="font-mono text-text-primary font-bold">{token.quickStats.combat} Dados</span>
+                    <span className="font-mono text-text-primary font-bold">{token.quickStats.combat ?? 0} Dados</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1">
                     <button
-                      onClick={() => onQuickRoll?.(token.id, token.name, "Combate", token.quickStats!.combat, false)}
+                      onClick={() => onQuickRoll?.(token.id, token.name, "Combate", token.quickStats?.combat ?? 0, false)}
                       className="py-0.5 bg-white/5 hover:bg-white/15 text-[9px] font-bold text-text-primary uppercase border border-white/5 rounded-xs transition-colors cursor-pointer"
                     >
                       Público
                     </button>
                     <button
-                      onClick={() => onQuickRoll?.(token.id, token.name, "Combate (Secreto)", token.quickStats!.combat, true)}
+                      onClick={() => onQuickRoll?.(token.id, token.name, "Combate (Secreto)", token.quickStats?.combat ?? 0, true)}
                       className="py-0.5 bg-willpower-blue/20 hover:bg-willpower-blue/30 text-[9px] font-bold text-willpower-blue border border-willpower-blue/30 rounded-xs transition-colors cursor-pointer"
                     >
                       Secreto

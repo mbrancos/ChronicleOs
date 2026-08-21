@@ -9,16 +9,18 @@ export interface TokenData {
   campaignId: string;
   characterId: string | null;
   name: string;
-  type: "player" | "full_npc" | "quick_npc";
+  type: "player" | "full_npc" | "quick_npc" | "item";
   x: number;
   y: number;
   isVisible: boolean;
   hasActed: boolean;
   quickStats?: {
-    physical: number;
-    social: number;
-    combat: number;
-    health: {
+    imageUrl?: string;
+    description?: string;
+    physical?: number;
+    social?: number;
+    combat?: number;
+    health?: {
       max: number;
       superficial: number;
       aggravated: number;
@@ -44,6 +46,7 @@ interface TokenProps {
     }
   ) => void;
   onOpenDamageModal?: (characterId: string, characterName: string) => void;
+  onInspectItem?: (item: { name: string; imageUrl: string; description?: string }) => void;
 }
 
 export default function Token({
@@ -58,6 +61,7 @@ export default function Token({
   onUpdateQuickHealth,
   onUpdateCharacterStatus,
   onOpenDamageModal,
+  onInspectItem,
 }: TokenProps) {
   const [showPopover, setShowPopover] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -103,6 +107,16 @@ export default function Token({
 
   const handleDoubleClick = () => {
     setShowPopover(false);
+    if (token.type === "item") {
+      if (onInspectItem && token.quickStats?.imageUrl) {
+        onInspectItem({
+          name: token.name,
+          imageUrl: token.quickStats.imageUrl,
+          description: token.quickStats.description,
+        });
+      }
+      return;
+    }
     if (onDoubleClick && token.characterId) {
       onDoubleClick(token.characterId);
     }
@@ -110,6 +124,16 @@ export default function Token({
 
   const handleTokenClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (token.type === "item") {
+      if (onInspectItem && token.quickStats?.imageUrl) {
+        onInspectItem({
+          name: token.name,
+          imageUrl: token.quickStats.imageUrl,
+          description: token.quickStats.description,
+        });
+      }
+      return;
+    }
     if (isStoryteller) {
       setShowPopover(!showPopover);
     }
@@ -125,6 +149,9 @@ export default function Token({
   } else if (token.type === "full_npc") {
     ringClass = "border-red-500";
     shadowColor = "rgba(239,68,68,0.4)";
+  } else if (token.type === "item") {
+    ringClass = "border-gold-accent ring-1 ring-gold-accent/40";
+    shadowColor = "rgba(212,175,55,0.5)";
   } else {
     ringClass = "border-sky-500";
     shadowColor = "rgba(14,165,233,0.4)";
@@ -134,11 +161,17 @@ export default function Token({
   let opacityClass = "";
   if (!token.isVisible) {
     opacityClass = "opacity-50"; // Bastidores (legibilidade Narrador)
-  } else if (token.hasActed) {
+  } else if (token.hasActed && token.type !== "item") {
     opacityClass = "opacity-70"; // Agiu no Palco
   }
 
-  const grayscaleClass = token.hasActed ? "grayscale-[0.8]" : "";
+  const grayscaleClass = token.hasActed && token.type !== "item" ? "grayscale-[0.8]" : "";
+
+  // Imagem do avatar ou item se existir
+  const tokenAvatarUrl =
+    token.type === "item"
+      ? token.quickStats?.imageUrl
+      : characterSheetData?.profile?.avatarUrl || characterSheetData?.profile?.portrait_url;
 
   return (
     <div
@@ -151,8 +184,8 @@ export default function Token({
       }}
       className={`z-30 select-none flex flex-col items-center group transition-all duration-300 ${opacityClass} ${grayscaleClass}`}
     >
-      {/* Botão de Check para o Narrador (Alternar Ação Concluída) */}
-      {isStoryteller && onToggleActed && (
+      {/* Botão de Check para o Narrador (Alternar Ação Concluída) - Não exibido para itens */}
+      {isStoryteller && onToggleActed && token.type !== "item" && (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -191,11 +224,21 @@ export default function Token({
         style={{
           boxShadow: `0 0 12px ${shadowColor}`,
         }}
-        className={`w-14 h-14 rounded-full border-2 bg-bg-card-dark/95 flex items-center justify-center font-gothic text-xl tracking-wider text-text-primary select-none transition-transform duration-200 ${
-          isStoryteller ? "cursor-grab active:cursor-grabbing hover:scale-105" : "cursor-default"
+        className={`w-14 h-14 rounded-full border-2 bg-bg-card-dark/95 overflow-hidden flex items-center justify-center font-gothic text-xl tracking-wider text-text-primary select-none transition-transform duration-200 ${
+          isStoryteller ? "cursor-grab active:cursor-grabbing hover:scale-105" : "cursor-pointer hover:scale-105"
         } ${ringClass}`}
+        title={token.type === "item" ? "Clique para inspecionar o item" : undefined}
       >
-        {getInitials(token.name)}
+        {tokenAvatarUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={tokenAvatarUrl}
+            alt={token.name}
+            className="w-full h-full object-cover pointer-events-none"
+          />
+        ) : (
+          getInitials(token.name)
+        )}
       </div>
 
       {/* Etiqueta de Nome */}
@@ -205,8 +248,8 @@ export default function Token({
         </div>
       </div>
 
-      {/* Popover Universal (Apenas se for Narrador) */}
-      {showPopover && isStoryteller && (
+      {/* Popover Universal (Apenas se for Narrador e não for Item) */}
+      {showPopover && isStoryteller && token.type !== "item" && (
         <div ref={popoverRef}>
           <TokenPopover
             token={token}

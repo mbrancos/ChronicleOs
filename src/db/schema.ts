@@ -75,23 +75,25 @@ export const sceneTokens = pgTable("scene_tokens", {
     .references(() => campaigns.id, { onDelete: "cascade" })
     .notNull(),
   characterId: uuid("character_id")
-    .references(() => characters.id, { onDelete: "cascade" }), // Nulo para figurantes rápidos (quick_npc)
+    .references(() => characters.id, { onDelete: "cascade" }), // Nulo para figurantes rápidos e itens
   name: text("name").notNull(),
-  type: text("type").$type<"player" | "full_npc" | "quick_npc">().notNull(),
+  type: text("type").$type<"player" | "full_npc" | "quick_npc" | "item">().notNull(),
   x: integer("x").default(100).notNull(),
   y: integer("y").default(100).notNull(),
   isVisible: boolean("is_visible").default(false).notNull(), // true se estiver dentro do "Palco"
   hasActed: boolean("has_acted").default(false).notNull(),
   quickStats: jsonb("quick_stats").$type<{
-    physical: number;
-    social: number;
-    combat: number;
-    health: {
+    imageUrl?: string;
+    description?: string;
+    physical?: number;
+    social?: number;
+    combat?: number;
+    health?: {
       max: number;
       superficial: number;
       aggravated: number;
     };
-  }>() // Nulo se type !== "quick_npc"
+  }>()
 });
 
 export const xpLedgers = pgTable("xp_ledgers", {
@@ -118,7 +120,7 @@ export const mediaAssets = pgTable("media_assets", {
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  category: text("category").$type<"avatar" | "scene" | "token" | "prop">().notNull(),
+  category: text("category").$type<"avatar" | "scene" | "item" | "other">().notNull(),
   mimeType: text("mime_type").default("image/webp").notNull(),
   data: text("data").notNull(),
   sizeBytes: integer("size_bytes").notNull(),

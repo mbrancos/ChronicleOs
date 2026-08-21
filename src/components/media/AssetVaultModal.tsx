@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import ImageCropModal, { CropResult } from "@/components/common/ImageCropModal";
-import { getCampaignMediaAssetsAction, uploadMediaAssetAction, deleteMediaAssetAction } from "@/app/actions/mediaActions";
+import {
+  getCampaignMediaAssetsAction,
+  uploadMediaAssetAction,
+  deleteMediaAssetAction,
+  updateMediaAssetCategoryAction,
+} from "@/app/actions/mediaActions";
+import { createSceneToken } from "@/app/actions/sceneActions";
 import { useToast } from "@/context/ToastContext";
 
 interface AssetVaultModalProps {
@@ -12,7 +18,7 @@ interface AssetVaultModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectImage?: (url: string) => void;
-  targetCategory?: "avatar" | "scene" | "token" | "prop" | "all";
+  targetCategory?: "avatar" | "scene" | "item" | "other" | "all";
 }
 
 export default function AssetVaultModal({
@@ -22,10 +28,10 @@ export default function AssetVaultModal({
   isOpen,
   onClose,
   onSelectImage,
-  targetCategory = "all",
 }: AssetVaultModalProps) {
   const { showSuccess, showError } = useToast();
-  const [activeTab, setActiveTab] = useState<string>(targetCategory === "all" ? "todos" : targetCategory);
+  // Sempre abre na aba "Todos" por padrão
+  const [activeTab, setActiveTab] = useState<string>("todos");
   const [assets, setAssets] = useState<any[]>([]);
   const [totalBytes, setTotalBytes] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -47,9 +53,9 @@ export default function AssetVaultModal({
   useEffect(() => {
     if (isOpen) {
       fetchAssets();
-      setActiveTab(targetCategory === "all" ? "todos" : targetCategory);
+      setActiveTab("todos");
     }
-  }, [isOpen, fetchAssets, targetCategory]);
+  }, [isOpen, fetchAssets]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -94,6 +100,54 @@ export default function AssetVaultModal({
     }
   };
 
+  const handleCategoryChange = async (assetId: string, newCategory: "avatar" | "scene" | "item" | "other") => {
+    // Atualização otimista local
+    setAssets((prev) =>
+      prev.map((a) => (a.id === assetId ? { ...a, category: newCategory } : a))
+    );
+
+    const res = await updateMediaAssetCategoryAction(assetId, newCategory);
+    if (res.success) {
+      const labels: Record<string, string> = {
+        avatar: "Avatar",
+        scene: "Cenário",
+        item: "Item",
+        other: "Outros",
+      };
+      showSuccess(`Categoria alterada para ${labels[newCategory]}.`);
+    } else {
+      showError(res.error || "Falha ao alterar categoria.");
+      await fetchAssets();
+    }
+  };
+
+  const handlePlaceOnBoard = async (asset: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!campaignId) return;
+
+    try {
+      const res = await createSceneToken(
+        campaignId,
+        null,
+        asset.name,
+        "item",
+        300,
+        200,
+        true,
+        { imageUrl: asset.url }
+      );
+
+      if (res.success) {
+        showSuccess(`"${asset.name}" adicionado ao tabuleiro!`);
+        onClose();
+      } else {
+        showError(res.error || "Falha ao adicionar item no tabuleiro.");
+      }
+    } catch {
+      showError("Erro inesperado ao adicionar item.");
+    }
+  };
+
   const filteredAssets = activeTab === "todos" ? assets : assets.filter((a) => a.category === activeTab);
   const formattedMb = (totalBytes / (1024 * 1024)).toFixed(2);
 
@@ -118,8 +172,8 @@ export default function AssetVaultModal({
               { id: "todos", label: "Todos" },
               { id: "avatar", label: "Avatares (1:1)" },
               { id: "scene", label: "Cenários (16:9)" },
-              { id: "token", label: "Tokens" },
-              { id: "prop", label: "Props / Itens" },
+              { id: "item", label: "Itens" },
+              { id: "other", label: "Outros" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -183,17 +237,32 @@ export default function AssetVaultModal({
 
                     {/* Overlay de Seleção */}
                     {onSelectImage && (
-                      <div className="absolute inset-0 bg-blood-red/80 text-white font-data font-bold text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <div className="absolute inset-0 bg-blood-red/80 text-white font-data font-bold text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-10">
                         ✓ Selecionar
                       </div>
                     )}
+
+                    {/* Botão de Colocar no Tabuleiro (se for campanha e não estiver no modo seleção pura) */}
+                    {campaignId && !onSelectImage && (
+                      <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <button
+                          type="button"
+                          onClick={(e) => handlePlaceOnBoard(asset, e)}
+                          className="px-1.5 py-0.5 bg-black/85 hover:bg-gold-accent hover:text-black border border-gold-accent/40 text-gold-accent text-[8px] font-data uppercase tracking-wider font-bold rounded-xs shadow transition-colors cursor-pointer"
+                          title="Colocar como token interativo no tabuleiro"
+                        >
+                          🗡️ + Tabuleiro
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="p-2 flex items-center justify-between text-[9px] font-data text-text-muted bg-bg-card-dark border-t border-white/5">
-                    <span className="truncate max-w-22 font-bold text-text-primary" title={asset.name}>
-                      {asset.name}
-                    </span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span>{(asset.sizeBytes / 1024).toFixed(0)} KB</span>
+
+                  {/* Informações e Seletor de Categoria */}
+                  <div className="p-2 flex flex-col gap-1.5 text-[9px] font-data text-text-muted bg-bg-card-dark border-t border-white/5">
+                    <div className="flex items-center justify-between">
+                      <span className="truncate max-w-22 font-bold text-text-primary" title={asset.name}>
+                        {asset.name}
+                      </span>
                       <button
                         type="button"
                         onClick={(e) => handleDelete(asset.id, e)}
@@ -202,6 +271,26 @@ export default function AssetVaultModal({
                       >
                         ✕
                       </button>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                      {/* Seletor Rápido de Categoria */}
+                      <select
+                        value={asset.category}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => handleCategoryChange(asset.id, e.target.value as any)}
+                        className="bg-black/60 border border-white/10 hover:border-gold-accent text-gold-accent text-[8px] font-data uppercase px-1 py-0.5 rounded-xs cursor-pointer outline-none"
+                        title="Mudar categoria da imagem"
+                      >
+                        <option value="avatar">Avatar</option>
+                        <option value="scene">Cenário</option>
+                        <option value="item">Item</option>
+                        <option value="other">Outros</option>
+                      </select>
+
+                      <span className="text-[8px] text-text-dim">
+                        {(asset.sizeBytes / 1024).toFixed(0)} KB
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -228,11 +317,11 @@ export default function AssetVaultModal({
         initialCategory={
           activeTab === "scene"
             ? "scene"
+            : activeTab === "item"
+            ? "item"
             : activeTab === "avatar"
             ? "avatar"
-            : activeTab === "token"
-            ? "token"
-            : "avatar"
+            : "other"
         }
         aspectRatioType={activeTab === "scene" ? "16:9" : "1:1"}
         title="Enquadrar & Categorizar Mídia"
