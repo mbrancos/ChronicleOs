@@ -37,7 +37,7 @@ import XpDiarySection from "@/components/sheet/XpDiarySection";
 import ProfileHeaderSection from "@/components/sheet/ProfileHeaderSection";
 import CreationProgressHUD from "@/components/sheet/CreationProgressHUD";
 import PredatorSelectionModal from "@/components/sheet/PredatorSelectionModal";
-import ImageCropModal from "@/components/common/ImageCropModal";
+import ImageCropModal, { CropResult } from "@/components/common/ImageCropModal";
 import AssetVaultModal from "@/components/media/AssetVaultModal";
 import { uploadMediaAssetAction, updateCharacterAvatarAction } from "@/app/actions/mediaActions";
 import { useToast } from "@/context/ToastContext";
@@ -601,12 +601,12 @@ export default function CharacterSheetClient({
   const [isCropOpen, setIsCropOpen] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
 
-  const handleAvatarCropUpload = async (result: { base64: string; sizeBytes: number; width: number; height: number }) => {
+  const handleAvatarCropUpload = async (result: CropResult) => {
     try {
       const uploadRes = await uploadMediaAssetAction({
         campaignId: campaignId || null,
-        name: `Avatar - ${character.profile?.name || "Personagem"}`,
-        category: "avatar",
+        name: result.name || `Avatar - ${character.profile?.name || "Personagem"}`,
+        category: result.category || "avatar",
         base64: result.base64,
         sizeBytes: result.sizeBytes,
         width: result.width,

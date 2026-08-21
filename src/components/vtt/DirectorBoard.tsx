@@ -5,9 +5,7 @@ import Token, { TokenData } from "./Token";
 import { updateTokenPosition, showSceneImageAction, updateSceneBackground } from "@/app/actions/sceneActions";
 import { CharacterSheetData } from "@/types/character";
 import { useToast } from "@/context/ToastContext";
-import ImageCropModal from "@/components/common/ImageCropModal";
 import AssetVaultModal from "@/components/media/AssetVaultModal";
-import { uploadMediaAssetAction } from "@/app/actions/mediaActions";
 
 interface DirectorBoardProps {
   tokens: TokenData[];
@@ -66,56 +64,13 @@ export default function DirectorBoard({
   const [localTokens, setLocalTokens] = useState<TokenData[]>(tokens);
 
   const { showSuccess, showError } = useToast();
-  const [narratorImageInput, setNarratorImageInput] = useState("");
   const [currentSceneImage, setCurrentSceneImage] = useState<string | null>(activeSceneImage || null);
   const [isShowingSceneImage, setIsShowingSceneImage] = useState(!!activeSceneImage);
-  const [isHoveringThumbnail, setIsHoveringThumbnail] = useState(false);
   const [isImageError, setIsImageError] = useState(false);
-  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [sceneBackgroundInput, setSceneBackgroundInput] = useState(sceneBackground || "");
 
-  // Estados para Asset Vault e Crop de Cenários
+  // Estados para Asset Vault
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [vaultTargetType, setVaultTargetType] = useState<"scene" | "background">("scene");
-  const [selectedFileForCrop, setSelectedFileForCrop] = useState<File | null>(null);
-  const [isCropOpen, setIsCropOpen] = useState(false);
-  const [cropTargetType, setCropTargetType] = useState<"scene" | "background">("scene");
-
-  const handleSceneCropUpload = async (result: { base64: string; sizeBytes: number; width: number; height: number }) => {
-    if (!campaignId) return;
-    try {
-      const uploadRes = await uploadMediaAssetAction({
-        campaignId,
-        name: selectedFileForCrop?.name.replace(/\.[^/.]+$/, "") || "Cenário da Mesa",
-        category: "scene",
-        base64: result.base64,
-        sizeBytes: result.sizeBytes,
-        width: result.width,
-        height: result.height,
-      });
-
-      if (uploadRes.success && uploadRes.data) {
-        const url = uploadRes.data.url;
-        if (cropTargetType === "scene") {
-          setCurrentSceneImage(url);
-          setIsShowingSceneImage(true);
-          await showSceneImageAction(campaignId, url);
-          if (onShowSceneImage) onShowSceneImage(url);
-          showSuccess("Cenário projetado ao vivo!");
-        } else {
-          setSceneBackgroundInput(url);
-          if (onChangeSceneBackground) onChangeSceneBackground(url);
-          await updateSceneBackground(campaignId, url);
-          showSuccess("Fundo do tabuleiro atualizado!");
-        }
-      } else {
-        showError(uploadRes.error || "Falha ao salvar cenário.");
-      }
-    } catch (err) {
-      console.error("Erro ao subir cenário:", err);
-      showError("Erro inesperado ao salvar cenário.");
-    }
-  };
 
   useEffect(() => {
     if (activeSceneImage !== undefined) {
@@ -127,13 +82,6 @@ export default function DirectorBoard({
     }
   }, [activeSceneImage]);
 
-  useEffect(() => {
-    if (sceneBackground) {
-      setSceneBackgroundInput(sceneBackground);
-    } else {
-      setSceneBackgroundInput("");
-    }
-  }, [sceneBackground]);
 
   // Efeito para calcular escala de forma responsiva monitorando a área disponível da mesa central
   useEffect(() => {
@@ -298,33 +246,24 @@ export default function DirectorBoard({
             </button>
           )}
 
-          {/* Controles de Imagem de Cena e Cenário no topo, fora do palco, na direção de Nova Rodada */}
+          {/* Controles de Imagem de Cena e Fundo do Tabuleiro no topo esquerdo */}
           {isStoryteller && campaignId && (
-            <div className="absolute top-17 left-25 z-40 flex items-center gap-3">
-              {/* Imagem de Cena */}
-              <div className="relative flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
-                <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold px-1 shrink-0">Cena</span>
-                
+            <div className="absolute top-17 left-25 z-40 flex items-center gap-2.5">
+              {/* SLOT 1: PROJEÇÃO DE CENA (AO VIVO PARA JOGADORES) */}
+              <div className="flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
+                <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold px-1 shrink-0">
+                  Cena
+                </span>
+
                 {isShowingSceneImage && currentSceneImage ? (
-                  /* Slot de Mídia Ativa (Com Thumbnail) */
                   <div className="relative flex items-center gap-1.5">
-                    {/* Thumbnail 38x38px */}
+                    {/* Thumbnail 32x32px */}
                     <div
-                      className="relative w-9 h-9 rounded-xs border border-gold-accent/40 bg-black/40 overflow-hidden shrink-0 cursor-pointer group"
+                      className="relative w-8 h-8 rounded-xs border border-gold-accent/40 bg-black/40 overflow-hidden shrink-0 cursor-pointer group"
                       onClick={() => {
                         if (onOpenNarratorImageModal && currentSceneImage) {
                           onOpenNarratorImageModal(currentSceneImage);
                         }
-                      }}
-                      onMouseEnter={() => {
-                        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-                        hoverTimerRef.current = setTimeout(() => {
-                          setIsHoveringThumbnail(true);
-                        }, 300);
-                      }}
-                      onMouseLeave={() => {
-                        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-                        setIsHoveringThumbnail(false);
                       }}
                       title="Clique para ver em tela cheia"
                     >
@@ -334,26 +273,11 @@ export default function DirectorBoard({
                           src={currentSceneImage}
                           alt="Thumbnail da Cena"
                           className="w-full h-full object-cover object-center transition-transform group-hover:scale-105"
-                          onError={() => {
-                            setIsImageError(true);
-                            showError("Formato inválido ou link bloqueado (CORS)", "Imagem de Cena");
-                          }}
+                          onError={() => setIsImageError(true)}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-black/70 text-amber-500 font-bold text-xs" title="Formato inválido ou link bloqueado (CORS)">
+                        <div className="w-full h-full flex items-center justify-center bg-black/70 text-amber-500 font-bold text-xs">
                           ⚠️
-                        </div>
-                      )}
-
-                      {/* Hover Preview Popover Flutuante (300ms Debounce) */}
-                      {isHoveringThumbnail && !isImageError && (
-                        <div className="absolute top-11 left-0 z-50 p-1.5 bg-bg-card-dark/98 border border-gold-accent/40 rounded-xs shadow-[0_0_25px_rgba(0,0,0,0.85)] pointer-events-none transition-all duration-200 animate-in fade-in">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={currentSceneImage}
-                            alt="Preview da Cena"
-                            className="max-w-55 max-h-50 object-contain rounded-xs border border-white/10"
-                          />
                         </div>
                       )}
                     </div>
@@ -364,32 +288,40 @@ export default function DirectorBoard({
                       <span>AO VIVO</span>
                     </div>
 
-                    {/* Botão de Fechar ✕ */}
+                    {/* Botão de Trocar */}
+                    <button
+                      onClick={() => {
+                        setVaultTargetType("scene");
+                        setIsVaultOpen(true);
+                      }}
+                      className="px-1.5 py-0.5 bg-white/5 hover:bg-white/15 border border-white/10 hover:border-gold-accent/40 text-text-muted hover:text-white font-data text-[8px] uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
+                      title="Escolher outra imagem da biblioteca"
+                    >
+                      Trocar
+                    </button>
+
+                    {/* Botão de Encerrar Projeção ✕ */}
                     <button
                       onClick={async () => {
                         const prevUrl = currentSceneImage;
                         setCurrentSceneImage(null);
                         setIsShowingSceneImage(false);
-                        setNarratorImageInput("");
                         setIsImageError(false);
 
                         try {
                           const res = await showSceneImageAction(campaignId, null);
                           if (res.success) {
-                            showSuccess("Imagem removida.", "Cena");
-                            if (onShowSceneImage) {
-                              onShowSceneImage(null);
-                            }
+                            showSuccess("Projeção de cena encerrada.", "Cena");
+                            if (onShowSceneImage) onShowSceneImage(null);
                           } else {
-                            // Rollback se a Server Action falhar
                             setCurrentSceneImage(prevUrl);
                             setIsShowingSceneImage(true);
-                            showError("Falha ao remover imagem. Tente novamente.", "Cena");
+                            showError("Falha ao encerrar projeção.", "Cena");
                           }
-                        } catch (err) {
+                        } catch {
                           setCurrentSceneImage(prevUrl);
                           setIsShowingSceneImage(true);
-                          showError("Falha ao remover imagem. Tente novamente.", "Cena");
+                          showError("Falha ao encerrar projeção.", "Cena");
                         }
                       }}
                       className="px-1.5 py-1 bg-hunger-red/15 hover:bg-hunger-red/30 border border-hunger-red/40 text-hunger-red font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
@@ -399,147 +331,78 @@ export default function DirectorBoard({
                     </button>
                   </div>
                 ) : (
-                  /* Estado Sem Imagem: Input de URL */
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      value={narratorImageInput}
-                      onChange={(e) => setNarratorImageInput(e.target.value)}
-                      onPaste={(e) => {
-                        const pasted = e.clipboardData.getData("text");
-                        if (pasted && (pasted.startsWith("http://") || pasted.startsWith("https://"))) {
-                          setNarratorImageInput(pasted);
-                        }
-                      }}
-                      placeholder="Cole a URL da cena..."
-                      className="w-28 px-1.5 py-0.5 text-[9px] border border-white/5 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-reading"
-                    />
-                    <button
-                      onClick={async () => {
-                        const url = narratorImageInput.trim();
-                        if (!url) return;
-
-                        const prevUrl = currentSceneImage;
-                        // Optimistic UI
-                        setCurrentSceneImage(url);
-                        setIsShowingSceneImage(true);
-                        setIsImageError(false);
-
-                        try {
-                          const res = await showSceneImageAction(campaignId, url);
-                          if (res.success) {
-                            showSuccess("Imagem exibida!", "Cena");
-                            if (onShowSceneImage) {
-                              onShowSceneImage(url);
-                            }
-                          } else {
-                            // Rollback se a Server Action falhar
-                            setCurrentSceneImage(prevUrl);
-                            setIsShowingSceneImage(!!prevUrl);
-                            showError("Falha ao transmitir imagem. Tente novamente.", "Cena");
-                          }
-                        } catch (err) {
-                          setCurrentSceneImage(prevUrl);
-                          setIsShowingSceneImage(!!prevUrl);
-                          showError("Falha ao transmitir imagem. Tente novamente.", "Cena");
-                        }
-                      }}
-                      disabled={!narratorImageInput.trim()}
-                      className="px-2 py-0.5 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                    >
-                      Exibir
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Cenário */}
-              <div className="flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
-                <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold px-1 shrink-0">Cenário</span>
-                <input
-                  type="text"
-                  value={sceneBackgroundInput}
-                  onChange={(e) => setSceneBackgroundInput(e.target.value)}
-                  placeholder="URL do cenário..."
-                  className="w-24 px-1.5 py-0.5 text-[9px] border border-white/5 rounded-xs bg-black/45 focus:outline-none focus:border-gold-accent text-text-primary font-reading"
-                  onKeyDown={async (e) => {
-                    if (e.key === "Enter" && sceneBackgroundInput.trim()) {
-                      const url = sceneBackgroundInput.trim();
-                      if (onChangeSceneBackground) {
-                        onChangeSceneBackground(url);
-                      }
-                      await updateSceneBackground(campaignId, url);
-                    }
-                  }}
-                />
-                <button
-                  onClick={async () => {
-                    const url = sceneBackgroundInput.trim();
-                    if (url) {
-                      if (onChangeSceneBackground) {
-                        onChangeSceneBackground(url);
-                      }
-                      await updateSceneBackground(campaignId, url);
-                    }
-                  }}
-                  className="px-1.5 py-0.5 bg-gold-accent/20 hover:bg-gold-accent/35 border border-gold-accent/30 text-gold-accent font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
-                >
-                  ✓
-                </button>
-                {sceneBackground && (
+                  /* Botão Limpo para Projetar Cena */
                   <button
-                    onClick={async () => {
-                      if (onChangeSceneBackground) {
-                        onChangeSceneBackground(null);
-                      }
-                      setSceneBackgroundInput("");
-                      await updateSceneBackground(campaignId, null);
+                    onClick={() => {
+                      setVaultTargetType("scene");
+                      setIsVaultOpen(true);
                     }}
-                    className="px-1.5 py-0.5 bg-hunger-red/15 hover:bg-hunger-red/25 border border-hunger-red/30 text-hunger-red font-data font-bold text-[8px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
-                    title="Remover Cenário"
+                    className="flex items-center gap-1.5 px-2.5 py-1 bg-blood-red/80 hover:bg-blood-red border border-blood-red text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shadow-md"
                   >
-                    ✕
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Projetar Cena</span>
                   </button>
                 )}
               </div>
 
-              {/* Botões Rápidos de Galeria e Crop */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => {
-                    setVaultTargetType("scene");
-                    setIsVaultOpen(true);
-                  }}
-                  className="px-2 py-1 bg-black/80 hover:bg-black border border-gold-accent/40 hover:border-gold-accent text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shadow-md flex items-center gap-1 shrink-0"
-                  title="Abrir Biblioteca de Ativos"
-                >
-                  <span>🗂️</span>
-                  <span>Galeria</span>
-                </button>
+              {/* SLOT 2: FUNDO DO TABULEIRO */}
+              <div className="flex items-center gap-1.5 bg-bg-card-dark/95 border border-white/10 rounded-xs p-1 select-none shadow-md">
+                <span className="text-[8px] uppercase tracking-wider text-text-muted font-data font-bold px-1 shrink-0">
+                  Fundo
+                </span>
 
-                <label
-                  className="px-2 py-1 bg-blood-red/80 hover:bg-blood-red border border-blood-red text-white font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shadow-md flex items-center gap-1 shrink-0"
-                  title="Subir imagem com recorte 16:9"
-                >
-                  <span>✂️</span>
-                  <span>+ Cenário (16:9)</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setSelectedFileForCrop(e.target.files[0]);
-                        setCropTargetType("scene");
-                        setIsCropOpen(true);
-                      }
-                      e.target.value = "";
+                {sceneBackground ? (
+                  <div className="flex items-center gap-1.5">
+                    {/* Thumbnail 32x32px */}
+                    <div className="w-8 h-8 rounded-xs border border-gold-accent/30 bg-black/40 overflow-hidden shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={sceneBackground} alt="Fundo" className="w-full h-full object-cover" />
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setVaultTargetType("background");
+                        setIsVaultOpen(true);
+                      }}
+                      className="px-1.5 py-0.5 bg-white/5 hover:bg-white/15 border border-white/10 hover:border-gold-accent/40 text-text-muted hover:text-white font-data text-[8px] uppercase tracking-wider rounded-xs transition-colors cursor-pointer"
+                      title="Escolher outro fundo da biblioteca"
+                    >
+                      Trocar
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        if (onChangeSceneBackground) onChangeSceneBackground(null);
+                        await updateSceneBackground(campaignId, null);
+                        showSuccess("Fundo do tabuleiro removido.");
+                      }}
+                      className="px-1.5 py-1 bg-hunger-red/15 hover:bg-hunger-red/30 border border-hunger-red/40 text-hunger-red font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shrink-0"
+                      title="Remover Fundo do Tabuleiro"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  /* Botão Limpo para Fundo */
+                  <button
+                    onClick={() => {
+                      setVaultTargetType("background");
+                      setIsVaultOpen(true);
                     }}
-                  />
-                </label>
+                    className="flex items-center gap-1.5 px-2.5 py-1 bg-black/80 hover:bg-black border border-gold-accent/40 hover:border-gold-accent text-gold-accent font-data font-bold text-[9px] uppercase tracking-wider rounded-xs transition-all cursor-pointer shadow-md"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <span>Fundo do Tabuleiro</span>
+                  </button>
+                )}
               </div>
             </div>
           )}
+
         {/* RETÂNGULO DO PALCO (800x400px no centro, left: 100px, top: 100px) */}
         <div
           style={{
@@ -599,21 +462,12 @@ export default function DirectorBoard({
       </div>
       </div>
 
-      {/* Modal de Crop de Cenário */}
-      <ImageCropModal
-        isOpen={isCropOpen}
-        file={selectedFileForCrop}
-        aspectRatioType="16:9"
-        title={cropTargetType === "scene" ? "Enquadrar Imagem de Cena (16:9)" : "Enquadrar Fundo do Tabuleiro (16:9)"}
-        onClose={() => setIsCropOpen(false)}
-        onCropped={handleSceneCropUpload}
-      />
-
-      {/* Modal do Asset Vault */}
+      {/* Modal do Asset Vault com Contexto Definido */}
       <AssetVaultModal
         isOpen={isVaultOpen}
         campaignId={campaignId}
         targetCategory="scene"
+        title={vaultTargetType === "scene" ? "Projetar Imagem na Cena" : "Escolher Fundo do Tabuleiro"}
         onClose={() => setIsVaultOpen(false)}
         onSelectImage={async (url) => {
           if (!campaignId) return;
@@ -622,12 +476,11 @@ export default function DirectorBoard({
             setIsShowingSceneImage(true);
             await showSceneImageAction(campaignId, url);
             if (onShowSceneImage) onShowSceneImage(url);
-            showSuccess("Cenário projetado da biblioteca!");
+            showSuccess("Cenário projetado ao vivo!");
           } else {
-            setSceneBackgroundInput(url);
             if (onChangeSceneBackground) onChangeSceneBackground(url);
             await updateSceneBackground(campaignId, url);
-            showSuccess("Fundo do tabuleiro atualizado da biblioteca!");
+            showSuccess("Fundo do tabuleiro atualizado!");
           }
         }}
       />
