@@ -20,6 +20,7 @@ import Pusher from "pusher-js";
 import { 
   grantSessionXpAction 
 } from "@/app/actions/xpActions";
+import { getCampaignMediaAssetsAction } from "@/app/actions/mediaActions";
 import RollEffects from "./RollEffects";
 import { usePresence } from "@/hooks/usePresence";
 
@@ -58,9 +59,10 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     };
   }, []);
   
-  // Personagens da campanha (Players e NPCs completos)
+  // Personagens da campanha (Players e NPCs completos) e Itens de Cena
   const [playersList, setPlayersList] = useState<CampaignCharacter[]>([]);
   const [npcsList, setNpcsList] = useState<CampaignCharacter[]>([]);
+  const [itemAssetsList, setItemAssetsList] = useState<any[]>([]);
   const [narratorDicePool, setNarratorDicePool] = useState<Array<{ id: string, label: string, value: number }>>([]);
 
   // Estado da Gaveta de Ficha
@@ -160,7 +162,17 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
     }
   }, [campaign.id]);
 
-
+  // 4. Buscar Itens de Cena da Campanha
+  const fetchItemAssets = useCallback(async () => {
+    try {
+      const res = await getCampaignMediaAssetsAction(campaign.id);
+      if (res.success && res.data) {
+        setItemAssetsList(res.data.assets.filter((a: any) => a.category === "item"));
+      }
+    } catch (err) {
+      console.error("Erro ao buscar itens de cena da campanha:", err);
+    }
+  }, [campaign.id]);
 
   // Configuração Geral das Escutas do Pusher (WebSocket) e Sincronizações Resilientes
   useEffect(() => {
@@ -169,6 +181,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       fetchRecentRolls();
       fetchSceneTokens();
       fetchCampaignCharacters();
+      fetchItemAssets();
     });
 
     // 2. Conectar Cliente Pusher
@@ -258,6 +271,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       fetchRecentRolls();
       fetchSceneTokens();
       fetchCampaignCharacters();
+      fetchItemAssets();
     };
 
     pusher.connection.bind("connected", handleSync);
@@ -280,7 +294,7 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       pusher.disconnect();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [campaign.id, fetchRecentRolls, fetchSceneTokens, fetchCampaignCharacters]);
+  }, [campaign.id, fetchRecentRolls, fetchSceneTokens, fetchCampaignCharacters, fetchItemAssets]);
 
   // Ação: Adicionar Personagem da Campanha ao Tabuleiro
   const handleAddCharacterToBoard = async (char: CampaignCharacter) => {
@@ -306,6 +320,32 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
       }
     } catch (err) {
       console.error("Erro ao adicionar personagem ao tabuleiro:", err);
+    }
+  };
+
+  // Ação: Adicionar Item de Cena ao Tabuleiro
+  const handleAddItemToBoard = async (item: any) => {
+    try {
+      // Criar nos bastidores (x:500, y:300, isVisible:false) para o narrador revelar quando desejar
+      const res = await createSceneToken(
+        campaign.id,
+        null,
+        item.name,
+        "item",
+        500,
+        300,
+        false,
+        { imageUrl: item.url }
+      );
+
+      if (res.success) {
+        showSuccess(`"${item.name}" adicionado aos bastidores!`, "Item de Cena");
+        await fetchSceneTokens();
+      } else {
+        showError(`Erro ao adicionar item: ${res.error}`, "Item de Cena");
+      }
+    } catch (err) {
+      console.error("Erro ao adicionar item ao tabuleiro:", err);
     }
   };
 
@@ -893,6 +933,38 @@ export default function StorytellerDashboardClient({ campaign }: StorytellerDash
                         {isOnBoard ? "Em Jogo" : "+ Tabuleiro"}
                       </button>
                     </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Itens de Cena */}
+          <div className="space-y-1.5 max-h-36 overflow-y-auto scrollbar-none pt-1">
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] font-bold text-text-muted uppercase">Itens de Cena</span>
+              <span className="text-[8px] text-gold-accent font-data">{itemAssetsList.length}</span>
+            </div>
+            {itemAssetsList.length === 0 ? (
+              <div className="text-[10px] text-text-dim italic">Sem itens cadastrados.</div>
+            ) : (
+              itemAssetsList.map((item) => {
+                const isOnBoard = tokensList.some((t) => t.type === "item" && t.name === item.name);
+                return (
+                  <div key={item.id} className="flex justify-between items-center bg-black/35 p-1.5 rounded-sm border border-white/5">
+                    <div className="flex items-center space-x-1.5 min-w-0 flex-1">
+                      <div className="w-5 h-5 rounded-xs border border-gold-accent/40 bg-black overflow-hidden shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-xs font-semibold truncate max-w-18" title={item.name}>{item.name}</span>
+                    </div>
+                    <button
+                      onClick={() => handleAddItemToBoard(item)}
+                      className="text-[9px] text-gold-accent hover:text-amber-300 uppercase font-bold cursor-pointer shrink-0"
+                    >
+                      {isOnBoard ? "+ Mais 1" : "+ Tabuleiro"}
+                    </button>
                   </div>
                 );
               })
