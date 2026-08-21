@@ -116,8 +116,7 @@ export const mediaAssets = pgTable("media_assets", {
   campaignId: uuid("campaign_id")
     .references(() => campaigns.id, { onDelete: "cascade" }),
   userId: uuid("user_id")
-    .references(() => users.id, { onDelete: "cascade" })
-    .notNull(),
+    .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   category: text("category").$type<"avatar" | "scene" | "token" | "prop">().notNull(),
   mimeType: text("mime_type").default("image/webp").notNull(),

@@ -2,8 +2,15 @@
 
 import { db } from "@/db";
 import { mediaAssets, characters, campaigns } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth/server";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidUuid(val?: string | null): val is string {
+  return typeof val === "string" && UUID_REGEX.test(val);
+}
 
 export interface UploadMediaPayload {
   campaignId?: string | null;
@@ -13,7 +20,7 @@ export interface UploadMediaPayload {
   sizeBytes: number;
   width: number;
   height: number;
-  userId: string;
+  userId?: string | null;
 }
 
 /**
@@ -21,19 +28,32 @@ export interface UploadMediaPayload {
  */
 export async function uploadMediaAssetAction(payload: UploadMediaPayload) {
   try {
-    if (!payload.userId) {
-      return { success: false, error: "Usuário não autenticado." };
+    let resolvedUserId: string | null = null;
+
+    try {
+      const { data: session } = await auth.getSession();
+      if (session?.user?.id && isValidUuid(session.user.id)) {
+        resolvedUserId = session.user.id;
+      }
+    } catch {
+      // Sessão opcional
     }
 
-    if (payload.sizeBytes > 600 * 1024) {
-      return { success: false, error: "Tamanho de imagem excede o limite otimizado (máx 600 KB)." };
+    if (!resolvedUserId && isValidUuid(payload.userId)) {
+      resolvedUserId = payload.userId;
+    }
+
+    const resolvedCampaignId = isValidUuid(payload.campaignId) ? payload.campaignId : null;
+
+    if (payload.sizeBytes > 800 * 1024) {
+      return { success: false, error: "Tamanho de imagem excede o limite otimizado (máx 800 KB)." };
     }
 
     const [inserted] = await db
       .insert(mediaAssets)
       .values({
-        campaignId: payload.campaignId || null,
-        userId: payload.userId,
+        campaignId: resolvedCampaignId,
+        userId: resolvedUserId,
         name: payload.name.trim() || `Imagem ${Date.now()}`,
         category: payload.category,
         mimeType: "image/webp",
@@ -63,10 +83,34 @@ export async function uploadMediaAssetAction(payload: UploadMediaPayload) {
 }
 
 /**
- * Lista todas as mídias da campanha (e avatares globais do usuário)
+ * Lista todas as mídias da campanha (e avatares do usuário)
  */
 export async function getCampaignMediaAssetsAction(campaignId?: string | null, userId?: string) {
   try {
+    const validCampaignId = isValidUuid(campaignId) ? campaignId : null;
+    let validUserId: string | null = null;
+
+    if (isValidUuid(userId)) {
+      validUserId = userId;
+    } else {
+      try {
+        const { data: session } = await auth.getSession();
+        if (session?.user?.id && isValidUuid(session.user.id)) {
+          validUserId = session.user.id;
+        }
+      } catch {
+        // Sessão opcional
+      }
+    }
+
+    const conditions = [];
+    if (validCampaignId) {
+      conditions.push(eq(mediaAssets.campaignId, validCampaignId));
+    }
+    if (validUserId) {
+      conditions.push(eq(mediaAssets.userId, validUserId));
+    }
+
     const assets = await db
       .select({
         id: mediaAssets.id,
@@ -78,7 +122,7 @@ export async function getCampaignMediaAssetsAction(campaignId?: string | null, u
         createdAt: mediaAssets.createdAt,
       })
       .from(mediaAssets)
-      .where(campaignId ? eq(mediaAssets.campaignId, campaignId) : undefined)
+      .where(conditions.length > 0 ? or(...conditions) : undefined)
       .orderBy(desc(mediaAssets.createdAt));
 
     const totalBytes = assets.reduce((acc, curr) => acc + curr.sizeBytes, 0);
@@ -102,8 +146,11 @@ export async function getCampaignMediaAssetsAction(campaignId?: string | null, u
  */
 export async function deleteMediaAssetAction(mediaId: string, campaignId?: string) {
   try {
+    if (!isValidUuid(mediaId)) {
+      return { success: false, error: "ID de mídia inválido." };
+    }
     await db.delete(mediaAssets).where(eq(mediaAssets.id, mediaId));
-    if (campaignId) {
+    if (campaignId && isValidUuid(campaignId)) {
       revalidatePath(`/campanhas/${campaignId}/narrador`);
       revalidatePath(`/campanhas/${campaignId}/mesa`);
     }
@@ -119,6 +166,10 @@ export async function deleteMediaAssetAction(mediaId: string, campaignId?: strin
  */
 export async function updateCharacterAvatarAction(characterId: string, avatarUrl: string) {
   try {
+    if (!isValidUuid(characterId)) {
+      return { success: false, error: "ID de personagem inválido." };
+    }
+
     const [character] = await db
       .select()
       .from(characters)
@@ -135,6 +186,7 @@ export async function updateCharacterAvatarAction(characterId: string, avatarUrl
       profile: {
         ...currentSheet.profile,
         avatarUrl,
+        portrait_url: avatarUrl,
       },
     };
 
@@ -145,7 +197,9 @@ export async function updateCharacterAvatarAction(characterId: string, avatarUrl
 
     if (character.campaignId) {
       revalidatePath(`/campanhas/${character.campaignId}/personagens/${characterId}`);
+      revalidatePath(`/campanhas/${character.campaignId}/mesa`);
     }
+    revalidatePath(`/cofre/personagens/${characterId}`);
     return { success: true, avatarUrl };
   } catch (error: any) {
     console.error("Erro ao atualizar avatar do personagem:", error);

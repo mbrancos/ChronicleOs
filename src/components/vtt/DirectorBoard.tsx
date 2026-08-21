@@ -86,7 +86,6 @@ export default function DirectorBoard({
     try {
       const uploadRes = await uploadMediaAssetAction({
         campaignId,
-        userId: "narrador",
         name: selectedFileForCrop?.name.replace(/\.[^/.]+$/, "") || "Cenário da Mesa",
         category: "scene",
         base64: result.base64,
@@ -614,7 +613,6 @@ export default function DirectorBoard({
       <AssetVaultModal
         isOpen={isVaultOpen}
         campaignId={campaignId}
-        userId="narrador"
         targetCategory="scene"
         onClose={() => setIsVaultOpen(false)}
         onSelectImage={async (url) => {

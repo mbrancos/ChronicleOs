@@ -16,7 +16,7 @@ interface AssetVaultModalProps {
 
 export default function AssetVaultModal({
   campaignId,
-  userId = "user_default",
+  userId,
   isOpen,
   onClose,
   onSelectImage,

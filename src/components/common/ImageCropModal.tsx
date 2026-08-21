@@ -47,9 +47,13 @@ export default function ImageCropModal({
     if (typeof file === "string") {
       setImageSrc(file);
     } else {
-      const url = URL.createObjectURL(file);
-      setImageSrc(url);
-      return () => URL.revokeObjectURL(url);
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setImageSrc(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   }, [file]);
 

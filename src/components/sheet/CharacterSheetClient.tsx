@@ -39,7 +39,7 @@ import CreationProgressHUD from "@/components/sheet/CreationProgressHUD";
 import PredatorSelectionModal from "@/components/sheet/PredatorSelectionModal";
 import ImageCropModal from "@/components/common/ImageCropModal";
 import AssetVaultModal from "@/components/media/AssetVaultModal";
-import { uploadMediaAssetAction } from "@/app/actions/mediaActions";
+import { uploadMediaAssetAction, updateCharacterAvatarAction } from "@/app/actions/mediaActions";
 import { useToast } from "@/context/ToastContext";
 
 const CLAN_OPTIONS = [
@@ -605,7 +605,6 @@ export default function CharacterSheetClient({
     try {
       const uploadRes = await uploadMediaAssetAction({
         campaignId: campaignId || null,
-        userId: character.profile?.name || "jogador",
         name: `Avatar - ${character.profile?.name || "Personagem"}`,
         category: "avatar",
         base64: result.base64,
@@ -621,6 +620,11 @@ export default function CharacterSheetClient({
         setAvatarUrlInput(url);
         setAvatarImageError(false);
         setIsAvatarModalOpen(false);
+
+        if (characterId) {
+          await updateCharacterAvatarAction(characterId, url);
+        }
+
         showSuccess("Avatar otimizado e atualizado com sucesso!");
       } else {
         showError(uploadRes.error || "Falha ao salvar avatar.");
@@ -3451,15 +3455,17 @@ export default function CharacterSheetClient({
       <AssetVaultModal
         isOpen={isVaultOpen}
         campaignId={campaignId}
-        userId={character.profile?.name || "jogador"}
         targetCategory="avatar"
         onClose={() => setIsVaultOpen(false)}
-        onSelectImage={(url) => {
+        onSelectImage={async (url) => {
           handleProfileChange("avatarUrl", url);
           handleProfileChange("portrait_url", url);
           setAvatarUrlInput(url);
           setAvatarImageError(false);
           setIsAvatarModalOpen(false);
+          if (characterId) {
+            await updateCharacterAvatarAction(characterId, url);
+          }
           showSuccess("Avatar atualizado da biblioteca!");
         }}
       />

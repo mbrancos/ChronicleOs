@@ -877,7 +877,6 @@ export default function NarratorDashboardClient({
       <AssetVaultModal
         isOpen={isVaultOpen}
         campaignId={campaign.id}
-        userId="narrador"
         onClose={() => setIsVaultOpen(false)}
       />
     </main>
