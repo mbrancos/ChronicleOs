@@ -24,7 +24,7 @@ export default async function NarratorPage({ params }: PageProps) {
     throw new Error(result.error || "Erro ao carregar dados do painel do Narrador.");
   }
 
-  const { campaign, players, npcs } = result.data;
+  const { campaign, players, npcs, vaultCharacters } = result.data;
 
   // 3. Renderizar o painel tático do mestre
   return (
@@ -32,6 +32,7 @@ export default async function NarratorPage({ params }: PageProps) {
       campaign={campaign}
       players={players}
       npcs={npcs}
+      vaultCharacters={vaultCharacters}
     />
   );
 }
