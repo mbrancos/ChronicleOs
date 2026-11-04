@@ -16,12 +16,14 @@ import {
   duplicateCharacterAction,
   transferCharacterAction
 } from "@/app/actions/characterActions";
+import type { SystemId } from "@/types/systems/regrasDeOuro";
 
 interface NarratorCampaign {
   id: string;
   name: string;
   description: string | null;
   status: "DRAFT" | "RECRUITING" | "IN_PROGRESS" | "PAUSED" | "ARCHIVED";
+  systemId?: SystemId;
 }
 
 interface PlayerCampaign {
@@ -33,6 +35,7 @@ interface PlayerCampaign {
   narratorName: string;
   characterName: string;
   characterId: string;
+  systemId?: SystemId;
 }
 
 interface Character {
@@ -41,6 +44,7 @@ interface Character {
   campaignId: string | null;
   campaignName: string | null;
   type: string;
+  systemId?: SystemId;
   sheetData: any; // Ficha JSONB
 }
 
@@ -70,6 +74,10 @@ export default function HubClient({
 
   // Controle de abertura dos modais
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+  const [campaignSystemId, setCampaignSystemId] = useState<SystemId>("v5");
+  const [isCharSystemModalOpen, setIsCharSystemModalOpen] = useState(false);
+  const [newCharName, setNewCharName] = useState("Novo Vampiro");
+  const [newCharSystemId, setNewCharSystemId] = useState<SystemId>("v5");
 
   // Estados dos formulários de criação
   const [campaignName, setCampaignName] = useState("");
@@ -276,11 +284,12 @@ export default function HubClient({
     setLoading(true);
     setErrorMsg(null);
 
-    const response = await createCampaignAction(campaignName, campaignDesc);
+    const response = await createCampaignAction(campaignName, campaignDesc, campaignSystemId);
 
     if (response.success) {
       setCampaignName("");
       setCampaignDesc("");
+      setCampaignSystemId("v5");
       setIsCampaignModalOpen(false);
     } else {
       setErrorMsg(response.error || "Erro ao criar crônica.");
@@ -289,14 +298,15 @@ export default function HubClient({
   };
 
   // Handler para criar personagem rapidamente no cofre e redirecionar
-  const handleQuickCreateCharacter = async () => {
+  const handleQuickCreateCharacter = async (systemId: SystemId = newCharSystemId) => {
     setLoading(true);
     setErrorMsg(null);
 
-    const response = await createCharacterAction("Novo Vampiro", null);
+    const response = await createCharacterAction(newCharName.trim() || "Novo Vampiro", null, "jogador", systemId);
 
     if (response.success && response.characterId) {
       showToast("Vampiro forjado com sucesso! 🩸");
+      setIsCharSystemModalOpen(false);
       router.push(`/cofre/personagens/${response.characterId}`);
     } else {
       showToast(response.error || "Erro ao criar personagem.", "error");
@@ -410,8 +420,11 @@ export default function HubClient({
                       </div>
 
                       <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1 font-data text-[10px]">
-                        <span className="uppercase tracking-wider text-text-dim">
-                          ID: {camp.id.slice(0, 8)}
+                        <span className="uppercase tracking-wider text-text-dim flex items-center gap-2">
+                          <span>ID: {camp.id.slice(0, 8)}</span>
+                          <span className={`px-1.5 py-0.5 rounded-xs text-[8px] uppercase tracking-wider font-bold ${camp.systemId === "regras_de_ouro" ? "bg-amber-950/60 text-amber-300 border border-amber-500/40" : "bg-blood-red/15 text-blood-red border border-blood-red/30"}`}>
+                            {camp.systemId === "regras_de_ouro" ? "Regras de Ouro" : "Vampiro V5"}
+                          </span>
                         </span>
                         <div className="flex items-center space-x-4">
                           <Link
@@ -559,8 +572,11 @@ export default function HubClient({
                         </div>
 
                         <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1 font-data text-[10px]">
-                          <span className="uppercase tracking-wider text-text-dim">
-                            ID: {camp.id.slice(0, 8)}
+                          <span className="uppercase tracking-wider text-text-dim flex items-center gap-2">
+                            <span>ID: {camp.id.slice(0, 8)}</span>
+                            <span className={`px-1.5 py-0.5 rounded-xs text-[8px] uppercase tracking-wider font-bold ${camp.systemId === "regras_de_ouro" ? "bg-amber-950/60 text-amber-300 border border-amber-500/40" : "bg-blood-red/15 text-blood-red border border-blood-red/30"}`}>
+                              {camp.systemId === "regras_de_ouro" ? "Regras de Ouro" : "Vampiro V5"}
+                            </span>
                           </span>
                           <Link
                             href={`/campanhas/${camp.id}/jogador`}
@@ -591,7 +607,11 @@ export default function HubClient({
 
               <div className="relative group">
                 <button
-                  onClick={handleQuickCreateCharacter}
+                  onClick={() => {
+                    setNewCharName("Novo Vampiro");
+                    setNewCharSystemId("v5");
+                    setIsCharSystemModalOpen(true);
+                  }}
                   disabled={loading}
                   className="px-3 py-1 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-semibold rounded-sm transition-all duration-200 cursor-pointer shadow-[0_0_6px_rgba(255,216,77,0.3)] disabled:opacity-50"
                 >
@@ -602,7 +622,11 @@ export default function HubClient({
 
             {characters.length === 0 ? (
               <div
-                onClick={handleQuickCreateCharacter}
+                onClick={() => {
+                  setNewCharName("Novo Vampiro");
+                  setNewCharSystemId("v5");
+                  setIsCharSystemModalOpen(true);
+                }}
                 className="border border-dashed border-gold-accent/30 hover:border-gold-accent/60 bg-bg-card/20 rounded-sm p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 h-64 group"
               >
                 <svg className="w-12 h-12 text-gold-accent/40 group-hover:text-gold-accent/75 transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -616,8 +640,8 @@ export default function HubClient({
             ) : (
               <div className="grid grid-cols-1 gap-4 max-h-125 overflow-y-auto pr-1">
                 {characters.map(char => {
-                  const clan = char.sheetData?.profile?.clan || "Vampiro";
-                  const concept = char.sheetData?.profile?.concept || "Neófito";
+                  const clan = char.sheetData?.profile?.clan || (char.sheetData?.cabecalho?.cla) || "Vampiro";
+                  const concept = char.sheetData?.profile?.concept || (char.sheetData?.cabecalho?.natureza ? `${char.sheetData.cabecalho.natureza}/${char.sheetData.cabecalho.mascara}` : "Neófito");
 
                   return (
                     <div
@@ -635,9 +659,12 @@ export default function HubClient({
                           <h3 className="text-xl font-gothic tracking-wide text-text-primary group-hover:text-gold-accent transition-colors">
                             {char.name.toUpperCase()}
                           </h3>
-                           <p className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-semibold flex items-center gap-2">
+                          <p className="text-[10px] uppercase tracking-widest text-gold-accent font-data font-semibold flex items-center gap-2 flex-wrap">
                             <span className={`px-1.5 py-0.5 rounded-xs text-[8px] uppercase tracking-wider font-bold ${char.type === "npc" ? "bg-hunger-red/10 text-hunger-red border border-hunger-red/25" : "bg-gold-accent/10 text-gold-accent border border-gold-accent/25"}`}>
                               {char.type === "npc" ? "Antagonista" : "Jogador"}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded-xs text-[8px] uppercase tracking-wider font-bold ${char.systemId === "regras_de_ouro" ? "bg-amber-950/60 text-amber-300 border border-amber-500/40" : "bg-blood-red/15 text-blood-red border border-blood-red/30"}`}>
+                              {char.systemId === "regras_de_ouro" ? "Regras de Ouro" : "Vampiro V5"}
                             </span>
                             <span>Clã {clan} • {concept}</span>
                           </p>
@@ -767,6 +794,36 @@ export default function HubClient({
             )}
 
             <form onSubmit={handleCreateCampaign} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-widest font-data text-text-muted block">Sistema de Regras</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCampaignSystemId("v5")}
+                    className={`p-2.5 rounded-sm border text-left cursor-pointer transition-colors ${
+                      campaignSystemId === "v5"
+                        ? "bg-blood-red/20 border-blood-red text-white shadow-[0_0_8px_rgba(200,36,52,0.3)]"
+                        : "bg-bg-input border-white/10 text-text-muted hover:border-white/20"
+                    }`}
+                  >
+                    <div className="text-xs font-bold uppercase tracking-wider font-data text-blood-red">Vampiro V5</div>
+                    <div className="text-[10px] text-text-muted mt-0.5 font-reading">5ª Edição (Fome e Humanidade)</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCampaignSystemId("regras_de_ouro")}
+                    className={`p-2.5 rounded-sm border text-left cursor-pointer transition-colors ${
+                      campaignSystemId === "regras_de_ouro"
+                        ? "bg-amber-950/40 border-amber-500 text-white shadow-[0_0_8px_rgba(245,158,11,0.2)]"
+                        : "bg-bg-input border-white/10 text-text-muted hover:border-white/20"
+                    }`}
+                  >
+                    <div className="text-xs font-bold uppercase tracking-wider font-data text-amber-400">Regras de Ouro</div>
+                    <div className="text-[10px] text-text-muted mt-0.5 font-reading">E ainda chove (12 Talentos)</div>
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-widest font-data text-text-muted block">Nome da Crônica</label>
                 <input
@@ -1051,6 +1108,96 @@ export default function HubClient({
               >
                 {loading ? "Excluindo..." : "Confirmar Exclusão"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL GÓTICO: FORJAR NOVO PERSONAGEM COM ESCOLHA DE SISTEMA */}
+      {/* ============================================================ */}
+      {isCharSystemModalOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div
+            className="w-full max-w-md bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(212,175,55,0.15)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setIsCharSystemModalOpen(false)}
+              className="absolute top-4 right-4 text-text-dim hover:text-white transition-colors cursor-pointer text-lg"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-2xl font-gothic tracking-widest text-gold-accent uppercase pb-2 border-b border-white/5 mb-4">
+              Forjar Novo Vampiro
+            </h3>
+
+            {errorMsg && (
+              <div className="bg-hunger-red/10 border border-hunger-red text-hunger-red text-xs p-3 rounded-sm mb-4 font-data uppercase tracking-wider text-center">
+                {errorMsg}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-widest font-data text-text-muted block">Nome do Personagem</label>
+                <input
+                  type="text"
+                  value={newCharName}
+                  onChange={(e) => setNewCharName(e.target.value)}
+                  placeholder="Ex: Julian de Luna"
+                  className="w-full bg-bg-input border border-white/10 rounded-sm px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold-accent transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-widest font-data text-text-muted block">Sistema de Regras</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewCharSystemId("v5")}
+                    className={`p-2.5 rounded-sm border text-left cursor-pointer transition-colors ${
+                      newCharSystemId === "v5"
+                        ? "bg-blood-red/20 border-blood-red text-white shadow-[0_0_8px_rgba(200,36,52,0.3)]"
+                        : "bg-bg-input border-white/10 text-text-muted hover:border-white/20"
+                    }`}
+                  >
+                    <div className="text-xs font-bold uppercase tracking-wider font-data text-blood-red">Vampiro V5</div>
+                    <div className="text-[10px] text-text-muted mt-0.5 font-reading">5ª Edição Oficial (Fome e Humanidade)</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewCharSystemId("regras_de_ouro")}
+                    className={`p-2.5 rounded-sm border text-left cursor-pointer transition-colors ${
+                      newCharSystemId === "regras_de_ouro"
+                        ? "bg-amber-950/40 border-amber-500 text-white shadow-[0_0_8px_rgba(245,158,11,0.2)]"
+                        : "bg-bg-input border-white/10 text-text-muted hover:border-white/20"
+                    }`}
+                  >
+                    <div className="text-xs font-bold uppercase tracking-wider font-data text-amber-400">Regras de Ouro</div>
+                    <div className="text-[10px] text-text-muted mt-0.5 font-reading">E ainda chove (12 Talentos e Vitalidade Anatômica)</div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => setIsCharSystemModalOpen(false)}
+                  className="px-4 py-2 border border-white/10 hover:border-white text-text-muted hover:text-white text-xs uppercase tracking-widest font-data transition-colors rounded-sm cursor-pointer disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleQuickCreateCharacter(newCharSystemId)}
+                  className="px-5 py-2 bg-gold-accent hover:bg-yellow-600 text-bg-main text-xs uppercase tracking-widest font-data font-semibold rounded-sm cursor-pointer transition-colors shadow-[0_0_6px_rgba(255,216,77,0.3)] disabled:opacity-50"
+                >
+                  {loading ? "Criando..." : "Despertar"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
