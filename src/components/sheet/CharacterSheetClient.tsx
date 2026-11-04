@@ -41,6 +41,9 @@ import ImageCropModal, { CropResult } from "@/components/common/ImageCropModal";
 import AssetVaultModal from "@/components/media/AssetVaultModal";
 import { uploadMediaAssetAction, updateCharacterAvatarAction } from "@/app/actions/mediaActions";
 import { useToast } from "@/context/ToastContext";
+import type { SystemId, RegrasDeOuroSheetData } from "@/types/systems/regrasDeOuro";
+import { createInitialRegrasDeOuroSheet } from "@/lib/systems/regrasDeOuro/rules";
+import RegrasDeOuroSheetView from "@/components/sheet/regrasDeOuro/RegrasDeOuroSheetView";
 
 const CLAN_OPTIONS = [
   "Banu Haqim",
@@ -543,9 +546,10 @@ function calculateBaseAndXp(charData: CharacterSheetData) {
 interface CharacterSheetClientProps {
   characterId: string;
   campaignId: string | null;
-  initialData: CharacterSheetData | null;
+  initialData: any;
   initialName?: string;
-  onDataChange?: (data: CharacterSheetData) => void;
+  systemId?: SystemId;
+  onDataChange?: (data: any) => void;
   dicePool?: Array<{ id: string, label: string, value: number }>;
   onTraitClick?: (trait: { id: string, label: string, value: number }) => void;
   initialStatus?: "DRAFT" | "READY" | "IN_PLAY";
@@ -561,6 +565,7 @@ export default function CharacterSheetClient({
   campaignId,
   initialData,
   initialName = "",
+  systemId,
   onDataChange,
   dicePool = [],
   onTraitClick,
@@ -592,6 +597,32 @@ export default function CharacterSheetClient({
 
   const [status, setStatus] = useState<"DRAFT" | "READY" | "IN_PLAY">(initialStatus);
   const [buildState, setBuildState] = useState<any>(initialBuildState);
+
+  // DETECÇÃO E ESTADO MULTI-SISTEMA: REGRAS DE OURO 2.0
+  const isRegrasDeOuro = systemId === "regras_de_ouro" || (initialData as any)?.systemId === "regras_de_ouro";
+
+  const [regrasDeOuroData, setRegrasDeOuroData] = useState<RegrasDeOuroSheetData>(() => {
+    if ((initialData as any)?.systemId === "regras_de_ouro") {
+      return initialData as RegrasDeOuroSheetData;
+    }
+    return createInitialRegrasDeOuroSheet({ name: initialName });
+  });
+
+  // Autosave debounced para Regras de Ouro
+  useAutosave(regrasDeOuroData, 1000, async (dataToSave) => {
+    if (!isRegrasDeOuro) return;
+    setSyncStatus("saving");
+    const response = await updateCharacterSheet(characterId, dataToSave as any, buildStateRef.current, statusRef.current);
+    if (response.success) {
+      setSyncStatus("saved");
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => {
+        setSyncStatus("idle");
+      }, 2000);
+    } else {
+      setSyncStatus("error");
+    }
+  });
 
   // Estados para Modal de Avatar (Foto de Perfil)
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -1810,6 +1841,140 @@ export default function CharacterSheetClient({
       diceList: result.diceList
     });
   };
+
+  const handleRegrasDeOuroRoll = (diceCount: number, difficulty: number, label: string) => {
+    const diceList: { type: "normal"; value: number }[] = [];
+    for (let i = 0; i < diceCount; i++) {
+      diceList.push({ type: "normal", value: Math.floor(Math.random() * 10) + 1 });
+    }
+    const successes = diceList.filter((d) => d.value >= difficulty).length;
+    const tens = diceList.filter((d) => d.value === 10).length;
+    const ones = diceList.filter((d) => d.value === 1).length;
+
+    setRollResult({
+      macroName: `${label} (Dif. ${difficulty})`,
+      totalPool: diceCount,
+      successes,
+      isCritical: tens >= 2,
+      isMessianic: false,
+      isBestial: ones > successes && successes === 0,
+      diceList,
+    });
+  };
+
+  if (isRegrasDeOuro) {
+    return (
+      <main className="min-h-screen bg-bg-main text-text-primary p-4 md:p-8 font-reading flex flex-col justify-start items-center">
+        <div className="w-full max-w-6xl space-y-6">
+          {/* NAV VOLTAR AO HUB E FEEDBACK DE AUTOSAVE */}
+          <div className="flex justify-between items-center pb-2 border-b border-white/10">
+            {!hideBackToHub && !isStoryteller ? (
+              <Link 
+                href="/hub" 
+                className="flex items-center space-x-2 text-xs uppercase tracking-widest text-text-muted hover:text-gold-accent transition-colors font-data"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>Voltar ao Hub</span>
+              </Link>
+            ) : (
+              <div />
+            )}
+
+            {/* INDICADOR VISUAL DE AUTOSAVE DEBOUNCED */}
+            <div className="flex items-center space-x-4 font-data text-xs select-none">
+              <div className="min-h-6 flex items-center animate-fade-in">
+                {syncStatus === "saving" && (
+                  <span className="text-text-muted uppercase tracking-wider flex items-center space-x-1.5 text-[10px]">
+                    <svg className="animate-spin h-3.5 w-3.5 text-gold-accent shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Salvando alterações...</span>
+                  </span>
+                )}
+                {syncStatus === "saved" && (
+                  <span className="text-gold-accent uppercase tracking-wider font-semibold flex items-center space-x-1.5 text-[10px]">
+                    <svg className="w-3.5 h-3.5 text-gold-accent shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Nuvem Sincronizada</span>
+                  </span>
+                )}
+                {syncStatus === "error" && (
+                  <span className="text-hunger-red uppercase tracking-wider font-semibold animate-bounce flex items-center space-x-1.5 text-[10px]">
+                    <svg className="w-3.5 h-3.5 text-hunger-red shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>Erro ao Salvar</span>
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-xs text-[10px] uppercase tracking-wider font-bold bg-amber-950/60 text-amber-300 border border-amber-500/40">
+                  Regras de Ouro 2.0
+                </span>
+                <span className="text-xs uppercase tracking-wider text-blood-red font-gothic text-right">
+                  {!campaignId || campaignId === "cofre" ? "Cofre 🔒" : chronicle?.name ? `Crônica: ${chronicle.name}` : `Crônica Ativa`}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* FICHA GÓTICA COMPLETA DE REGRAS DE OURO 2.0 */}
+          <RegrasDeOuroSheetView
+            sheetData={regrasDeOuroData}
+            onUpdateSheet={setRegrasDeOuroData}
+            characterName={initialName || "Novo Vampiro"}
+            isNarrator={isStoryteller}
+            disabled={status === "IN_PLAY" && !isStoryteller}
+            onRollDice={handleRegrasDeOuroRoll}
+          />
+
+          {/* Modal / Overlay de Rolagem Compartilhado */}
+          {rollResult && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+              <div className="w-full max-w-sm bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(212,175,55,0.2)]">
+                <button
+                  onClick={() => setRollResult(null)}
+                  className="absolute top-4 right-4 text-text-dim hover:text-white transition-colors cursor-pointer text-base"
+                >
+                  ✕
+                </button>
+                <h4 className="text-sm font-gothic tracking-widest text-gold-accent uppercase pb-2 border-b border-white/5 mb-3">
+                  {rollResult.macroName}
+                </h4>
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-xs uppercase font-data text-text-muted">Sucessos:</span>
+                  <span className="text-2xl font-mono font-bold text-gold-accent">{rollResult.successes}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 my-3 p-2 bg-black/30 rounded-xs border border-white/5">
+                  {rollResult.diceList.map((d, i) => (
+                    <span
+                      key={i}
+                      className={`w-7 h-7 rounded-xs border flex items-center justify-center font-mono font-bold text-xs ${
+                        d.value >= 6 ? "bg-gold-accent/20 border-gold-accent text-gold-accent" : "bg-bg-input border-white/10 text-text-muted"
+                      }`}
+                    >
+                      {d.value}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRollResult(null)}
+                  className="w-full py-1.5 bg-white/10 hover:bg-white/20 text-xs uppercase font-data tracking-wider rounded-xs cursor-pointer transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-bg-main text-text-primary p-4 md:p-8 font-reading flex flex-col justify-start items-center">

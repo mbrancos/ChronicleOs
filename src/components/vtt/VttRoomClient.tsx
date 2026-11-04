@@ -513,7 +513,7 @@ export default function VttRoomClient({ character, chronicle }: VttRoomClientPro
                 }
                 // Verificar se é disciplina
                 else {
-                  const disc = newData.disciplines?.find((d) => d.id === item.id);
+                  const disc = (newData as any).disciplines?.find((d: any) => d.id === item.id);
                   if (disc) {
                     newValue = disc.level;
                   }

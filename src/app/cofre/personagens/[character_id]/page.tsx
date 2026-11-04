@@ -25,6 +25,7 @@ export default async function VaultCharacterPage({ params }: PageProps) {
       characterId={character_id}
       campaignId={null}
       initialData={initialData}
+      systemId={response.systemId}
       initialName={response.name ?? ""}
       initialStatus={(response.type === "npc") ? "DRAFT" : response.status}
       initialBuildState={response.buildState}

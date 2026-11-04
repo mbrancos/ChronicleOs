@@ -43,6 +43,7 @@ export default async function CharacterPage({ params }: PageProps) {
       characterId={character_id}
       campaignId={campaign_id}
       initialData={initialData}
+      systemId={response.systemId}
       initialName={response.name ?? ""}
       initialStatus={(response.type === "npc") ? "DRAFT" : response.status}
       initialBuildState={response.buildState}
