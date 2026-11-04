@@ -137,7 +137,6 @@ export function applyAnatomicalDamage(
 
     // Transborda para agravado
     if (remaining > 0) {
-      const availableAgravado = Math.max(0, sector.maxAgravado - sector.agravado);
       sector.agravado = Math.min(sector.maxAgravado, sector.agravado + remaining);
     }
   } else if (damageType === "letal") {
@@ -282,7 +281,7 @@ export function createInitialRegrasDeOuroSheet(profile?: {
   const cla = profile?.cla || "Brujah";
   const geracao = profile?.geracao || 13;
 
-  const { campoPessoal, pontosVirtudes } = calculateArchetypeBonuses(natureza, mascara);
+  const { campoPessoal } = calculateArchetypeBonuses(natureza, mascara);
 
   const initialVirtudes: RegrasDeOuroVirtudes = {
     consciencia: 2,
