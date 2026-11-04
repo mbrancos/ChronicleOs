@@ -24,6 +24,7 @@ export async function getCharacterSheet(characterId: string) {
         status: characters.status,
         buildState: characters.buildState,
         type: characters.type,
+        systemId: characters.systemId,
       })
       .from(characters)
       .where(eq(characters.id, characterId))
@@ -35,11 +36,12 @@ export async function getCharacterSheet(characterId: string) {
 
     return { 
       success: true, 
-      data: result[0].sheetData as CharacterSheetData | null,
+      data: result[0].sheetData as any,
       name: result[0].name,
       status: result[0].status,
       buildState: result[0].buildState,
       type: result[0].type,
+      systemId: result[0].systemId,
     };
   } catch (error: any) {
     console.error("Erro em getCharacterSheet:", error);
@@ -219,6 +221,7 @@ export async function duplicateCharacterAction(characterId: string) {
       type: originalChar.type,
       userId: session.user.id,
       campaignId: null, // Forçado a ir para o Cofre
+      systemId: (originalChar as any).systemId || "v5",
       sheetData: originalChar.sheetData,
     });
 

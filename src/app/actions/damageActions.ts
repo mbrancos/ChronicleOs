@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { characters, rolls } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { CharacterSheetData, getMaxHealth, getMaxWillpower } from "@/types/character";
+import type { BodySectorId, RegrasDeOuroSheetData } from "@/types/systems/regrasDeOuro";
+import { applyAnatomicalDamage, healSectorDamage } from "@/lib/systems/regrasDeOuro/rules";
 import { pusherServer } from "@/lib/pusher";
 import { revalidatePath } from "next/cache";
 import { requireUser, requireCharacterAccess } from "@/lib/auth/guards";
@@ -380,5 +382,172 @@ export async function setTrackerDamageAction(
   } catch (error: any) {
     console.error("Erro em setTrackerDamageAction:", error);
     return { success: false, error: error?.message || "Erro interno ao ajustar dano." };
+  }
+}
+
+/**
+ * Aplica dano anatômico a um dos 9 setores do corpo de um personagem de Regras de Ouro 2.0.
+ */
+export async function applyRegrasDeOuroDamageAction(
+  characterId: string,
+  sectorId: BodySectorId,
+  damageType: "normal" | "letal" | "agravado",
+  amount: number
+) {
+  try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
+    const accessCheck = await requireCharacterAccess(characterId, userCheck.user.id);
+    if (!accessCheck.success) {
+      return { success: false, error: accessCheck.error };
+    }
+
+    const result = await db
+      .select({
+        id: characters.id,
+        campaignId: characters.campaignId,
+        name: characters.name,
+        sheetData: characters.sheetData,
+        systemId: characters.systemId,
+      })
+      .from(characters)
+      .where(eq(characters.id, characterId))
+      .limit(1);
+
+    if (result.length === 0) {
+      return { success: false, error: "Personagem não encontrado." };
+    }
+
+    const character = result[0];
+    const sheet = character.sheetData as RegrasDeOuroSheetData;
+
+    if (!sheet || !sheet.vitalidade) {
+      return { success: false, error: "Dados de vitalidade anatômica inexistentes." };
+    }
+
+    const updatedVitality = applyAnatomicalDamage(sheet.vitalidade, sectorId, damageType, amount);
+    const updatedSheet: RegrasDeOuroSheetData = {
+      ...sheet,
+      vitalidade: updatedVitality,
+    };
+
+    await db
+      .update(characters)
+      .set({ sheetData: updatedSheet })
+      .where(eq(characters.id, characterId));
+
+    if (character.campaignId) {
+      try {
+        await pusherServer.trigger(
+          `private-vtt-${character.campaignId}`,
+          "damage-applied",
+          {
+            characterId: character.id,
+            characterName: character.name,
+            sectorId,
+            damageType,
+            amount,
+            vitality: updatedVitality,
+            createdAt: new Date(),
+          }
+        );
+      } catch (pushErr) {
+        console.error("Erro ao notificar Pusher (regras de ouro damage):", pushErr);
+      }
+
+      revalidatePath(`/campanhas/${character.campaignId}/mesa`);
+      revalidatePath(`/campanhas/${character.campaignId}/jogador`);
+      revalidatePath(`/campanhas/${character.campaignId}/narrador`);
+    } else {
+      revalidatePath("/hub");
+    }
+
+    return { success: true, vitality: updatedVitality };
+  } catch (err: any) {
+    console.error("Erro em applyRegrasDeOuroDamageAction:", err);
+    return { success: false, error: err?.message || "Erro ao aplicar dano anatômico." };
+  }
+}
+
+/**
+ * Cura dano em um setor anatômico de personagem de Regras de Ouro 2.0 consumindo Vitæ.
+ */
+export async function healRegrasDeOuroDamageAction(
+  characterId: string,
+  sectorId: BodySectorId,
+  healType: "normal_all" | "letal_one" | "agravado_one"
+) {
+  try {
+    const userCheck = await requireUser();
+    if (!userCheck.success) {
+      return { success: false, error: userCheck.error };
+    }
+
+    const accessCheck = await requireCharacterAccess(characterId, userCheck.user.id);
+    if (!accessCheck.success) {
+      return { success: false, error: accessCheck.error };
+    }
+
+    const result = await db
+      .select({
+        id: characters.id,
+        campaignId: characters.campaignId,
+        name: characters.name,
+        sheetData: characters.sheetData,
+      })
+      .from(characters)
+      .where(eq(characters.id, characterId))
+      .limit(1);
+
+    if (result.length === 0) {
+      return { success: false, error: "Personagem não encontrado." };
+    }
+
+    const character = result[0];
+    const sheet = character.sheetData as RegrasDeOuroSheetData;
+
+    if (!sheet || !sheet.vitalidade || !sheet.vitae) {
+      return { success: false, error: "Dados da ficha inválidos." };
+    }
+
+    const { vitality: updatedVitality, vitaeCost } = healSectorDamage(sheet.vitalidade, sectorId, healType);
+
+    if (sheet.vitae.atual < vitaeCost) {
+      return { success: false, error: "Vitæ insuficiente para realizar a cura." };
+    }
+
+    const updatedSheet: RegrasDeOuroSheetData = {
+      ...sheet,
+      vitalidade: updatedVitality,
+      vitae: {
+        ...sheet.vitae,
+        atual: Math.max(0, sheet.vitae.atual - vitaeCost),
+      },
+    };
+
+    await db
+      .update(characters)
+      .set({ sheetData: updatedSheet })
+      .where(eq(characters.id, characterId));
+
+    if (character.campaignId) {
+      revalidatePath(`/campanhas/${character.campaignId}/mesa`);
+      revalidatePath(`/campanhas/${character.campaignId}/jogador`);
+      revalidatePath(`/campanhas/${character.campaignId}/narrador`);
+    } else {
+      revalidatePath("/hub");
+    }
+
+    return {
+      success: true,
+      vitality: updatedVitality,
+      vitaeAtual: updatedSheet.vitae.atual,
+    };
+  } catch (err: any) {
+    console.error("Erro em healRegrasDeOuroDamageAction:", err);
+    return { success: false, error: err?.message || "Erro ao curar dano anatômico." };
   }
 }

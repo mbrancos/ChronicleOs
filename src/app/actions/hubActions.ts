@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth/server";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { DEFAULT_CHARACTER_DATA } from "@/types/character";
+import type { SystemId } from "@/types/systems/regrasDeOuro";
+import { createInitialRegrasDeOuroSheet } from "@/lib/systems/regrasDeOuro/rules";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -32,6 +34,7 @@ export async function getUserHubData() {
           description: campaigns.description,
           status: campaigns.status,
           powerLevel: campaigns.powerLevel,
+          systemId: campaigns.systemId,
           narratorName: users.name, // Nome do Narrador da crônica
           characterName: characters.name, // Nome do personagem do jogador nesta campanha
           characterId: characters.id, // ID do personagem do jogador nesta campanha
@@ -52,6 +55,7 @@ export async function getUserHubData() {
           type: characters.type,
           campaignId: characters.campaignId,
           campaignName: campaigns.name,
+          systemId: characters.systemId,
           sheetData: characters.sheetData,
         })
         .from(characters)
@@ -83,7 +87,7 @@ const DEFAULT_ALLOWED_CLANS = [
 ];
 
 // Cria uma nova campanha (crônica)
-export async function createCampaignAction(name: string, description?: string) {
+export async function createCampaignAction(name: string, description?: string, systemId: SystemId = "v5") {
   try {
     const { data: session } = await auth.getSession();
     if (!session?.user) {
@@ -99,6 +103,7 @@ export async function createCampaignAction(name: string, description?: string) {
       name: trimmedName,
       description: description?.trim() || null,
       narratorId: session.user.id,
+      systemId,
       status: "RECRUITING", // Começa aberta para recrutamento por padrão
       powerLevel: "FLEDGLING,NEONATE,ANCILLAE",
       extraXp: 0,
@@ -114,7 +119,12 @@ export async function createCampaignAction(name: string, description?: string) {
 }
 
 // Cria um novo personagem inicializando a ficha com dados padrão
-export async function createCharacterAction(name: string, campaignId?: string | null, type: "jogador" | "npc" = "jogador") {
+export async function createCharacterAction(
+  name: string,
+  campaignId?: string | null,
+  type: "jogador" | "npc" = "jogador",
+  systemId?: SystemId
+) {
   try {
     const { data: session } = await auth.getSession();
     if (!session?.user) {
@@ -127,20 +137,38 @@ export async function createCharacterAction(name: string, campaignId?: string | 
     }
 
     let targetCampaignId: string | null = null;
+    let effectiveSystemId: SystemId = systemId || "v5";
+
     if (campaignId && campaignId.trim() !== "") {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(campaignId)) {
         return { success: false, error: "ID de campanha inválido." };
       }
       targetCampaignId = campaignId;
+
+      // Buscar o sistema da campanha para herdar
+      const campaignRecord = await db
+        .select({ systemId: campaigns.systemId })
+        .from(campaigns)
+        .where(eq(campaigns.id, targetCampaignId))
+        .limit(1);
+
+      if (campaignRecord.length > 0) {
+        effectiveSystemId = campaignRecord[0].systemId;
+      }
     }
+
+    const initialSheet = effectiveSystemId === "regras_de_ouro"
+      ? createInitialRegrasDeOuroSheet({ name: trimmedName })
+      : DEFAULT_CHARACTER_DATA;
 
     const newChar = await db.insert(characters).values({
       campaignId: targetCampaignId,
       userId: session.user.id,
       name: trimmedName,
       type,
-      sheetData: DEFAULT_CHARACTER_DATA,
+      systemId: effectiveSystemId,
+      sheetData: initialSheet,
     }).returning({ id: characters.id });
 
     // Se for NPC criado dentro de uma campanha, criar também uma cópia no cofre (sem campaignId)
@@ -151,7 +179,8 @@ export async function createCharacterAction(name: string, campaignId?: string | 
           userId: session.user.id,
           name: trimmedName,
           type: "npc",
-          sheetData: DEFAULT_CHARACTER_DATA,
+          systemId: effectiveSystemId,
+          sheetData: initialSheet,
         });
       } catch (err) {
         console.error("Falha ao criar cópia do NPC no cofre:", err);
