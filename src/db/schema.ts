@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, jsonb, timestamp, boolean, integer } from "drizzle-orm/pg-core";
+import type { SystemId } from "@/types/systems/regrasDeOuro";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(), // UUID associado ao Neon Auth
@@ -38,6 +39,7 @@ export const campaigns = pgTable("campaigns", {
     .$type<ChronicleSystemRules>()
     .default(DEFAULT_CHRONICLE_RULES)
     .notNull(),
+  systemId: text("system_id").$type<SystemId>().default("v5").notNull(),
   currentSceneImage: text("current_scene_image"),
 });
 
@@ -48,6 +50,7 @@ export const characters = pgTable("characters", {
   userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // Proteger contra exclusão: vira NPC sob controle do Narrador
   name: text("name").notNull(),
   type: text("type").$type<"jogador" | "npc" | "coterie">().notNull(),
+  systemId: text("system_id").$type<SystemId>().default("v5").notNull(),
   sheetData: jsonb("sheet_data").notNull(), // Tipo JSONB rígido para a ficha reativa
   status: text("status").$type<"DRAFT" | "READY" | "IN_PLAY">().default("DRAFT").notNull(),
   buildState: jsonb("build_state").$type<any>(), // Memória de compra por XP contra esqueleto base

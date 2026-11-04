@@ -1,0 +1,2 @@
+ALTER TABLE "campaigns" ADD COLUMN IF NOT EXISTS "system_id" text DEFAULT 'v5' NOT NULL;
+ALTER TABLE "characters" ADD COLUMN IF NOT EXISTS "system_id" text DEFAULT 'v5' NOT NULL;
