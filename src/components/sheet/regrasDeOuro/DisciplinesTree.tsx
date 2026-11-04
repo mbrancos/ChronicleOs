@@ -18,6 +18,7 @@ const CANONICAL_DISCIPLINE_NAMES = [
   "Fortitude",
   "Metamorfose / Proteísmo",
   "Necromancia",
+  "Obeah",
   "Ofuscação",
   "Potência",
   "Presença",

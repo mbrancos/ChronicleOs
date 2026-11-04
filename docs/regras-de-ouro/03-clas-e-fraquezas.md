@@ -186,7 +186,20 @@ Em *As Regras de Ouro 2.0*, os Clãs mantêm sua herança mítica do clássico M
 
 ---
 
-### 15. Caitiff (Sem Clã)
+### 15. Salubri
+
+- **Apelido:** Curandeiros / Ladrões de Alma (calúnia Tremere) / Ciclistas (termo jocoso)
+- **Seita:** Independentes / Caçados
+- **Disciplinas de Clã:** Auspícios, Fortitude, Obeah
+- **Fraqueza Mecânica:**
+  - **O Terceiro Olho:** No nível 4 de Obeah (ou poderes avançados), o lendário terceiro olho vertical se manifesta na fronte do Salubri ao canalizar sua disciplina ou dons místicos de percepção, revelando sua linhagem proibida.
+  - **Alimentação Virtuosa e Restrição de Obeah:** Obeah origina-se da busca pela Verdadeira Paz (a Golconda). Se a Trilha de Humanidade do Salubri cair para **8 ou menor**, ele fica **completamente impossibilitado de utilizar qualquer nível de Obeah**, até que consiga arrepender-se e retornar ao caminho da iluminação espiritual, restaurando sua Trilha até o nível 10.
+  - **Inimigo Mortal do Clã:** Caçados ativamente pela Pirâmide Tremere e difamados historicamente como "devoradores de almas".
+- **Criação de Personagem:** Talentos: Emocional, Espacial, Social, Vigor. Virtudes e Humanidade elevadas. Palavras-Chave voltadas a Medicina, Tratamento Espiritual, Filosofia e Altruísmo.
+
+---
+
+### 16. Caitiff (Sem Clã)
 
 - **Apelido:** Refugos / Vira-Latas
 - **Seita:** Desprezados por todas

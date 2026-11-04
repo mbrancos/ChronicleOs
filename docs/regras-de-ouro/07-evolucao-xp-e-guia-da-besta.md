@@ -1,66 +1,70 @@
 # As Regras de Ouro 2.0 (E ainda chove)
 ## Módulo 07: Evolução por XP e o Guia da Besta
 
-Este módulo documenta a economia de Pontos de Experiência (XP), os critérios de premiação e as regras do **Guia da Besta**, a inovação de terror pessoal das Regras de Ouro 2.0 onde outro participante da mesa personifica o inconsciente monstruoso do vampiro.
+Este módulo documenta o sistema de premiação e gasto de Pontos de Experiência (XP), a governança de mesa sobre desempenho e a inovadora mecânica do **Guia da Besta**, onde a psique monstruosa de cada vampiro é interpretada por outro jogador da mesa.
 
 ---
 
 ### 1. Critérios de Premiação de Experiência (XP)
 
-Ao final de cada sessão, o grupo reúne-se para avaliar o desempenho e conceder XP de acordo com um dos dois estilos:
+Ao final de cada sessão de jogo, o grupo deve reunir-se para um diálogo conjunto de avaliação dramática e técnica. O sistema oferece dois estilos oficiais de premiação:
 
-#### Estilo 1: Simplificado (Iniciantes)
-- **1 pt por Participação:** Pontualidade e presença na sessão.
-- **1 pt por Interpretação:** Fidelidade à Natureza, Máscara, Paixões e fraquezas.
-- **1 pt por Justiça:** Incorporação ativa de Vantagens e Desvantagens no drama.
-- **1 pt por Ideia:** Ideia criativa ou tática brilhante que moveu a história.
-- **1 pt por Aprendizado:** O que o personagem realmente assimilou dos acontecimentos.
+#### Estilo 1: Simplificado (Iniciantes e Foco Rápido)
+Ideal para mesas introdutórias ou narrativas de ritmo ágil. Distribui até 5 pontos de XP positivos:
+- **1 pt por Participação:** Estar presente no horário e participar ativamente da sessão. O Narrador pode recusar a jogadores com atrasos graves ou comportamento disruptivo.
+- **1 pt por Interpretação:** Fidelidade demonstrada à Natureza, Máscara, Paixões e Paixões Obscuras do personagem.
+- **1 pt por Justiça:** Incorporar ativamente suas Vantagens, Desvantagens e fraquezas na atuação e nas decisões em cena.
+- **1 pt por Ideia:** Contribuir com um plano, raciocínio tático ou ideia brilhante que auxiliou significativamente o desenrolar da crônica (nem toda ideia garante o ponto; critério do Narrador).
+- **1 pt por Aprendizado:** O jogador responde: *"Que situações e lições meu personagem tirou desta sessão?"*. Apenas reflexões genuínas e pertinentes são premiadas.
 
-#### Estilo 2: Crítico e Profundo (Avançado)
-- **0 a 2 pts por Interpretação:** Profundidade e peso dramático da atuação.
-- **-1 a 2 pts por Avanço:** Envolvimento com a trama e superação de medos.
-- **-1 a 2 pts por Aprendizado:** Reflexão madura sobre os impactos da não-vida.
-- **-1 a 1 pt pela Besta:** Avaliação da atuação do jogador que atuou como Guia da Besta de um colega.
-- **+1 pt por Excelência:** Votação unânime aberta para eleger o melhor jogador da sessão.
-- **-1 pt por Incoerência ("Troféu Abacaxi"):** Votação unânime para o pior jogador / antijogo. Acumular o troféu em duas sessões consecutivas desconta -1 XP permanente (se na sessão seguinte vencer o prêmio de Excelência, ganha bônus de superação de +2 XP).
-
----
-
-### 2. Tabela de Custos em Pontos de Experiência (XP)
-
-Transcrições exatas da tabela matemática oficial (Página 108):
-
-| Característica | Custo em Pontos de Experiência (XP) | Observações |
-| :--- | :--- | :--- |
-| **Novo nível de Talento** | $8 + \text{nível a se comprar}$ | Ex: Comprar Força 4 custa $8 + 4 = 12$ XP. |
-| **Novo nível em Trilha** | $10 - \text{nível de Consciência}$ | Quanto mais consciente o cainita, mais barato elevar a Trilha. |
-| **Novo nível em Virtude** | $4 + \text{nível a se comprar}$ | Não pode ultrapassar o nível atual de Trilha. |
-| **Novo nível em Campo Pessoal** | $8 + \text{nível a se comprar}$ | Aumenta a rigidez e defesa contra dominação mental. |
-| **Nova Disciplina (Nível 1)** | $\text{Geração do vampiro em pontos}$ | Vampiro de 13ª geração paga 13 XP; de 8ª geração paga 8 XP. |
-| **Novo nível em Disciplina ($N \ge 2$)** | $\text{Nível atual} \times \text{Geração do vampiro}^*$ | **Regra do Clã:** Em Disciplinas do seu Clã, o vampiro calcula o custo como se fosse **2 Gerações mais antigo** (ex: 13ª calcula com 11ª). Caitiff calcula como se fosse 1 geração mais novo. |
-| **Palavra-Chave: Médio $\to$ Bom** | 15 XP | Transforma uma aptidão comum em ponto forte (+1). |
-| **Palavra-Chave: Bom $\to$ Ótimo** | 5 XP de melhoria (ou 20 XP base) | Eleva para bônus de +2 na parada. |
-| **Palavra-Chave: Ótimo $\to$ Excepcional** | 10 XP de melhoria (ou 30 XP base) | Eleva para bônus de +3 na parada (ou +1 no Talento 5+). |
-| **Palavra-Chave: Excepcional $\to$ Extraordinário** | 10 XP de melhoria (ou 40 XP base) | Eleva para bônus de +4 na parada (ou +2 no Talento 5+). |
-| **Novo nível de Paixão** | $\text{Nível a se comprar} + 8$ | Aumenta metas e foco de interpretação. |
-| **Novo nível de Paixão Obscura** | $\text{Nível a se comprar} + 8$ | Alimentado pela Besta. |
-| **Novo Flagelo da Besta** | $\text{Custo do Flagelo} + 8$ | Adquirido pelo Guia da Besta com o XP da Besta. |
+#### Estilo 2: Profundo e Crítico (Avançado)
+Recomendado para grupos veteranos que buscam imersão psicológica rigorosa. Contempla notas variáveis, bonificações extraordinárias e penalidades por antijogo:
+- **0 a 2 pts por Interpretação:** Coesão da atuação, participação dramática no enredo e relevância dos diálogos para o arco de todos os personagens.
+- **-1 a 2 pts por Avanço:** O quanto o jogador assumiu riscos genuínos por seu personagem, confrontou medos do passado e moveu a história positivamente para a mesa.
+- **-1 a 2 pts por Aprendizado:** O impacto emocional da história no personagem e no próprio jogador. A profundidade da evolução moral e filosófica.
+- **-1 a 1 pt pelo Guia da Besta:** Avaliação da atuação do colega que personificou a Besta de outro jogador. Normalmente pontua **0**, devendo ser premiado com **+1** apenas quem demonstrou atuação extraordinária sem abusar gratuitamente de seus poderes, ou punido com **-1** por atuações negligentes ou descompromissadas.
+- **+1 pt por Excelência:** Votação aberta e unânime entre todos os jogadores para eleger o melhor jogador da sessão. Se houver empate, ninguém recebe.
+- **Troféu Abacaxi (Incoerência):** Votação aberta e unânime para eleger a pior atuação da sessão. Se houver empate, **todos os jogadores recebem o troféu**.
+  - **Punição Cumulativa:** O jogador que acumular a vitória no Troféu Abacaxi em duas sessões consecutivas **perde -1 ponto de XP** permanente (ficando com saldo devedor caso não tenha pontos).
+  - **Bônus de Superação:** Como incentivo à recuperação, se em qualquer uma das duas sessões seguintes o jogador penalizado der uma virada impressionante e conquistar o prêmio de **Excelência**, recebe um bônus especial de **+2 pontos de XP** por sua superação.
 
 ---
 
-### 3. O Guia da Besta
+### 2. Tabela Matemática de Custos de Experiência (XP)
 
-Uma das premissas centrais de *As Regras de Ouro 2.0* é que a Besta de um personagem não deve ser interpretada pelo próprio jogador nem pelo Narrador sobrecarregado, mas sim por **outro jogador da mesa**, designado como seu **Guia da Besta**.
+Transcrições e fórmulas matemáticas oficiais (Página 73):
 
-1. **A Ficha da Besta (Página 18):**
-   - Possui seus próprios atributos:
-     - `Ângstia` (1 a 10): A força do desespero e da fúria da Besta.
-     - `Líbido` (1 a 10): O combustível instintivo gerado pela fome e pelos poderes vampíricos.
-     - `Paixões Obscuras`: Desejos vis, sádicos e destrutivos associados à criatura.
-     - `Flagelos`: Efeitos sobrenaturais que a Besta manifesta no hospedeiro (como *Descontrole Emocional*, *Rompante de Fúria*, *A Pele do Lobo*, *Cria do Inferno*).
-     - `XP da Besta`: Pontos exclusivos para o Guia comprar novos Flagelos e fortalecer a Besta.
+| Característica | Custo em XP | Fórmula e Regras Oficiais |
+| :--- | :---: | :--- |
+| **Novo nível de Talento** | $8 + \text{nível a se comprar}$ | Para comprar nível 3: $8 + 3 = 11$ XP; nível 5: $8 + 5 = 13$ XP. |
+| **Elevar Trilha da Humanidade** | $10 - \text{nível de Consciência}$ | Quanto mais elevada a virtude Consciência, menor o custo de recuperar a Trilha. |
+| **Novo nível em Virtude** | $4 + \text{nível a se comprar}$ | Não pode exceder o nível atual de Trilha de Sabedoria/Humanidade. |
+| **Novo nível em Campo Pessoal** | $8 + \text{nível a se comprar}$ | Reforça a rigidez mental e resistência contra manipulação mística. |
+| **Nova Disciplina (Nível 1)** | $\text{Geração do vampiro}$ | Em pontos de XP iguais ao número da Geração (13ª paga 13 XP; 8ª paga 8 XP). |
+| **Novo nível em Disciplina ($N \ge 2$)** | $\text{Nível atual} \times \text{Geração}$ | **Regra do Clã:** Em Disciplinas do seu Clã, o vampiro calcula o custo como se fosse **2 Gerações mais antigo** (ex: 13ª geração calcula como se fosse 11ª). Caitiff calcula como se fosse 1 geração mais novo. |
+| **Palavra-Chave: Médio $\to$ Bom** | 15 XP | Transforma uma aptidão cotidiana em ponto forte (+1 na parada). |
+| **Palavra-Chave: Bom $\to$ Ótimo** | 5 XP (ou 20 base) | Aumenta o bônus para +2 na parada. |
+| **Palavra-Chave: Ótimo $\to$ Excepcional** | 10 XP (ou 30 base) | Eleva para +3 na parada (ou +1 no Talento base caso seja 5+). |
+| **Palavra-Chave: Excep. $\to$ Extraordinário** | 10 XP (ou 40 base) | Eleva para +4 na parada (ou +2 no Talento base caso seja 5+). |
+| **Nível de Paixão** | $\text{Nível a se comprar} + 8$ | Metas de virtude e convicção do cainita. |
+| **Nível de Paixão Obscura** | $\text{Nível a se comprar} + 8$ | Impulsos destrutivos explorados pelo Guia da Besta. |
+| **Novo Flagelo da Besta** | $\text{Custo do Flagelo} + 8$ | Habilidade de horror manifestada pela Besta. |
 
-2. **Dinâmica em Mesa:**
-   - O Guia da Besta atua como uma voz no ouvido do personagem, sussurrando tentações, crueldades e impulsos predatórios durante momentos de estresse.
-   - Quando o personagem é provocado ou ferido, o Guia da Besta gasta pontos de Líbido para tentar induzir o Frenesi ou ativar Flagelos.
-   - O cainita resiste utilizando suas Virtudes ($\text{Autocontrole}$ ou $\text{Coragem}$) disputadas contra a Ângstia da Besta.
+---
+
+### 3. A Dinâmica do Guia da Besta
+
+Em *As Regras de Ouro 2.0*, a Besta não é uma abstração estática nem uma responsabilidade deixada nos ombros do Narrador: **ela é controlada e interpretada ativamente por outro jogador da mesa**, designado como o Guia da Besta daquele personagem.
+
+#### 3.1 Atributos da Besta
+A ficha da Besta possui mecânicas e recursos próprios:
+1. **Ângstia (1 a 10):** A força da fúria, do desespero e da revolta da criatura. Usada em paradas de teste de disputa para tentar induzir o hospedeiro ao Frenesi.
+2. **Líbido (1 a 10):** A reserva instintiva de energia da Besta, alimentada pela queima de sangue, fome e instintos predatórios do vampiro.
+3. **Paixões Obscuras:** Vícios, rancores e desejos sórdidos que provocam prazer sádico na Besta e lhe conferem bônus quando o hospedeiro cede a eles.
+4. **Flagelos:** Mutações e poderes monstruosos manifestados no corpo ou na psique (como *Descontrole Emocional*, *Rompante de Fúria*, *A Pele do Lobo*, *Cria do Inferno*).
+5. **XP da Besta:** Pontos acumulados exclusivamente pelo Guia da Besta durante as sessões para comprar novos Flagelos e fortalecer o horror interior.
+
+#### 3.2 O Papel do Guia em Jogo
+- O Guia da Besta atua como o "demônio no ombro", sussurrando pensamentos cruéis, impulsos vingativos e sugestões violentas no ouvido do jogador quando este passa por situações de pressão social, humilhação ou dor física.
+- Quando o cainita é ferido, provocado ou exposto ao sangue, o Guia da Besta pode gastar Líbido para desafiar o controle do vampiro. O jogador resiste utilizando suas Virtudes ($\text{Autocontrole}$ ou $\text{Coragem}$) disputadas contra a Ângstia da Besta.
+- A mecânica transforma o terror pessoal em uma experiência teatral compartilhada, garantindo que o horror vampírico esteja sempre vivo na mesa sem sobrecarregar a condução do Narrador.

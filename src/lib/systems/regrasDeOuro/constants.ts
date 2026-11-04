@@ -174,6 +174,12 @@ export const CLANS_REGRAS_DE_OURO: Record<string, ClanDefinition> = {
     disciplines: ["Dominação", "Fortitude", "Presença"],
     weakness: "Paladar rarefeito com 3 restrições. Vômito e 1 dano no tórax se consumir outro sangue mortal."
   },
+  "Salubri": {
+    name: "Salubri",
+    nickname: "Curandeiros / Ladrões de Alma",
+    disciplines: ["Auspícios", "Fortitude", "Obeah"],
+    weakness: "Terceiro olho na fronte. Se Trilha cair a 8 ou menor, perde uso de Obeah até restaurar a 10. Caçados pelos Tremere."
+  },
   "Caitiff": {
     name: "Caitiff",
     nickname: "Refugos",
