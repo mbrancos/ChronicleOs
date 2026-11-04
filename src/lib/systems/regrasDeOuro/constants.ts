@@ -220,3 +220,6 @@ export const VITAE_BY_GENERATION: Record<number, { maxVitae: number; spendPerTur
   5: { maxVitae: 40, spendPerTurn: 8 },
   4: { maxVitae: 50, spendPerTurn: 10 }
 };
+
+export const CLANS_REGROURO = CLANS_REGRAS_DE_OURO;
+export const CLANS_DATA = CLANS_REGRAS_DE_OURO;

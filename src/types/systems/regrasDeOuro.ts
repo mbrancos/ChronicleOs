@@ -49,10 +49,42 @@ export interface SectorDamage {
 
 export type AnatomicalVitality = Record<BodySectorId, SectorDamage>;
 
+export interface SubNivelDisciplina {
+  codigo: string;
+  nome: string;
+  descricao: string;
+  ativo: boolean;
+}
+
 export interface RegrasDeOuroDisciplinaAdquirida {
   id: string;
   nome: string; // Ex: "Celeridade"
   nivel: number; // 1 a 5
+  subNiveisAtivos?: SubNivelDisciplina[];
+  descricao?: string;
+}
+
+export type RegrasDeOuroDisciplina = RegrasDeOuroDisciplinaAdquirida;
+
+export interface FlageloEntry {
+  id: string;
+  nome: string;
+  descricao: string;
+  nivel?: number;
+  custo?: number;
+}
+
+export interface RegrasDeOuroBesta {
+  nivel: number;
+  angstia: number;
+  libido: number;
+  flagelos?: FlageloEntry[];
+}
+
+export interface RegrasDeOuroTrilha {
+  nome: string;
+  nivel: number;
+  pecados?: string[];
 }
 
 export interface GuiaDaBestaData {
