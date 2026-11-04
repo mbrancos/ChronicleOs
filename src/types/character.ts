@@ -1,3 +1,7 @@
+import type { SystemId, RegrasDeOuroSheetData } from "./systems/regrasDeOuro";
+
+export type { SystemId, RegrasDeOuroSheetData };
+
 export interface CharacterProfile {
   name?: string; // Nome editável do vampiro
   portrait_url?: string; // Para futura integração com upload ou links de imagens
@@ -202,7 +206,10 @@ export interface CharacterSheetData {
     isAlive: boolean;
   }>;
   predatorSelections?: PredatorSelections;
+  systemId?: "v5";
 }
+
+export type AnySheetData = CharacterSheetData | RegrasDeOuroSheetData;
 
 export const DEFAULT_CHARACTER_DATA: CharacterSheetData = {
   profile: {
