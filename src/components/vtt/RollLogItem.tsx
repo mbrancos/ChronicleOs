@@ -271,6 +271,91 @@ export default function RollLogItem({
     );
   }
 
+  // RENDERIZAÇÃO DE ROLAGEM: REGRAS DE OURO 2.0 (E ainda chove)
+  if ((roll.resultData as any).type === "regras_de_ouro" || (roll.resultData as any).type === "regras_de_ouro_roll") {
+    const rData = roll.resultData as any;
+    const characterName = roll.characterName || "Personagem";
+    const difficulty = rData.difficulty ?? 6;
+    const successes = rData.successes ?? 0;
+    const diceList: Array<{ value: number }> = rData.diceList || (rData.normalDice ? rData.normalDice.map((v: number) => ({ value: v })) : []);
+    const isCritical = rData.isCritical ?? false;
+    const isBotch = rData.isBotch ?? (rData.isBestial && successes === 0);
+    const keyword = rData.keywordName;
+
+    return (
+      <div className={`backdrop-blur-md rounded-sm p-3 flex flex-col space-y-2 border select-text ${
+        isCritical
+          ? "bg-amber-950/20 border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.15)]"
+          : isBotch
+          ? "bg-hunger-red/15 border-hunger-red/50 shadow-[0_0_12px_rgba(239,68,68,0.2)] animate-pulse-subtle"
+          : successes > 0
+          ? "bg-bg-card-dark/85 border-white/10"
+          : "bg-bg-card-dark/60 border-white/5 opacity-80"
+      }`}>
+        {/* Cabeçalho */}
+        <div className="flex justify-between items-center text-[9px] font-data tracking-wider">
+          <div className="flex items-center space-x-1.5 truncate max-w-[80%]">
+            <span className="font-bold text-text-primary truncate">{characterName}</span>
+            <span className="px-1.5 py-0.2 rounded-2xs text-[8px] uppercase tracking-wider font-bold bg-amber-950/60 text-amber-300 border border-amber-500/40">
+              Regras de Ouro
+            </span>
+            <span className="text-text-dim/80 font-semibold truncate">
+              {roll.poolName || "Teste de Talento"}
+            </span>
+          </div>
+          <span className="text-[8px] text-text-dim font-mono shrink-0">{timeStr}</span>
+        </div>
+
+        {/* Informações da Parada e Palavra-Chave */}
+        <div className="text-xs text-text-primary font-reading flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-data text-text-muted">Dificuldade: {difficulty}</span>
+            {keyword && (
+              <span className="text-[10px] font-data text-amber-300 bg-amber-950/40 px-1.5 py-0.5 rounded-2xs border border-amber-500/30">
+                🏷️ {keyword}
+              </span>
+            )}
+          </div>
+          <div className="text-right">
+            <span className={`font-mono text-sm font-bold ${
+              isCritical ? "text-amber-300" : isBotch ? "text-hunger-red" : successes > 0 ? "text-gold-accent" : "text-text-dim"
+            }`}>
+              {isCritical ? `Crítico! (${successes} suc)` : isBotch ? `Falha Crítica! (0 suc)` : `${successes} sucesso${successes === 1 ? "" : "s"}`}
+            </span>
+          </div>
+        </div>
+
+        {/* Dados Rolados */}
+        <div className="flex flex-wrap gap-1 items-center bg-black/30 p-2 rounded-xs border border-white/5">
+          {diceList.map((d: any, idx: number) => {
+            const val = typeof d === "number" ? d : d.value;
+            const isSuccess = val >= difficulty;
+            const isTen = val === 10;
+            const isOne = val === 1;
+
+            return (
+              <div
+                key={idx}
+                className={`w-6 h-6 rounded-xs border flex items-center justify-center font-mono font-bold text-[10px] ${
+                  isTen
+                    ? "bg-amber-950/70 border-amber-500 text-amber-300 shadow-[0_0_6px_rgba(245,158,11,0.4)]"
+                    : isSuccess
+                    ? "bg-gold-accent/20 border-gold-accent text-gold-accent"
+                    : isOne
+                    ? "bg-hunger-red/20 border-hunger-red text-hunger-red"
+                    : "bg-black/40 border-white/10 text-text-dim"
+                }`}
+                title={`Dado ${idx + 1}: ${val}`}
+              >
+                {val}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   // Ordenação inteligente de dados (preservando o índice original para dados normais)
   let sortedNormalDice: Array<{ value: number; originalIdx: number }> = [];
   let sortedHungerDice: number[] = [];

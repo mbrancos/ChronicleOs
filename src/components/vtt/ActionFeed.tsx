@@ -11,7 +11,7 @@ export interface RollItem {
   characterId: string | null;
   characterName: string;
   poolName: string;
-  resultData: V5RollResult | RouseCheckResult;
+  resultData: V5RollResult | RouseCheckResult | any;
   hungerDice: number;
   isRerolled: boolean;
   isSecret: boolean;
