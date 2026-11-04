@@ -1,4 +1,4 @@
-import { BodySectorId, PalavraChaveGrau, RegrasDeOuroTalentos, SectorDamage } from "@/types/systems/regrasDeOuro";
+import { BodySectorId, PalavraChaveGrau, RegrasDeOuroTalentos, SectorDamage } from "../../../types/systems/regrasDeOuro";
 
 export interface ArchetypeDefinition {
   name: string;
