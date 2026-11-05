@@ -327,6 +327,7 @@ export function createInitialRegrasDeOuroSheet(profile?: {
       { id: "pk3", nome: "Furtividade", grau: "otimo" }
     ],
     disciplinas: [],
+    rituais: [],
     vitalidade: JSON.parse(JSON.stringify(INITIAL_ANATOMICAL_VITALITY)),
     vitae: {
       atual: vitaeConfig.maxVitae,

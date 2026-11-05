@@ -523,6 +523,8 @@ export default function RegrasDeOuroSheetView({
           <DisciplinesTree
             disciplinas={sheetData.disciplinas}
             onChangeDisciplinas={(disc) => handleUpdate({ disciplinas: disc })}
+            rituais={sheetData.rituais || []}
+            onChangeRituais={(rit) => handleUpdate({ rituais: rit })}
             disabled={disabled}
           />
         </div>

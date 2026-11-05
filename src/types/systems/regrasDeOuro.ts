@@ -54,14 +54,25 @@ export interface SubNivelDisciplina {
   nome: string;
   descricao: string;
   ativo: boolean;
+  customizado?: boolean;
+}
+
+export interface RitualTaumaturgicoEntry {
+  id: string;
+  nome: string;
+  nivel: number; // 1 a 5
+  descricao: string;
+  customizado?: boolean;
 }
 
 export interface RegrasDeOuroDisciplinaAdquirida {
   id: string;
-  nome: string; // Ex: "Celeridade"
+  nome: string; // Ex: "Taumaturgia: Rego Motus (Movimento da Mente)"
   nivel: number; // 1 a 5
   subNiveisAtivos?: SubNivelDisciplina[];
   descricao?: string;
+  senda?: string;
+  rituais?: RitualTaumaturgicoEntry[];
 }
 
 export type RegrasDeOuroDisciplina = RegrasDeOuroDisciplinaAdquirida;
@@ -114,6 +125,7 @@ export interface RegrasDeOuroSheetData {
   talentos: RegrasDeOuroTalentos;
   palavrasChave: PalavraChaveItem[];
   disciplinas: RegrasDeOuroDisciplinaAdquirida[];
+  rituais?: RitualTaumaturgicoEntry[];
   vitalidade: AnatomicalVitality;
   vitae: {
     atual: number;
