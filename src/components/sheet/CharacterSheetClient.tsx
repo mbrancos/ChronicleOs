@@ -2787,19 +2787,27 @@ export default function CharacterSheetClient({
                             onChange={(e) => setNewPowerName(e.target.value)}
                             className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent flex-1 h-9 font-reading"
                           />
-                          <div className="flex items-center space-x-2">
-                            <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Nível:</label>
-                            <select
-                              value={newPowerLevel}
-                              onChange={(e) => setNewPowerLevel(Number(e.target.value))}
-                              className="bg-bg-input border border-white/10 text-text-primary text-xs p-2 rounded-sm outline-none focus:border-gold-accent h-9"
-                            >
-                              {Array.from({ length: isOverrideActive ? 5 : disc.level }).map((_, idx) => (
-                                <option key={idx + 1} value={idx + 1} className="bg-bg-card">
-                                  {idx + 1}
-                                </option>
-                              ))}
-                            </select>
+                          <div className="flex items-center space-x-1.5">
+                            <label className="text-[10px] text-text-muted uppercase tracking-wider font-semibold mr-1">Nível:</label>
+                            <div className="flex gap-1">
+                              {Array.from({ length: isOverrideActive ? 5 : disc.level }).map((_, idx) => {
+                                const lvl = idx + 1;
+                                return (
+                                  <button
+                                    key={lvl}
+                                    type="button"
+                                    onClick={() => setNewPowerLevel(lvl)}
+                                    className={`w-7 h-7 rounded-xs border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center ${
+                                      newPowerLevel === lvl
+                                        ? "bg-blood-red/40 border-blood-red text-white shadow-[0_0_6px_rgba(200,36,52,0.4)]"
+                                        : "bg-bg-input border-white/10 text-text-muted hover:border-white/30"
+                                    }`}
+                                  >
+                                    {lvl}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                         <div className="flex justify-end space-x-2 pt-1">

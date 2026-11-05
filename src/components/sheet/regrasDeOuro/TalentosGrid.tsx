@@ -56,8 +56,8 @@ export default function TalentosGrid({
           </span>
         </div>
 
-        {/* 6 Bolinhas clicáveis (0 a 6) */}
-        <div className="flex items-center gap-1.5">
+        {/* 6 Bolinhas clicáveis (0 a 6) com Touch Target Generoso (Mobile-Friendly) */}
+        <div className="flex items-center gap-0.5">
           {[1, 2, 3, 4, 5, 6].map((dot) => {
             const filled = (value ?? 0) >= dot;
             return (
@@ -73,15 +73,19 @@ export default function TalentosGrid({
                     onChangeTalento(key, dot);
                   }
                 }}
-                className={`w-3.5 h-3.5 rounded-full border transition-all cursor-pointer flex items-center justify-center ${
-                  filled
-                    ? variant === "red"
-                      ? "bg-blood-red border-blood-red shadow-[0_0_5px_rgba(200,36,52,0.6)]"
-                      : "bg-gold-accent border-gold-accent shadow-[0_0_5px_rgba(255,216,77,0.5)]"
-                    : "bg-transparent border-white/20 hover:border-white/50"
-                } disabled:cursor-not-allowed`}
+                className="p-1 cursor-pointer flex items-center justify-center disabled:cursor-not-allowed group/dot"
                 title={`${label}: ${dot} ponto${dot > 1 ? "s" : ""}`}
-              />
+              >
+                <span
+                  className={`w-3.5 h-3.5 rounded-full border transition-all flex items-center justify-center ${
+                    filled
+                      ? variant === "red"
+                        ? "bg-blood-red border-blood-red shadow-[0_0_5px_rgba(200,36,52,0.6)]"
+                        : "bg-gold-accent border-gold-accent shadow-[0_0_5px_rgba(255,216,77,0.5)]"
+                      : "bg-transparent border-white/20 group-hover/dot:border-white/60"
+                  }`}
+                />
+              </button>
             );
           })}
           <span className="ml-1 text-[11px] font-mono text-text-muted w-3 text-right">

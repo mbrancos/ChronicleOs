@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import type { AnatomicalVitality, BodySectorId } from "@/types/systems/regrasDeOuro";
 import { applyAnatomicalDamage, healSectorDamage } from "@/lib/systems/regrasDeOuro/rules";
+import GothicSelect from "@/components/common/GothicSelect";
 
 interface AnatomicalHealthTrackerProps {
   vitality: AnatomicalVitality;
@@ -133,8 +134,8 @@ export default function AnatomicalHealthTracker({
             </p>
           </div>
 
-          {/* Penalidade atual */}
-          <div className="text-right">
+          {/* Penalidade atual e Ação Rápida */}
+          <div className="text-right flex items-center gap-1.5">
             <span
               className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded-xs ${
                 sector.penalty < 0
@@ -142,8 +143,22 @@ export default function AnatomicalHealthTracker({
                   : "text-text-dim"
               }`}
             >
-              {sector.penalty < 0 ? `${sector.penalty} dados` : "Sem Penalidade"}
+              {sector.penalty < 0 ? `${sector.penalty} dados` : "Íntegro"}
             </span>
+
+            {!disabled && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSector(sectorId);
+                  setIsDamageModalOpen(true);
+                }}
+                className="text-[9px] px-1.5 py-0.5 rounded-2xs border border-white/10 hover:border-hunger-red/50 hover:bg-hunger-red/10 text-text-dim hover:text-white transition-colors cursor-pointer"
+                title={`Registrar dano em ${meta.label}`}
+              >
+                + Dano
+              </button>
+            )}
           </div>
         </div>
 
@@ -255,14 +270,17 @@ export default function AnatomicalHealthTracker({
 
       {/* Modal de Aplicação de Dano */}
       {isDamageModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => setIsDamageModalOpen(false)}
+        >
           <div
             className="w-full max-w-md bg-bg-card border border-hunger-red/40 rounded-sm p-6 relative shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setIsDamageModalOpen(false)}
-              className="absolute top-4 right-4 text-text-dim hover:text-white transition-colors cursor-pointer text-base"
+              className="absolute top-4 right-4 text-text-dim hover:text-white transition-colors cursor-pointer text-base w-8 h-8 flex items-center justify-center rounded-xs hover:bg-white/10"
             >
               ✕
             </button>
@@ -277,17 +295,17 @@ export default function AnatomicalHealthTracker({
                 <label className="text-[10px] uppercase tracking-widest font-data text-text-muted block">
                   Setor Corporal Atingido
                 </label>
-                <select
+                <GothicSelect
+                  variant="blood"
                   value={selectedSector}
-                  onChange={(e) => setSelectedSector(e.target.value as BodySectorId)}
-                  className="w-full bg-bg-input border border-white/10 rounded-sm px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-hunger-red transition-colors"
-                >
-                  {SECTORS_META.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label} {s.isVital ? "(Vital)" : "(Não-vital)"}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedSector(val as BodySectorId)}
+                  options={SECTORS_META.map((s) => ({
+                    value: s.id,
+                    label: `${s.label} ${s.isVital ? "(Vital)" : "(Não-vital)"}`,
+                    description: s.description,
+                    badge: s.isVital ? "VITAL" : undefined,
+                  }))}
+                />
               </div>
 
               {/* Tipo de Dano */}

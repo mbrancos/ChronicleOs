@@ -334,16 +334,24 @@ export function createInitialRegrasDeOuroSheet(profile?: {
       gastoPorTurno: vitaeConfig.spendPerTurn
     },
     paixoes: [
-      { id: "p1", nome: "Sobreviver à noite", nivel: 3 }
+      { id: "p1", nome: "Sobreviver à noite", nivel: 3, emocao: "Determinação" }
+    ],
+    grilhoes: [
+      { id: "g1", nome: "Relógio do Criador", nivel: 2, emocao: "Nostalgia" }
     ],
     vantagens: [],
     desvantagens: [],
     peculiaridades: [],
     besta: {
-      angstia: 3,
+      angstia: Math.max(1, 10 - initialTrilha),
+      pontosAngustia: 0,
       libido: 1,
+      simbolismoArcano: "O Lobo",
       paixoesObscuras: [
-        { id: "po1", nome: "Fúria destrutiva", nivel: 2 }
+        { id: "po1", nome: "Fúria destrutiva", nivel: 2, emocao: "Ódio cego" }
+      ],
+      grilhoesObscuros: [
+        { id: "go1", nome: "Túmulo abandonado", nivel: 2, emocao: "Culpa amarga" }
       ],
       flagelos: [],
       xpBesta: { total: 0, gasto: 0 }

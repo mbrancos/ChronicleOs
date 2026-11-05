@@ -88,10 +88,13 @@ export interface RegrasDeOuroTrilha {
 }
 
 export interface GuiaDaBestaData {
-  angstia: number; // 1 a 10
+  angstia: number; // 1 a 10 (permanente)
+  pontosAngustia?: number; // 0 a 10 (volátil)
   libido: number;  // 1 a 10
-  paixoesObscuras: Array<{ id: string; nome: string; nivel: number }>;
-  flagelos: Array<{ id: string; nome: string; nivel: number; custo: number }>;
+  simbolismoArcano?: string; // "O Cordeiro" | "O Lobo" | "A Cobra" | "O Lagarto Alado (Dragão)" | "O Gato Preto"
+  paixoesObscuras: Array<{ id: string; nome: string; nivel: number; emocao?: string }>;
+  grilhoesObscuros?: Array<{ id: string; nome: string; nivel: number; emocao?: string }>;
+  flagelos: Array<{ id: string; nome: string; nivel: number; custo: number; tipo?: "branco" | "vermelho"; descricao?: string }>;
   xpBesta: { total: number; gasto: number };
 }
 
@@ -117,7 +120,8 @@ export interface RegrasDeOuroSheetData {
     maximo: number;
     gastoPorTurno: number;
   };
-  paixoes: Array<{ id: string; nome: string; nivel: number }>;
+  paixoes: Array<{ id: string; nome: string; nivel: number; emocao?: string }>;
+  grilhoes?: Array<{ id: string; nome: string; nivel: number; emocao?: string }>;
   vantagens: Array<{ id: string; nome: string; categoria: string; custo: number }>;
   desvantagens: Array<{ id: string; nome: string; categoria: string; pontos: number }>;
   peculiaridades: string[];

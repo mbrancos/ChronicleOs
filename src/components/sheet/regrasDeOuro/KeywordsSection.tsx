@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import type { PalavraChaveItem, PalavraChaveGrau, RegrasDeOuroTalentos } from "@/types/systems/regrasDeOuro";
 import { KEYWORD_MODIFIERS, TALENTOS_META } from "@/lib/systems/regrasDeOuro/constants";
+import GothicSelect from "@/components/common/GothicSelect";
 
 interface KeywordsSectionProps {
   palavrasChave: PalavraChaveItem[];
@@ -186,7 +187,10 @@ export default function KeywordsSection({
 
       {/* Modal Adicionar Palavra-Chave */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => setIsAddModalOpen(false)}
+        >
           <div
             className="w-full max-w-lg bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-2xl"
             onClick={(e) => e.stopPropagation()}
@@ -251,18 +255,20 @@ export default function KeywordsSection({
                   <label className="text-[10px] uppercase tracking-widest font-data text-amber-400 block">
                     Talento Bonificado (+1 ou +2 pontos permanentes)
                   </label>
-                  <select
-                    value={associatedTalent}
-                    onChange={(e) => setAssociatedTalent(e.target.value as keyof RegrasDeOuroTalentos)}
-                    className="w-full bg-bg-input border border-white/10 rounded-sm px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold-accent transition-colors"
-                  >
-                    <option value="">Nenhum talento associado</option>
-                    {TALENTOS_META.map((t) => (
-                      <option key={t.key} value={t.key}>
-                        {t.label} ({t.category === "fisico" ? "Físico" : "Mental"})
-                      </option>
-                    ))}
-                  </select>
+                  <GothicSelect
+                    variant="gold"
+                    value={associatedTalent || ""}
+                    onChange={(val) => setAssociatedTalent(val as keyof RegrasDeOuroTalentos)}
+                    placeholder="Nenhum talento associado"
+                    options={[
+                      { value: "", label: "Nenhum talento associado" },
+                      ...TALENTOS_META.map((t) => ({
+                        value: t.key,
+                        label: `${t.label} (${t.category === "fisico" ? "Físico" : "Mental"})`,
+                        badge: t.category === "fisico" ? "FÍS" : "MEN",
+                      })),
+                    ]}
+                  />
                 </div>
               )}
 

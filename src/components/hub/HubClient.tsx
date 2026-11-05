@@ -437,10 +437,10 @@ export default function HubClient({
                       </div>
 
                       {/* Botão Kebab para Opções da Crônica */}
-                      <div className="absolute top-4 right-4">
+                      <div className="absolute top-3 right-3">
                         <button
                           onClick={(e) => toggleMenu(camp.id, e)}
-                          className="text-text-dim hover:text-blood-red transition-colors cursor-pointer p-1 text-sm font-bold focus:outline-none"
+                          className="text-text-dim hover:text-blood-red transition-colors cursor-pointer w-8 h-8 flex items-center justify-center rounded-xs hover:bg-white/5 text-base font-bold focus:outline-none"
                           title="Opções da Crônica"
                         >
                           ⋮
@@ -684,10 +684,10 @@ export default function HubClient({
                       </div>
 
                       {/* Botão Kebab para Opções do Personagem */}
-                      <div className="absolute top-4 right-4">
+                      <div className="absolute top-3 right-3">
                         <button
                           onClick={(e) => toggleMenu(char.id, e)}
-                          className="text-text-dim hover:text-gold-accent transition-colors cursor-pointer p-1 text-sm font-bold focus:outline-none"
+                          className="text-text-dim hover:text-gold-accent transition-colors cursor-pointer w-8 h-8 flex items-center justify-center rounded-xs hover:bg-white/5 text-base font-bold focus:outline-none"
                           title="Opções do Vampiro"
                         >
                           ⋮
@@ -770,7 +770,10 @@ export default function HubClient({
       {/* MODAL GÓTICO: INICIAR NOVA CRÔNICA */}
       {/* ========================================== */}
       {isCampaignModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => setIsCampaignModalOpen(false)}
+        >
           <div
             className="w-full max-w-md bg-bg-card border border-blood-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(200,36,52,0.15)]"
             onClick={(e) => e.stopPropagation()}
@@ -873,7 +876,13 @@ export default function HubClient({
       {/* MODAL GÓTICO: CONFIRMAR EXCLUSÃO DE PERSONAGEM */}
       {/* ========================================== */}
       {isDeleteModalOpen && characterToDelete && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => {
+            setIsDeleteModalOpen(false);
+            setCharacterToDelete(null);
+          }}
+        >
           <div
             className="w-full max-w-md bg-bg-card border border-hunger-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(230,36,36,0.15)]"
             onClick={(e) => e.stopPropagation()}
@@ -921,7 +930,13 @@ export default function HubClient({
       {/* MODAL GÓTICO: TRANSFERIR PERSONAGEM */}
       {/* ========================================== */}
       {isTransferModalOpen && characterToTransfer && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => {
+            setIsTransferModalOpen(false);
+            setCharacterToTransfer(null);
+          }}
+        >
           <div
             className="w-full max-w-md bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(255,216,77,0.1)]"
             onClick={(e) => e.stopPropagation()}
@@ -991,7 +1006,10 @@ export default function HubClient({
       {/* MODAL GÓTICO: EDITAR CRÔNICA */}
       {/* ========================================== */}
       {isEditCampaignModalOpen && campaignToEdit && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => setIsEditCampaignModalOpen(false)}
+        >
           <div
             className="w-full max-w-md bg-bg-card border border-blood-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(200,36,52,0.15)]"
             onClick={(e) => e.stopPropagation()}
@@ -1061,7 +1079,13 @@ export default function HubClient({
       {/* MODAL GÓTICO: CONFIRMAR EXCLUSÃO DE CRÔNICA */}
       {/* ========================================== */}
       {isDeleteCampaignModalOpen && campaignToDelete && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => {
+            setIsDeleteCampaignModalOpen(false);
+            setCampaignToDelete(null);
+          }}
+        >
           <div
             className="w-full max-w-md bg-bg-card border border-hunger-red/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(230,36,36,0.15)]"
             onClick={(e) => e.stopPropagation()}
@@ -1116,7 +1140,10 @@ export default function HubClient({
       {/* MODAL GÓTICO: FORJAR NOVO PERSONAGEM COM ESCOLHA DE SISTEMA */}
       {/* ============================================================ */}
       {isCharSystemModalOpen && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div
+          className="fixed inset-0 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={() => setIsCharSystemModalOpen(false)}
+        >
           <div
             className="w-full max-w-md bg-bg-card border border-gold-accent/40 rounded-sm p-6 relative shadow-[0_0_25px_rgba(212,175,55,0.15)]"
             onClick={(e) => e.stopPropagation()}
