@@ -229,3 +229,122 @@ export const VITAE_BY_GENERATION: Record<number, { maxVitae: number; spendPerTur
 
 export const CLANS_REGROURO = CLANS_REGRAS_DE_OURO;
 export const CLANS_DATA = CLANS_REGRAS_DE_OURO;
+
+export interface SimbolismoArcano {
+  id: string;
+  nome: string;
+  titulo: string;
+  descricao: string;
+  vantagem: string;
+  desvantagem: string;
+}
+
+export const SIMBOLISMOS_ARCANOS: SimbolismoArcano[] = [
+  {
+    id: "cordeiro",
+    nome: "O Cordeiro",
+    titulo: "Besta da Melancolia e Auto-Indulgência",
+    descricao: "Prega a futilidade da existência e induz a Psique a se render pacificamente ou cometer suicídio.",
+    vantagem: "Se a fonte de provocação causar dano físico, a Psique sofre -2 na parada de resistência ao Frenesi.",
+    desvantagem: "Frenesi cessa imediatamente se receber 1 ponto de dano agravado ou sofrer dor física extrema."
+  },
+  {
+    id: "lobo",
+    nome: "O Lobo",
+    titulo: "Besta da Agressividade e Crueldade",
+    descricao: "Trata a Psique como uma fera a ser adestrada e uma arma afiada para despedaçar inimigos.",
+    vantagem: "Durante o Frenesi, os testes de Força e de Agilidade nunca têm resultado inferior a 10.",
+    desvantagem: "Cessa tão logo o alvo da ira seja destruído; converte-se em Frenesi Raposa diante de fogo ou luz solar."
+  },
+  {
+    id: "cobra",
+    nome: "A Cobra",
+    titulo: "Besta da Mentira, Suborno e Chantagem",
+    descricao: "Mestra das traições que opera por lábia, barganha e ameaça no estilo de um poderoso chefão do crime.",
+    vantagem: "Ganha +2 XP se cumprir um acordo com a Psique e a Psique recusar-se a cumprir sua parte.",
+    desvantagem: "Se a Cobra descumprir um acordo firmado com a Psique, fica proibida de usar Flagelos por 2 sessões."
+  },
+  {
+    id: "dragao",
+    nome: "O Lagarto Alado (Dragão)",
+    titulo: "Besta da Arrogância Medieval",
+    descricao: "Arrogante e metódico; ataca e destrói as pessoas e coisas que a Psique ama para forçar sua capitulação.",
+    vantagem: "Pode gastar XP para reduzir níveis de Grilhões ou Paixões negligenciados por mais de uma semana.",
+    desvantagem: "Comprar novos Flagelos ou Paixões/Grilhões Obscuros custa 10 + o custo normal em XP."
+  },
+  {
+    id: "gato_preto",
+    nome: "O Gato Preto",
+    titulo: "Besta Zombeteira e Boêmia",
+    descricao: "O prazer antes do dever: joga uma mão de 7 males com 3 augúrios diários e exige tiradas de humor negro ao fim do Frenesi.",
+    vantagem: "Resultado 10 automático em Agilidade; cumprir a lista de 7 males concede +4 XP para a Besta e +4 para a Psique.",
+    desvantagem: "Se não fizer uma tirada de humor negro inteligente ao matar a vítima, perde o uso de Flagelos até novo Frenesi."
+  }
+];
+
+export interface FlageloCanonico {
+  nome: string;
+  tipo: "branco" | "vermelho";
+  custo: number;
+  resumo: string;
+}
+
+export const FLAGELOS_CANONICOS: FlageloCanonico[] = [
+  // Flagelos Brancos (Comuns a Mortais, Carniçais e Vampiros)
+  { nome: "Murmúrios", tipo: "branco", custo: 1, resumo: "Sussurra diretamente na mente da Psique (1 frase por cena + 1 por resposta)." },
+  { nome: "Autotraição", tipo: "branco", custo: 1, resumo: "Gasta 1 Angústia; se rolar menos que o teste da Psique em hesitação, provoca falha." },
+  { nome: "Descontrole Emocional", tipo: "branco", custo: 2, resumo: "Gasta Trilha em Angústia para forçar o personagem a cometer ato em dilema extremo." },
+  { nome: "Stress", tipo: "branco", custo: 1, resumo: "Oferece 1 ação física extra à Psique em risco; cada uso concede +1 Angústia à Besta." },
+  { nome: "Ops! (Ato Falho)", tipo: "branco", custo: 2, resumo: "Gasta 1 Angústia para permutar dados mentais (trocar nomes, números, senhas)." },
+  { nome: "Esquecimento", tipo: "branco", custo: 2, resumo: "Gasta Trilha em Angústia para provocar amnésia situacional de objetos ou códigos." },
+  { nome: "Cama de Espinhos", tipo: "branco", custo: 3, resumo: "Invade os sonhos da Psique transformando-os em pesadelos aterrorizantes." },
+  { nome: "Calmaria", tipo: "branco", custo: 3, resumo: "Permite conduzir o Frenesi com inteligência e calma tática aparente." },
+  { nome: "Mal Reprimido", tipo: "branco", custo: 2, resumo: "Gasta pontos de Angústia volátil para elevar Angústia Permanente por 1 turno." },
+  { nome: "Possessão", tipo: "branco", custo: 3, resumo: "Disputa Trilha vs Angústia ao fim do Frenesi; vitória reinicia Frenesi por 2 Angústia." },
+  { nome: "Açoite", tipo: "branco", custo: 2, resumo: "Com 10 de Angústia, desfere chicotadas psicossomáticas dolorosas no corpo da Psique." },
+  { nome: "Talentos Sombrios", tipo: "branco", custo: 2, resumo: "2 pts por nível (máx 6) em Talentos físicos/mentais ativos apenas no Frenesi." },
+  { nome: "Rompante de Fúria", tipo: "branco", custo: 1, resumo: "Com 10 Angústia, gasta 1 ponto para assumir a voz por 1 turno e proferir xingamentos." },
+
+  // Flagelos Vermelhos (Sobrenaturais e Exclusivos de Vampiros)
+  { nome: "Exorcizar", tipo: "vermelho", custo: 3, resumo: "Drenar inocente reduz Angústia Permanente para 1; sem esse sangue, Besta ganha +2." },
+  { nome: "Bainha das Gerações", tipo: "vermelho", custo: 1, resumo: "Flagelos ocultos que se destravam a cada geração reduzida por Diablerie." },
+  { nome: "Delicatessen", tipo: "vermelho", custo: 1, resumo: "Sussurra desejo de beber sangue de alvos fascinantes; negação concede +2 Angústia." },
+  { nome: "Vício de Sangue", tipo: "vermelho", custo: 3, resumo: "Gasta 1 Angústia para viciar a Psique no sabor de uma vítima específica." },
+  { nome: "Pessimismo Sobrenatural", tipo: "vermelho", custo: 3, resumo: "Filtra percepções de disciplinas para revelar apenas o lado podre e vil do mundo." },
+  { nome: "Insônia", tipo: "vermelho", custo: 2, resumo: "Impede o desligamento de disciplinas sensoriais ativas por minutos iguais à Angústia." },
+  { nome: "Tortura Hedonista", tipo: "vermelho", custo: 3, resumo: "Transforma dor física em prazer sublime; penalidades de ferimento viram bônus." },
+  { nome: "Partilhar o Pão", tipo: "vermelho", custo: 1, resumo: "Induz desejo predatório e sede de sangue em um animal próximo por uma cena." },
+  { nome: "Olhos do Carrasco", tipo: "vermelho", custo: 1, resumo: "Mensagem corporal de ódio: +1 dado em intimidação, -2 dados em sociabilidade." },
+  { nome: "Auréola de Moscas", tipo: "vermelho", custo: 2, resumo: "Convoca hordas de ratos, moscas e animais borralheiros num raio de 1 km." },
+  { nome: "Mascarado", tipo: "vermelho", custo: 1, resumo: "Mostra a face da Besta no Frenesi, reduzindo Aparência até 0 ou -2." },
+  { nome: "A Pele de Cordeiro", tipo: "vermelho", custo: 1, resumo: "Gasta 1 Angústia para suprimir sinais físicos evidentes de Frenesi perante mortais." },
+  { nome: "A Pele do Lobo", tipo: "vermelho", custo: 4, resumo: "Trilha < 8 manifesta traços animais na carne (olhos amarelos, garras, orelhas)." },
+  { nome: "Cria do Inferno", tipo: "vermelho", custo: 2, resumo: "Formas animais de Proteísmo/Serpentis tornam-se aberrações titânicas monstruosas." },
+  { nome: "Cicatriz da Besta", tipo: "vermelho", custo: 1, resumo: "Crava marcas mutilantes no corpo durante o Frenesi que duram dias." },
+  { nome: "Eclipse", tipo: "vermelho", custo: 3, resumo: "Gasta 1 Angústia para prender o vampiro na forma animal por mais 30 minutos." },
+  { nome: "Pacto do Destino", tipo: "vermelho", custo: 2, resumo: "Guia dá 6 XP em troca de a Psique abdicar voluntariamente de 1 ponto de Trilha/Virtude." },
+  { nome: "Aparência Alternativa", tipo: "vermelho", custo: 1, resumo: "No Frenesi, o vampiro assume as feições de outra pessoa inteiramente distinta." },
+  { nome: "Espreita", tipo: "vermelho", custo: 4, resumo: "Obriga a Psique a rerolar um teste com Falha Crítica; Besta ganha +2 Angústia." },
+  { nome: "Estigma", tipo: "vermelho", custo: 1, resumo: "Manifesta sinal da maldição divina na pele por uma cena (coroa de espinhos, sem sombra)." },
+  { nome: "Senhor de Todas as Marés", tipo: "vermelho", custo: 3, resumo: "A Besta altera coincidências e memórias em troca da provação do Wasseil (frenesi bárbaro)." },
+  { nome: "Febre Espiritual", tipo: "vermelho", custo: 2, resumo: "Gasta 1 Líbido: todos com Campo Pessoal menor que a Psique ganham +1 Angústia." },
+  { nome: "Pedra Fundamental", tipo: "vermelho", custo: 2, resumo: "A permanência do cainita emana miasma que gera +2 Angústia diária nos habitantes locais." },
+  { nome: "Cálice Amargo", tipo: "vermelho", custo: 2, resumo: "Bebe Angústia de vítimas com o sangue ou contamina sangue doado com sua Angústia." },
+  { nome: "Relíquia Maculada", tipo: "vermelho", custo: 2, resumo: "Convoca arma forjada na Umbra durante o Frenesi com parada de ataque fixa em 10 dados." }
+];
+
+export interface ReliquiaMaculada {
+  nome: string;
+  custo: number;
+  dano: string;
+  propriedade: string;
+}
+
+export const RELIQUIAS_MACULADAS: ReliquiaMaculada[] = [
+  { nome: "Gancho de Açougueiro", custo: 2, dano: "Letal: Força / 2", propriedade: "Prende a carne; arrancar causa +1 dano letal adicional." },
+  { nome: "Torniquete Alicate", custo: 2, dano: "Agravado: 2 pontos", propriedade: "Ignora 10 RD (exceto Fortitude); corta cabos e esmaga membros." },
+  { nome: "Tesoura de Ossos", custo: 3, dano: "Agravado: 2 pontos", propriedade: "Dificuldade 6 Força para armar; fecha decepando ossos e ignorando RD." },
+  { nome: "Foice de Duas Mãos", custo: 3, dano: "Letal ou Agravado: Força + Lâminas", propriedade: "Giro no pivô (-4 na parada) converte todo o dano em dano Agravado." },
+  { nome: "Facão do Feitor", custo: 4, dano: "Letal convencional", propriedade: "Concede visão no escuro e eleva testes de Naturalista para 10 dados." },
+  { nome: "Foice do Castigo", custo: 5, dano: "Sobrenatural", propriedade: "Ponta inferior decompõe matéria orgânica com 50 anos de erosão; ponta superior queima." }
+];
