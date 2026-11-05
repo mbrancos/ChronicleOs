@@ -8,7 +8,6 @@ import type {
 } from "@/types/systems/regrasDeOuro";
 import GothicSelect from "@/components/common/GothicSelect";
 import {
-  DISCIPLINAS_CANONICAS_CATALOGO,
   CANONICAL_DISCIPLINES_LIST,
   SENDAS_TAUMATURGICAS,
   RITUAIS_TAUMATURGICOS_CATALOGO,
@@ -17,6 +16,13 @@ import {
   findCanonicalPower,
   isPlaceholderSubLevels,
 } from "@/lib/systems/regrasDeOuro/disciplinesCatalog";
+
+function generateSafeId(prefix: string): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 interface DisciplinesTreeProps {
   disciplinas: RegrasDeOuroDisciplina[];
@@ -110,7 +116,7 @@ export default function DisciplinesTree({
     const catalogItem = CANONICAL_DISCIPLINES_LIST.find((m) => m.nome === selectedDisciplineName);
 
     const newEntry: RegrasDeOuroDisciplina = {
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `disc-${Date.now()}`,
+      id: generateSafeId("disc"),
       nome: selectedDisciplineName.trim(),
       nivel: newDiscLevel,
       subNiveisAtivos: generateCanonicalSubLevels(selectedDisciplineName.trim(), newDiscLevel),
@@ -278,7 +284,7 @@ export default function DisciplinesTree({
     if (exists) return;
 
     const newRitual: RitualTaumaturgicoEntry = {
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `rit-${Date.now()}`,
+      id: generateSafeId("rit"),
       nome: ritualDef.nome,
       nivel: ritualDef.nivel,
       descricao: ritualDef.descricao,
@@ -291,7 +297,7 @@ export default function DisciplinesTree({
     if (!onChangeRituais || !customRitualForm.nome.trim()) return;
 
     const newRitual: RitualTaumaturgicoEntry = {
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `rit-${Date.now()}`,
+      id: generateSafeId("rit"),
       nome: customRitualForm.nome.trim(),
       nivel: customRitualForm.nivel,
       descricao: customRitualForm.descricao.trim() || "Ritual arcano desenvolvido pelo taumaturgo.",
