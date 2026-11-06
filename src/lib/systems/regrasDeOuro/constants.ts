@@ -189,15 +189,15 @@ export const CLANS_REGRAS_DE_OURO: Record<string, ClanDefinition> = {
 };
 
 export const INITIAL_ANATOMICAL_VITALITY: Record<BodySectorId, SectorDamage> = {
-  cabeca: { normal: 0, letal: 0, agravado: 0, maxNormal: 2, maxLetal: 2, maxAgravado: 2, penalty: 0 },
-  pescoco: { normal: 0, letal: 0, agravado: 0, maxNormal: 1, maxLetal: 1, maxAgravado: 1, penalty: 0 },
-  torax: { normal: 0, letal: 0, agravado: 0, maxNormal: 4, maxLetal: 4, maxAgravado: 4, penalty: 0 },
-  braco_d: { normal: 0, letal: 0, agravado: 0, maxNormal: 3, maxLetal: 3, maxAgravado: 3, penalty: 0 },
-  braco_e: { normal: 0, letal: 0, agravado: 0, maxNormal: 3, maxLetal: 3, maxAgravado: 3, penalty: 0 },
-  mao_d: { normal: 0, letal: 0, agravado: 0, maxNormal: 2, maxLetal: 2, maxAgravado: 2, penalty: 0 },
-  mao_e: { normal: 0, letal: 0, agravado: 0, maxNormal: 2, maxLetal: 2, maxAgravado: 2, penalty: 0 },
-  perna_d: { normal: 0, letal: 0, agravado: 0, maxNormal: 3, maxLetal: 3, maxAgravado: 3, penalty: 0 },
-  perna_e: { normal: 0, letal: 0, agravado: 0, maxNormal: 3, maxLetal: 3, maxAgravado: 3, penalty: 0 }
+  cabeca: { normal: 0, letal: 0, agravado: 0, maxNormal: 5, maxLetal: 4, maxAgravado: 3, penalty: 0 },
+  pescoco: { normal: 0, letal: 0, agravado: 0, maxNormal: 5, maxLetal: 4, maxAgravado: 3, penalty: 0 },
+  torax: { normal: 0, letal: 0, agravado: 0, maxNormal: 7, maxLetal: 6, maxAgravado: 5, penalty: 0 },
+  braco_d: { normal: 0, letal: 0, agravado: 0, maxNormal: 5, maxLetal: 4, maxAgravado: 3, penalty: 0 },
+  braco_e: { normal: 0, letal: 0, agravado: 0, maxNormal: 5, maxLetal: 4, maxAgravado: 3, penalty: 0 },
+  mao_d: { normal: 0, letal: 0, agravado: 0, maxNormal: 4, maxLetal: 3, maxAgravado: 2, penalty: 0 },
+  mao_e: { normal: 0, letal: 0, agravado: 0, maxNormal: 4, maxLetal: 3, maxAgravado: 2, penalty: 0 },
+  perna_d: { normal: 0, letal: 0, agravado: 0, maxNormal: 6, maxLetal: 5, maxAgravado: 4, penalty: 0 },
+  perna_e: { normal: 0, letal: 0, agravado: 0, maxNormal: 6, maxLetal: 5, maxAgravado: 4, penalty: 0 }
 };
 
 export const PANIC_TABLE: Array<{ minRoll: number; effect: string; actionLostTurns?: number; isFaint?: boolean; peculiaridade?: boolean }> = [

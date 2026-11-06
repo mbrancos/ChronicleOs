@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { RegrasDeOuroTalentos } from "@/types/systems/regrasDeOuro";
 import { TALENTOS_META } from "@/lib/systems/regrasDeOuro/constants";
 import SolidHeaderBanner from "@/components/common/SolidHeaderBanner";
@@ -18,6 +18,9 @@ export default function TalentosGrid({
   onRollTalento,
   disabled = false,
 }: TalentosGridProps) {
+  const [isFisicosOpen, setIsFisicosOpen] = useState(false); // Recolhido por padrão para caber na dobra!
+  const [isMentaisOpen, setIsMentaisOpen] = useState(false); // Recolhido por padrão para caber na dobra!
+
   const fisicos = TALENTOS_META.filter((t) => t.category === "fisico");
   const mentais = TALENTOS_META.filter((t) => t.category === "mental");
 
@@ -31,16 +34,16 @@ export default function TalentosGrid({
     return (
       <div
         key={key}
-        className="flex items-center justify-between h-10 px-2.5 rounded-xs border-b border-white/5 hover:bg-white/5 transition-colors group"
+        className="flex items-center justify-between h-8 px-2 rounded-xs border-b border-white/5 hover:bg-white/5 transition-colors group"
       >
         <div
-          className="flex flex-col cursor-pointer select-none"
+          className="flex flex-col cursor-pointer select-none min-w-0"
           onClick={() => onRollTalento?.(key, label, value)}
           title={`Clique para rolar teste de ${label} (${description})`}
         >
           <div className="flex items-center gap-1.5">
             <span
-              className={`text-xs font-data uppercase tracking-wider font-semibold transition-colors ${
+              className={`text-[11px] font-data uppercase tracking-wider font-semibold transition-colors truncate ${
                 variant === "red"
                   ? "group-hover:text-blood-red text-text-primary"
                   : "group-hover:text-gold-accent text-text-primary"
@@ -48,16 +51,13 @@ export default function TalentosGrid({
             >
               {label}
             </span>
-            <span className="text-[10px] text-text-dim opacity-0 group-hover:opacity-100 transition-opacity font-data">
-              🎲 Rolar
+            <span className="text-[9px] text-text-dim opacity-0 group-hover:opacity-100 transition-opacity font-data">
+              🎲
             </span>
           </div>
-          <span className="text-[9px] text-text-dim font-reading truncate max-w-44">
-            {description}
-          </span>
         </div>
 
-        {/* 6 Bolinhas clicáveis (0 a 6) com Touch Target Generoso (Mobile-Friendly) */}
+        {/* 6 Bolinhas clicáveis (0 a 6) */}
         <div className="flex items-center gap-0.5">
           {[1, 2, 3, 4, 5, 6].map((dot) => {
             const filled = (value ?? 0) >= dot;
@@ -74,22 +74,22 @@ export default function TalentosGrid({
                     onChangeTalento(key, dot);
                   }
                 }}
-                className="p-1 cursor-pointer flex items-center justify-center disabled:cursor-not-allowed group/dot"
+                className="p-0.5 cursor-pointer flex items-center justify-center disabled:cursor-not-allowed group/dot"
                 title={`${label}: ${dot} ponto${dot > 1 ? "s" : ""}`}
               >
                 <span
-                  className={`w-3.5 h-3.5 rounded-full border transition-all flex items-center justify-center ${
+                  className={`w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border transition-all flex items-center justify-center ${
                     filled
                       ? variant === "red"
-                        ? "bg-blood-red border-blood-red shadow-[0_0_5px_rgba(200,36,52,0.6)]"
-                        : "bg-gold-accent border-gold-accent shadow-[0_0_5px_rgba(255,216,77,0.5)]"
+                        ? "bg-blood-red border-blood-red shadow-[0_0_4px_rgba(200,36,52,0.6)]"
+                        : "bg-gold-accent border-gold-accent shadow-[0_0_4px_rgba(255,216,77,0.5)]"
                       : "bg-transparent border-white/20 group-hover/dot:border-white/60"
                   }`}
                 />
               </button>
             );
           })}
-          <span className="ml-1 text-[11px] font-mono text-text-muted w-3 text-right">
+          <span className="ml-1 text-[10px] font-mono text-text-muted w-3 text-right">
             {value ?? 0}
           </span>
         </div>
@@ -101,51 +101,96 @@ export default function TalentosGrid({
   const totalMentais = mentais.reduce((acc, t) => acc + (talentos[t.key] ?? 0), 0);
 
   return (
-    <div className="space-y-6">
-      {/* Talentos Físicos (3) */}
-      <div className="bg-noir-card border border-white/10 rounded-sm overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+    <div className="space-y-2">
+      {/* Barra de Talentos Físicos (3) */}
+      <div className="bg-noir-card border border-white/10 rounded-xs overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
         <SolidHeaderBanner
           title="TALENTOS FÍSICOS"
-          subtitle="(Força, Vigor e Agilidade)"
+          subtitle="(Força, Vigor, Agilidade)"
           icon="⚔"
           badge={`Total: ${totalFisicos} pts`}
           variant="crimson"
+          action={
+            <div className="flex items-center gap-2">
+              {!isFisicosOpen && (
+                <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-noir-text-muted">
+                  {fisicos.map((t) => (
+                    <span key={t.key} className="bg-black/50 px-1.5 py-0.5 rounded-2xs border border-white/10">
+                      {t.label}: <strong className="text-white">{talentos[t.key] ?? 0}</strong>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsFisicosOpen(!isFisicosOpen)}
+                className="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-2xs text-[9px] font-mono cursor-pointer transition-colors"
+              >
+                {isFisicosOpen ? "▲ Recolher" : "▼ Expandir"}
+              </button>
+            </div>
+          }
         />
 
-        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-          {fisicos.map((t) =>
-            renderDotLine(
-              t.key,
-              t.label,
-              talentos[t.key] ?? 0,
-              t.description,
-              "red"
-            )
-          )}
-        </div>
+        {isFisicosOpen && (
+          <div className="p-2 grid grid-cols-1 md:grid-cols-3 gap-2 bg-black/30">
+            {fisicos.map((t) =>
+              renderDotLine(
+                t.key,
+                t.label,
+                talentos[t.key] ?? 0,
+                t.description,
+                "red"
+              )
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Talentos Mentais (9) */}
-      <div className="bg-noir-card border border-white/10 rounded-sm overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+      {/* Barra de Talentos Mentais (9) */}
+      <div className="bg-noir-card border border-white/10 rounded-xs overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
         <SolidHeaderBanner
           title="TALENTOS MENTAIS"
           subtitle="(9 perícias cognitivas e interpessoais)"
           icon="◆"
           badge={`Total: ${totalMentais} pts`}
           variant="noir"
+          action={
+            <div className="flex items-center gap-2">
+              {!isMentaisOpen && (
+                <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-mono text-noir-text-muted truncate max-w-sm">
+                  {mentais.slice(0, 4).map((t) => (
+                    <span key={t.key} className="bg-black/50 px-1 py-0.5 rounded-2xs border border-white/10">
+                      {t.label.slice(0, 4)}: <strong className="text-white">{talentos[t.key] ?? 0}</strong>
+                    </span>
+                  ))}
+                  <span>...</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsMentaisOpen(!isMentaisOpen)}
+                className="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-2xs text-[9px] font-mono cursor-pointer transition-colors"
+              >
+                {isMentaisOpen ? "▲ Recolher" : "▼ Expandir (9)"}
+              </button>
+            </div>
+          }
         />
 
-        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-          {mentais.map((t) =>
-            renderDotLine(
-              t.key,
-              t.label,
-              talentos[t.key] ?? 0,
-              t.description,
-              "gold"
-            )
-          )}
-        </div>
+        {isMentaisOpen && (
+          <div className="p-2 grid grid-cols-1 md:grid-cols-3 gap-1.5 bg-black/30">
+            {mentais.map((t) =>
+              renderDotLine(
+                t.key,
+                t.label,
+                talentos[t.key] ?? 0,
+                t.description,
+                "gold"
+              )
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

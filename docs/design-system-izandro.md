@@ -113,12 +113,21 @@ A substituição dos cards de texto comuns pela **Silhueta Anatômica Vetorial I
             └──────┴──────┘
 ```
 
-1. **Cabeça (Vital)**: 3 caixas de ferimento. Afeta paradas mentais e físicas.
-2. **Pescoço (Vital)**: 2 caixas de ferimento. Risco de asfixia e decapitação.
-3. **Tórax (Vital)**: 4 caixas de ferimento. Penalidade afeta TODAS as ações físicas.
-4. **Braço Direito & Braço Esquerdo**: 3 caixas cada. Penalidade nas ações do respectivo membro.
-5. **Mão Direita & Mão Esquerda**: 2 caixas cada. Afeta empunhadura e manuseio fino.
-6. **Perna Direita & Perna Esquerda**: 4 caixas cada. Afeta mobilidade, esquiva e locomoção.
+### 4.1 Tabela Oficial de Dano por Região e d10 de Aleatoriedade
+
+Os números de 0 a 9 correspondem à rolagem de 1d10 para localização aleatória de impactos (ex: atropelamentos, explosões, tiros perdidos ou rajadas de combate).
+
+| Região Anatômica | Número no d10 | Vital? | 🩹 Contusivo (Curativo) | 🗡️ Letal (Lâmina) | 🔥 Agravado (Fogo) | Escala de Penalidades |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Cabeça** | `1` | Sim | 5 círculos | 4 círculos | 3 círculos | `0`, `-1`, `-2`, `-4`, `X` |
+| **Pescoço** | `0` | Sim | 5 círculos | 4 círculos | 3 círculos | `0`, `-1`, `-2`, `-4`, `X` |
+| **Tórax** | `5` e `6` | Sim | 7 círculos | 6 círculos | 5 círculos | `0`, `0`, `-1`, `-2`, `-3`, `-4`, `X` |
+| **Braço Direito** | `2` | Não | 5 círculos | 4 círculos | 3 círculos | `0`, `-1`, `-2`, `-3`, `X` |
+| **Braço Esquerdo** | `9` | Não | 5 círculos | 4 círculos | 3 círculos | `0`, `-1`, `-2`, `-3`, `X` |
+| **Mão Direita** | `3` | Não | 4 círculos | 3 círculos | 2 círculos | `0`, `-1`, `-2`, `X` |
+| **Mão Esquerda** | `8` | Não | 4 círculos | 3 círculos | 2 círculos | `0`, `-1`, `-2`, `X` |
+| **Perna Direita** | `4` | Não | 6 círculos | 5 círculos | 4 círculos | `0`, `0`, `-1`, `-2`, `-3`, `X` |
+| **Perna Esquerda** | `7` | Não | 6 círculos | 5 círculos | 4 círculos | `0`, `0`, `-1`, `-2`, `-3`, `X` |
 
 ### 4.2 Estados e Símbolos de Dano
 
@@ -127,12 +136,22 @@ A substituição dos cards de texto comuns pela **Silhueta Anatômica Vetorial I
 *   **Dano Letal (`✕`)**: Marcado com cruz sólida em `crimson-blood` (`#c82434`).
 *   **Dano Agravado (`✦`)**: Marcado com losango ou estrela em `crimson-aggravated` (`#800008`) com preenchimento em roxo-sangue profundo.
 
-### 4.3 Comportamento do Componente Interativo
-- A silhueta vetorial SVG exibe o corpo em traços de estilo necropsia/estudo anatômico noir.
-- Ao clicar em um setor do corpo:
-  - O membro é destacado com um contorno iluminado em carmesim (`crimson-glow`).
-  - Um menu flutuante compacto ou HUD lateral exibe os controles de dano do setor (`+ Contusivo`, `+ Letal`, `+ Agravado`, `Cura Rápida via Vitæ`).
-  - O setor exibe a penalidade corrente (ex: `-1 dado`, `-2 dados`, `INCAPACITADO`).
+### 4.3 Arquitetura Visual em Dobra Única de Tela e Interação de 1 Clique
+
+O componente foi dimensionado para caber **100% dentro de uma única dobra de tela** (sem rolagem vertical excessiva em resoluções de desktop/laptop):
+*   **Coluna Esquerda**: Cabeça [1], Braço D. [2], Mão D. [3], Perna D. [4].
+*   **Coluna Central**: Silhueta Humanoide Écorché artística com ramificações vasculares em carmesim arterial fluindo do coração, anéis nodais interativos com a numeração do d10 e o card do Tórax [5 • 6] posicionado no centro.
+*   **Coluna Direita**: Pescoço [0], Braço E. [9], Mão E. [8], Perna E. [7].
+*   **Ferramenta de Rolagem d10**: Botão `🎲 Rolar d10` na barra de topo que sorteia o d10 (0 a 9), anuncia a região atingida e acende a região correspondente no boneco!
+
+**Interação Rápida Direta**:
+1. Cada membro possui 3 colunas de marcadores com seus ícones dedicados no rodapé:
+   - 🩹 **Contusivo / Curativo**: Bolinha com preenchimento âmbar e barra `/`.
+   - 🗡️ **Letal / Lâmina**: Bolinha com preenchimento carmesim e cruz `✕`.
+   - 🔥 **Agravado / Fogo**: Bolinha com preenchimento vermelho escuro pulsante e estrela `✦`.
+2. **Clique Direto**: Clicar em qualquer bolinha marca ou desmarca o dano instantaneamente (**1 único clique**), sem abrir modais, sem dropdowns e sem confirmações chatas.
+3. **Cura com 1 Clique**: Um botão `🩸 Curar` dedicado em cada card ferido consome 1 ponto de Vitæ e cura o ferimento imediatamente.
+4. **Sincronia Visual**: Passar o mouse ou tocar em qualquer card destaca o respectivo membro na silhueta central (e vice-versa).
 
 ---
 

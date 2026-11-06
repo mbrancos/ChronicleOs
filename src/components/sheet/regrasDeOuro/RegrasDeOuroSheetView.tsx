@@ -248,12 +248,12 @@ export default function RegrasDeOuroSheetView({
   const totalPontosGrilhoes = (sheetData.grilhoes || []).reduce((acc, g) => acc + (g.nivel || 1), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* ======================================================== */}
       {/* 1. CABEÇALHO DO CAINITA (Com Dropdowns Góticos Customizados) */}
       {/* ======================================================== */}
-      <div className="bg-bg-card border border-white/10 rounded-sm p-5 relative shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-4 border-b border-white/10">
+      <div className="bg-bg-card border border-white/10 rounded-sm p-3.5 relative shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pb-3 border-b border-white/10">
           {/* Coluna 1: Clã e Conceito */}
           <div className="space-y-2">
             <div>
@@ -479,7 +479,7 @@ export default function RegrasDeOuroSheetView({
 
       {/* ABA 1: Talentos & Vitalidade Anatômica */}
       {activeTab === "talentos" && (
-        <div className="space-y-6">
+        <div className="space-y-3">
           <TalentosGrid
             talentos={sheetData.talentos}
             onChangeTalento={(key, val) => {
