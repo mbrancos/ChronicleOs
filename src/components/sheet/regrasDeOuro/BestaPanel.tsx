@@ -11,6 +11,7 @@ import {
   type SimbolismoArcano,
 } from "@/lib/systems/regrasDeOuro/constants";
 import GothicSelect from "@/components/common/GothicSelect";
+import SolidHeaderBanner from "@/components/common/SolidHeaderBanner";
 
 interface BestaPanelProps {
   besta: GuiaDaBestaData;
@@ -193,6 +194,27 @@ export default function BestaPanel({
 
   return (
     <div className="space-y-5">
+      {/* Banner Principal da Besta (The Beast Within) */}
+      <div className="rounded-sm overflow-hidden border border-crimson-blood/40 shadow-[0_4px_24px_rgba(200,36,52,0.12)]">
+        <SolidHeaderBanner
+          title="THE BEAST WITHIN • O MONSTRO INTERIOR"
+          subtitle="Angústia, Libido Reprimida e Flagelos da Besta"
+          icon="💀"
+          badge={`Angústia Perm: ${angustiaPermanente}`}
+          variant="crimson"
+          action={
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={handleRollPanic}
+              className="px-2.5 py-1 bg-crimson-blood text-white rounded-xs text-[10px] uppercase font-condensed font-bold tracking-wider hover:bg-crimson-blood/80 transition-all cursor-pointer shadow-[0_0_8px_rgba(200,36,52,0.4)] disabled:opacity-50"
+            >
+              🎲 Teste de Pânico
+            </button>
+          }
+        />
+      </div>
+
       {/* Grade com Trilha da Sabedoria e Medidores da Besta */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Painel da Trilha de Sabedoria */}

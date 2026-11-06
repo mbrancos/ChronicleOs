@@ -1,8 +1,20 @@
 import type { Metadata } from "next";
-import { Barlow, Nunito } from "next/font/google";
+import { Barlow, Nunito, Cinzel, Bebas_Neue } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { ToastProvider } from "@/context/ToastContext";
+
+const cinzel = Cinzel({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "900"],
+  variable: "--font-cinzel",
+});
+
+const bebasNeue = Bebas_Neue({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-bebas",
+});
 
 const barlow = Barlow({
   subsets: ["latin"],
@@ -49,7 +61,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${barlow.variable} ${nunito.variable} ${gin.variable} ${goodOT.variable} ${goodOTCondBold.variable} ${taroca.variable} h-full antialiased`}
+      className={`${cinzel.variable} ${bebasNeue.variable} ${barlow.variable} ${nunito.variable} ${gin.variable} ${goodOT.variable} ${goodOTCondBold.variable} ${taroca.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body 

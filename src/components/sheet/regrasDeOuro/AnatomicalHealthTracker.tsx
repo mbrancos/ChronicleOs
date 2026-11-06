@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import type { AnatomicalVitality, BodySectorId } from "@/types/systems/regrasDeOuro";
 import { applyAnatomicalDamage, healSectorDamage } from "@/lib/systems/regrasDeOuro/rules";
 import GothicSelect from "@/components/common/GothicSelect";
+import AnatomicalSilhouetteSVG from "./AnatomicalSilhouetteSVG";
 
 interface AnatomicalHealthTrackerProps {
   vitality: AnatomicalVitality;
@@ -107,29 +108,33 @@ export default function AnatomicalHealthTracker({
     if (!sector) return null;
     const meta = SECTORS_META.find((s) => s.id === sectorId)!;
     const hasDamage = sector.normal > 0 || sector.letal > 0 || sector.agravado > 0;
+    const isSelected = selectedSector === sectorId;
 
     return (
       <div
         key={sectorId}
-        className={`p-3 rounded-sm border transition-all ${
-          meta.isVital
-            ? "bg-bg-card/90 border-blood-red/40 hover:border-blood-red/70 shadow-[0_2px_12px_rgba(200,36,52,0.06)]"
-            : "bg-bg-card/70 border-white/10 hover:border-white/20"
+        onClick={() => setSelectedSector(sectorId)}
+        className={`p-3 rounded-sm border transition-all cursor-pointer ${
+          isSelected
+            ? "bg-noir-card-subtle border-white shadow-[0_0_12px_rgba(255,255,255,0.2)] ring-1 ring-white"
+            : meta.isVital
+            ? "bg-noir-card/90 border-crimson-blood/40 hover:border-crimson-blood/70 shadow-[0_2px_12px_rgba(200,36,52,0.06)]"
+            : "bg-noir-card/70 border-white/10 hover:border-white/30"
         }`}
       >
         <div className="flex justify-between items-start mb-2">
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-data uppercase tracking-wider font-bold text-text-primary">
+              <span className="text-xs font-condensed tracking-wider font-bold text-noir-text-primary uppercase">
                 {meta.label}
               </span>
               {meta.isVital && (
-                <span className="px-1 py-0.2 bg-blood-red/20 text-blood-red border border-blood-red/40 rounded-2xs text-[8px] uppercase font-bold tracking-widest">
+                <span className="px-1 py-0.2 bg-crimson-blood/20 text-crimson-blood border border-crimson-blood/40 rounded-2xs text-[8px] uppercase font-bold tracking-widest font-mono">
                   Vital
                 </span>
               )}
             </div>
-            <p className="text-[9px] text-text-dim font-reading leading-tight mt-0.5">
+            <p className="text-[9px] text-noir-text-muted font-reading leading-tight mt-0.5">
               {meta.description}
             </p>
           </div>
@@ -139,8 +144,8 @@ export default function AnatomicalHealthTracker({
             <span
               className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded-xs ${
                 sector.penalty < 0
-                  ? "bg-hunger-red/20 text-hunger-red border border-hunger-red/40"
-                  : "text-text-dim"
+                  ? "bg-crimson-blood/20 text-crimson-blood border border-crimson-blood/40"
+                  : "text-noir-text-muted"
               }`}
             >
               {sector.penalty < 0 ? `${sector.penalty} dados` : "Íntegro"}
@@ -149,11 +154,12 @@ export default function AnatomicalHealthTracker({
             {!disabled && (
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setSelectedSector(sectorId);
                   setIsDamageModalOpen(true);
                 }}
-                className="text-[9px] px-1.5 py-0.5 rounded-2xs border border-white/10 hover:border-hunger-red/50 hover:bg-hunger-red/10 text-text-dim hover:text-white transition-colors cursor-pointer"
+                className="text-[9px] px-1.5 py-0.5 rounded-2xs border border-white/10 hover:border-crimson-blood/50 hover:bg-crimson-blood/10 text-noir-text-muted hover:text-white transition-colors cursor-pointer font-condensed uppercase tracking-wider"
                 title={`Registrar dano em ${meta.label}`}
               >
                 + Dano
@@ -172,8 +178,11 @@ export default function AnatomicalHealthTracker({
               {sector.normal > 0 && (
                 <button
                   type="button"
-                  onClick={() => handleHeal(sectorId, "normal_all")}
-                  className="px-1.5 py-0.5 bg-amber-950/40 text-amber-300 hover:bg-amber-900 border border-amber-600/40 rounded-2xs text-[9px] font-data uppercase tracking-wider cursor-pointer transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHeal(sectorId, "normal_all");
+                  }}
+                  className="px-1.5 py-0.5 bg-amber-950/40 text-amber-300 hover:bg-amber-900 border border-amber-600/40 rounded-2xs text-[9px] font-condensed uppercase tracking-wider cursor-pointer transition-colors"
                   title="Curar todo dano Normal (Custo: 1 Sangue)"
                 >
                   Curar N
@@ -182,8 +191,11 @@ export default function AnatomicalHealthTracker({
               {sector.letal > 0 && (
                 <button
                   type="button"
-                  onClick={() => handleHeal(sectorId, "letal_one")}
-                  className="px-1.5 py-0.5 bg-blood-red/30 text-blood-red hover:bg-blood-red/50 border border-blood-red/40 rounded-2xs text-[9px] font-data uppercase tracking-wider cursor-pointer transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHeal(sectorId, "letal_one");
+                  }}
+                  className="px-1.5 py-0.5 bg-crimson-blood/30 text-white hover:bg-crimson-blood/50 border border-crimson-blood/40 rounded-2xs text-[9px] font-condensed uppercase tracking-wider cursor-pointer transition-colors"
                   title="Curar 1 ponto Letal (Custo: 1 Sangue)"
                 >
                   Curar L
@@ -192,8 +204,11 @@ export default function AnatomicalHealthTracker({
               {sector.agravado > 0 && (
                 <button
                   type="button"
-                  onClick={() => handleHeal(sectorId, "agravado_one")}
-                  className="px-1.5 py-0.5 bg-purple-950/40 text-purple-300 hover:bg-purple-900 border border-purple-600/40 rounded-2xs text-[9px] font-data uppercase tracking-wider cursor-pointer transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHeal(sectorId, "agravado_one");
+                  }}
+                  className="px-1.5 py-0.5 bg-purple-950/40 text-purple-300 hover:bg-purple-900 border border-purple-600/40 rounded-2xs text-[9px] font-condensed uppercase tracking-wider cursor-pointer transition-colors"
                   title="Curar 1 ponto Agravado (Custo: 1 Sangue + Repouso)"
                 >
                   Curar A
@@ -206,30 +221,36 @@ export default function AnatomicalHealthTracker({
     );
   };
 
+  const activeSectorMeta = SECTORS_META.find((s) => s.id === selectedSector) || SECTORS_META[0];
+  const activeSectorData = vitality[selectedSector] || { normal: 0, letal: 0, agravado: 0, penalty: 0 };
+
   return (
     <div className="space-y-4">
-      {/* Barra de Topo com Ações e Resumo de Sangue */}
-      <div className="flex justify-between items-center p-3 bg-bg-card/60 border border-white/10 rounded-sm">
-        <div>
-          <h3 className="text-sm font-gothic tracking-widest text-gold-accent uppercase flex items-center gap-2">
-            <span>Vitalidade Anatômica</span>
-            <span className="text-[10px] font-data text-text-dim lowercase tracking-normal">
-              (9 setores corporais com transbordamento)
+      {/* Barra de Topo Noir com Ações */}
+      <div className="flex flex-wrap justify-between items-center p-3 bg-black border-b-2 border-white/20 rounded-t-sm gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 bg-white text-black font-bold flex items-center justify-center text-xs font-mono">
+            ✚
+          </div>
+          <h3 className="text-sm font-condensed tracking-widest text-white uppercase font-bold flex items-center gap-2">
+            <span>SISTEMA DE DANO CORPORAL LOCALIZADO</span>
+            <span className="text-[10px] font-mono text-noir-text-muted lowercase tracking-normal hidden sm:inline">
+              (9 setores anatômicos)
             </span>
           </h3>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Legenda de Tipos de Dano */}
-          <div className="hidden sm:flex items-center gap-2 text-[10px] font-data text-text-muted mr-2">
+          <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-noir-text-secondary mr-2">
             <span className="flex items-center gap-1">
-              <span className="w-3.5 h-3.5 rounded-xs border border-amber-500 bg-amber-950/70 text-amber-300 font-mono text-[9px] flex items-center justify-center">/</span> Normal
+              <span className="w-3.5 h-3.5 rounded-xs border border-amber-500 bg-amber-950/70 text-amber-300 font-mono text-[9px] flex items-center justify-center font-bold">/</span> Normal
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3.5 h-3.5 rounded-xs border border-blood-red bg-blood-red/80 text-white font-mono text-[9px] flex items-center justify-center">✕</span> Letal
+              <span className="w-3.5 h-3.5 rounded-xs border border-crimson-blood bg-crimson-blood text-white font-mono text-[9px] flex items-center justify-center font-bold">✕</span> Letal
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3.5 h-3.5 rounded-xs border border-purple-500 bg-purple-950/80 text-purple-300 font-mono text-[9px] flex items-center justify-center">✦</span> Agravado
+              <span className="w-3.5 h-3.5 rounded-xs border border-purple-500 bg-purple-950/80 text-purple-300 font-mono text-[9px] flex items-center justify-center font-bold">✦</span> Agravado
             </span>
           </div>
 
@@ -237,34 +258,85 @@ export default function AnatomicalHealthTracker({
             type="button"
             disabled={disabled}
             onClick={() => setIsDamageModalOpen(true)}
-            className="px-3 py-1 bg-hunger-red/20 hover:bg-hunger-red/40 text-hunger-red border border-hunger-red/40 rounded-xs text-[10px] uppercase font-data font-semibold tracking-wider transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_8px_rgba(230,36,36,0.15)]"
+            className="px-3 py-1 bg-crimson-blood/20 hover:bg-crimson-blood/40 text-crimson-blood border border-crimson-blood/40 rounded-xs text-[11px] uppercase font-condensed font-bold tracking-wider transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_8px_rgba(200,36,52,0.2)]"
           >
             + Sofrer Dano
           </button>
         </div>
       </div>
 
-      {/* Grid Anatômico Estruturado */}
-      <div className="space-y-3">
-        {/* Setores Vitais: Cabeça, Pescoço, Tórax */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {renderSectorCard("cabeca")}
-          {renderSectorCard("pescoco")}
-          {renderSectorCard("torax")}
+      {/* Layout Dual: Silhueta SVG Interativa (Esquerda) + Grid de Setores (Direita) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* Coluna 1: Silhueta SVG com Painel do Membro em Foco */}
+        <div className="lg:col-span-5 space-y-3">
+          <AnatomicalSilhouetteSVG
+            vitality={vitality}
+            selectedSector={selectedSector}
+            onSelectSector={(sec) => setSelectedSector(sec)}
+            disabled={disabled}
+          />
+
+          {/* Card Focal do Membro Selecionado */}
+          <div className="p-3 bg-noir-card border border-white/15 rounded-sm space-y-2">
+            <div className="flex justify-between items-center border-b border-white/10 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-condensed tracking-widest uppercase text-white font-bold">
+                  FOCO: {activeSectorMeta.label}
+                </span>
+                {activeSectorMeta.isVital && (
+                  <span className="px-1 py-0.5 bg-crimson-blood/20 text-crimson-blood border border-crimson-blood/40 rounded-2xs text-[8px] uppercase font-bold tracking-widest font-mono">
+                    Órgão Vital
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-mono font-bold text-noir-text-secondary">
+                Penalidade:{" "}
+                <span className={activeSectorData.penalty < 0 ? "text-crimson-blood font-bold" : "text-white"}>
+                  {activeSectorData.penalty < 0 ? `${activeSectorData.penalty} dados` : "Nenhuma"}
+                </span>
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center pt-1">
+              {renderSectorBoxes(selectedSector)}
+
+              {!disabled && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsDamageModalOpen(true)}
+                    className="px-2 py-1 bg-crimson-blood text-white rounded-xs text-[10px] uppercase font-condensed font-bold tracking-wider hover:bg-crimson-blood/80 transition-all cursor-pointer"
+                  >
+                    + Dano no Membro
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Membros Superiores: Braços e Mãos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          {renderSectorCard("braco_d")}
-          {renderSectorCard("mao_d")}
-          {renderSectorCard("braco_e")}
-          {renderSectorCard("mao_e")}
-        </div>
+        {/* Coluna 2: Lista dos 9 Setores com Caixas e Detalhes */}
+        <div className="lg:col-span-7 space-y-3">
+          {/* Setores Vitais: Cabeça, Pescoço, Tórax */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            {renderSectorCard("cabeca")}
+            {renderSectorCard("pescoco")}
+            {renderSectorCard("torax")}
+          </div>
 
-        {/* Membros Inferiores: Pernas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {renderSectorCard("perna_d")}
-          {renderSectorCard("perna_e")}
+          {/* Membros Superiores: Braços e Mãos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+            {renderSectorCard("braco_d")}
+            {renderSectorCard("mao_d")}
+            {renderSectorCard("braco_e")}
+            {renderSectorCard("mao_e")}
+          </div>
+
+          {/* Membros Inferiores: Pernas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {renderSectorCard("perna_d")}
+            {renderSectorCard("perna_e")}
+          </div>
         </div>
       </div>
 

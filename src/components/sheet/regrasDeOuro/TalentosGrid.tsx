@@ -3,6 +3,7 @@
 import React from "react";
 import type { RegrasDeOuroTalentos } from "@/types/systems/regrasDeOuro";
 import { TALENTOS_META } from "@/lib/systems/regrasDeOuro/constants";
+import SolidHeaderBanner from "@/components/common/SolidHeaderBanner";
 
 interface TalentosGridProps {
   talentos: RegrasDeOuroTalentos;
@@ -102,20 +103,16 @@ export default function TalentosGrid({
   return (
     <div className="space-y-6">
       {/* Talentos Físicos (3) */}
-      <div className="bg-bg-card/70 border border-blood-red/30 rounded-sm p-4 relative shadow-[0_4px_16px_rgba(200,36,52,0.06)]">
-        <div className="flex justify-between items-center mb-3 pb-2 border-b border-blood-red/20">
-          <h3 className="text-sm font-gothic tracking-widest text-blood-red uppercase flex items-center gap-2">
-            <span>Talentos Físicos</span>
-            <span className="text-[10px] font-data text-text-dim lowercase tracking-normal">
-              (Força, Vigor e Agilidade)
-            </span>
-          </h3>
-          <span className="text-[10px] font-data text-text-muted">
-            Total: {totalFisicos} pts
-          </span>
-        </div>
+      <div className="bg-noir-card border border-white/10 rounded-sm overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+        <SolidHeaderBanner
+          title="TALENTOS FÍSICOS"
+          subtitle="(Força, Vigor e Agilidade)"
+          icon="⚔"
+          badge={`Total: ${totalFisicos} pts`}
+          variant="crimson"
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           {fisicos.map((t) =>
             renderDotLine(
               t.key,
@@ -129,20 +126,16 @@ export default function TalentosGrid({
       </div>
 
       {/* Talentos Mentais (9) */}
-      <div className="bg-bg-card/70 border border-gold-accent/30 rounded-sm p-4 relative shadow-[0_4px_16px_rgba(212,175,55,0.06)]">
-        <div className="flex justify-between items-center mb-3 pb-2 border-b border-gold-accent/20">
-          <h3 className="text-sm font-gothic tracking-widest text-gold-accent uppercase flex items-center gap-2">
-            <span>Talentos Mentais</span>
-            <span className="text-[10px] font-data text-text-dim lowercase tracking-normal">
-              (9 perícias cognitivas e interpessoais)
-            </span>
-          </h3>
-          <span className="text-[10px] font-data text-text-muted">
-            Total: {totalMentais} pts
-          </span>
-        </div>
+      <div className="bg-noir-card border border-white/10 rounded-sm overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+        <SolidHeaderBanner
+          title="TALENTOS MENTAIS"
+          subtitle="(9 perícias cognitivas e interpessoais)"
+          icon="◆"
+          badge={`Total: ${totalMentais} pts`}
+          variant="noir"
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           {mentais.map((t) =>
             renderDotLine(
               t.key,

@@ -1,13 +1,35 @@
 @import "tailwindcss";
 
 @theme {
-  /* Cores Base */
-  --color-bg-main: #060606;
-  --color-bg-card: #202020;
-  --color-bg-card-dark: #101014;
-  --color-bg-input: #111111;
+  /* Cores Base Noir Carmesim (Sistema Izandro) */
+  --color-noir-base: #08080a;
+  --color-noir-card: #121216;
+  --color-noir-subtle: #18181f;
+  --color-noir-input: #0c0c0f;
+  --color-noir-banner: #000000;
 
-  /* Cores Temáticas */
+  /* Cores de Texto Noir */
+  --color-noir-text-primary: #ffffff;
+  --color-noir-text-secondary: #b8b8c2;
+  --color-noir-text-muted: #6a6a75;
+
+  /* Bordas Noir */
+  --color-noir-border: rgba(255, 255, 255, 0.12);
+  --color-noir-border-strong: rgba(255, 255, 255, 0.25);
+
+  /* Carmesim Cirúrgico */
+  --color-crimson-blood: #c82434;
+  --color-crimson-dark: #68111a;
+  --color-crimson-aggravated: #800008;
+  --color-crimson-beast: #991b1b;
+
+  /* Cores Base V5 Legadas (para compatibilidade contínua) */
+  --color-bg-main: #060606;
+  --color-bg-card: #121216;
+  --color-bg-card-dark: #101014;
+  --color-bg-input: #0c0c0f;
+
+  /* Cores Temáticas V5 */
   --color-blood-red: #c82434;
   --color-burgundy: #68111a;
   --color-deep-crimson: #800008;
@@ -17,12 +39,17 @@
 
   /* Cores de Texto */
   --color-text-primary: #ffffff;
-  --color-text-muted: #b7b7b7;
-  --color-text-dim: #666666;
+  --color-text-muted: #b8b8c2;
+  --color-text-dim: #6a6a75;
 
-  /* Fontes Customizadas mapeadas para as variáveis injetadas pelo layout */
-  --font-gothic: var(--font-gin), serif;
-  --font-data: var(--font-barlow), sans-serif;
+  /* Tipografia do Design System Izandro */
+  --font-display: var(--font-cinzel), serif;
+  --font-condensed: var(--font-bebas), sans-serif;
+  --font-body: var(--font-barlow), sans-serif;
+
+  /* Fontes Legadas mapeadas para as variáveis injetadas pelo layout */
+  --font-gothic: var(--font-cinzel), var(--font-gin), serif;
+  --font-data: var(--font-bebas), var(--font-barlow), sans-serif;
   --font-reading: var(--font-nunito), sans-serif;
 
   /* Animações Customizadas */
@@ -41,7 +68,7 @@
 }
 
 body {
-  background-color: var(--color-bg-main);
-  color: var(--color-text-primary);
-  font-family: var(--font-reading);
+  background-color: var(--color-noir-base);
+  color: var(--color-noir-text-primary);
+  font-family: var(--font-body);
 }
