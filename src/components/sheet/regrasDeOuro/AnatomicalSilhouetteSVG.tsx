@@ -99,6 +99,7 @@ export default function AnatomicalSilhouetteSVG({
           {/* Imagem do Corpo Recortado */}
           <image
             href="/images/corpo-recortado.jpg"
+            xlinkHref="/images/corpo-recortado.jpg"
             x="0"
             y="0"
             width="383"

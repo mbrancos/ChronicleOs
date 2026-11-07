@@ -113,6 +113,9 @@ export default function CharacterSheetClient({
 
   // Estado da Ficha Regras de Ouro 2.0
   const [regrasDeOuroData, setRegrasDeOuroData] = useState<RegrasDeOuroSheetData>(() => {
+    if (isRegrasDeOuro && initialData && ((initialData as any).systemId === "regras_de_ouro" || (initialData as any).talentos)) {
+      return initialData as RegrasDeOuroSheetData;
+    }
     if ((initialData as any)?.systemId === "regras_de_ouro") {
       return initialData as RegrasDeOuroSheetData;
     }

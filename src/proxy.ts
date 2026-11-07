@@ -29,9 +29,9 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Intercepta todas as rotas para permitir redirecionamento inteligente.
-     * Ignora apenas arquivos estáticos e rotas de API internas do Next.
+     * Intercepta rotas dinâmicas para permitir redirecionamento inteligente.
+     * Ignora arquivos estáticos em public (images, favicon), assets do Next e APIs.
      */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api|_next/static|_next/image|images|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
