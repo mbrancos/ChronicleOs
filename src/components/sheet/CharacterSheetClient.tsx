@@ -121,7 +121,7 @@ export default function CharacterSheetClient({
 
   // Estados Globais de Ciclo de Vida
   const [status, setStatus] = useState<"DRAFT" | "READY" | "IN_PLAY">(initialStatus);
-  const [buildState, setBuildState] = useState<any>(initialBuildState);
+  const buildStateRef = useRef<any>(initialBuildState);
   const [activeTabId, setActiveTabId] = useState<string>("ficha");
   const [isEvolvingMode, setIsEvolvingMode] = useState(false);
   const [isOverrideActive, setIsOverrideActive] = useState(false);
@@ -142,12 +142,7 @@ export default function CharacterSheetClient({
   // Estado de Sincronização e Autosave
   const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const savedTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const buildStateRef = useRef(buildState);
   const statusRef = useRef(status);
-
-  useEffect(() => {
-    buildStateRef.current = buildState;
-  }, [buildState]);
 
   useEffect(() => {
     statusRef.current = status;
@@ -288,37 +283,6 @@ export default function CharacterSheetClient({
       isMessianic: result.isMessianic,
       isBestial: result.isBestial,
       diceList: result.diceList
-    });
-  };
-
-  const handleV5Roll = (diceCount: number, hungerCount: number, poolName: string) => {
-    const diceList: { type: "normal" | "hunger"; value: number }[] = [];
-    const hungerDice = Math.min(diceCount, Math.max(0, hungerCount));
-    const normalDice = Math.max(0, diceCount - hungerDice);
-
-    for (let i = 0; i < normalDice; i++) {
-      diceList.push({ type: "normal", value: Math.floor(Math.random() * 10) + 1 });
-    }
-    for (let i = 0; i < hungerDice; i++) {
-      diceList.push({ type: "hunger", value: Math.floor(Math.random() * 10) + 1 });
-    }
-
-    const normalSuccesses = diceList.filter(d => d.value >= 6).length;
-    const normalTens = diceList.filter(d => d.type === "normal" && d.value === 10).length;
-    const hungerTens = diceList.filter(d => d.type === "hunger" && d.value === 10).length;
-    const totalTens = normalTens + hungerTens;
-    const criticalPairs = Math.floor(totalTens / 2);
-    const extraSuccesses = criticalPairs * 2;
-    const successes = normalSuccesses + extraSuccesses;
-
-    setRollResult({
-      macroName: poolName,
-      totalPool: diceCount,
-      successes,
-      isCritical: criticalPairs > 0,
-      isMessianic: criticalPairs > 0 && hungerTens > 0,
-      isBestial: diceList.some(d => d.type === "hunger" && d.value === 1) && successes === 0,
-      diceList
     });
   };
 
@@ -657,10 +621,6 @@ export default function CharacterSheetClient({
                 isStoryteller={isStoryteller}
                 disabled={status === "IN_PLAY" && !isStoryteller}
                 isEvolvingMode={isEvolvingMode}
-                onToggleEvolvingMode={() => setIsEvolvingMode(!isEvolvingMode)}
-                chronicle={chronicle}
-                campaignId={campaignId}
-                onRollDice={handleV5Roll}
                 characterId={characterId}
                 onOpenAvatarModal={() => {
                   setAvatarUrlInput(character.profile?.avatarUrl || character.profile?.portrait_url || "");

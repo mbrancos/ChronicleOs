@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   CharacterSheetData,
   Specialty,
@@ -491,10 +491,6 @@ export interface V5SheetViewProps {
   isStoryteller: boolean;
   disabled: boolean;
   isEvolvingMode: boolean;
-  onToggleEvolvingMode: () => void;
-  chronicle: { id: string; name: string } | null;
-  campaignId?: string | null;
-  onRollDice?: (diceCount: number, hungerCount: number, poolName: string) => void;
   characterId?: string;
   onOpenAvatarModal?: () => void;
   characterType?: "jogador" | "npc" | "coterie";
@@ -511,10 +507,6 @@ export default function V5SheetView({
   isStoryteller,
   disabled,
   isEvolvingMode,
-  onToggleEvolvingMode,
-  chronicle,
-  campaignId,
-  onRollDice,
   characterId = "",
   onOpenAvatarModal,
   characterType = "jogador",
@@ -583,6 +575,7 @@ export default function V5SheetView({
         },
       }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     character.attributes?.physical?.stamina,
     character.attributes?.social?.composure,
