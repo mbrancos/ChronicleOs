@@ -196,8 +196,7 @@ export async function createCharacterAction(
   }
 }
 
-// Ação de Logout consolidada em auth.ts
-export { signOutAction } from "./auth";
+
 
 // Server Action para atualizar nome e descrição de uma campanha (crônica)
 export async function updateCampaignAction(campaignId: string, name: string, description?: string) {
