@@ -24,7 +24,7 @@ import AssetVaultModal from "@/components/media/AssetVaultModal";
 import { uploadMediaAssetAction, updateCharacterAvatarAction } from "@/app/actions/mediaActions";
 import { useToast } from "@/context/ToastContext";
 import type { SystemId, RegrasDeOuroSheetData } from "@/types/systems/regrasDeOuro";
-import { createInitialRegrasDeOuroSheet } from "@/lib/systems/regrasDeOuro/rules";
+import { createInitialRegrasDeOuroSheet, calculateRegrasDeOuroAllocation } from "@/lib/systems/regrasDeOuro/rules";
 import RegrasDeOuroSheetView from "@/components/sheet/regrasDeOuro/RegrasDeOuroSheetView";
 import V5SheetView, { 
   V5_RECOMMENDED_MACROS, 
@@ -163,13 +163,15 @@ export default function CharacterSheetClient({
       }
       return;
     }
-    if (!isRegrasDeOuro) {
-      const calculatedStatus = alloc.isDraft ? "DRAFT" : "READY";
-      if (status !== calculatedStatus) {
-        setStatus(calculatedStatus);
-      }
+    const isDraft = isRegrasDeOuro
+      ? calculateRegrasDeOuroAllocation(regrasDeOuroData).isDraft
+      : alloc.isDraft;
+
+    const calculatedStatus = isDraft ? "DRAFT" : "READY";
+    if (status !== calculatedStatus) {
+      setStatus(calculatedStatus);
     }
-  }, [alloc.isDraft, initialStatus, isRegrasDeOuro, status]);
+  }, [alloc.isDraft, initialStatus, isRegrasDeOuro, regrasDeOuroData, status]);
 
   // Autosave debounced para Regras de Ouro
   useAutosave(regrasDeOuroData, 1000, async (dataToSave) => {
@@ -645,6 +647,7 @@ export default function CharacterSheetClient({
                 characterName={initialName || "Novo Vampiro"}
                 isNarrator={isStoryteller}
                 disabled={status === "IN_PLAY" && !isStoryteller}
+                status={status}
                 onRollDice={handleRegrasDeOuroRoll}
               />
             ) : (

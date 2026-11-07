@@ -12,7 +12,9 @@ import {
   INITIAL_ANATOMICAL_VITALITY,
   KEYWORD_MODIFIERS,
   PANIC_TABLE,
-  VITAE_BY_GENERATION
+  VITAE_BY_GENERATION,
+  ETARIAS_CONFIG,
+  calculateInitialFlageloPoints,
 } from "./constants";
 
 export const VITAL_SECTORS: BodySectorId[] = ["cabeca", "pescoco", "torax"];
@@ -361,3 +363,212 @@ export function createInitialRegrasDeOuroSheet(profile?: {
     notes: ""
   };
 }
+
+export interface RegrasDeOuroKeywordsAlloc {
+  fracoBase: number;
+  bomBase: number;
+  otimoBase: number;
+  maxFracosExtras: number;
+  fracosAtuais: number;
+  fracosExtras: number;
+  bomPermitido: number;
+  bomAtuais: number;
+  otimoAtuais: number;
+  excepcionalAtuais: number;
+  extraordinarioAtuais: number;
+  bomRemaining: number;
+  otimoRemaining: number;
+}
+
+export interface RegrasDeOuroAllocation {
+  // Talentos
+  talentosQuota: number;
+  talentosSpent: number;
+  talentosRemaining: number;
+  talentosFisicosSpent: number;
+  talentosMentaisSpent: number;
+
+  // Virtudes
+  virtudesQuota: number;
+  virtudesSpent: number;
+  virtudesRemaining: number;
+
+  // Disciplinas
+  disciplinasQuota: number;
+  disciplinasSpent: number;
+  disciplinasRemaining: number;
+
+  // Palavras-Chave
+  keywordsAlloc: RegrasDeOuroKeywordsAlloc;
+
+  // Paixões e Grilhões
+  paixoesQuota: number;
+  paixoesSpent: number;
+  paixoesRemaining: number;
+  grilhoesQuota: number;
+  grilhoesSpent: number;
+  grilhoesRemaining: number;
+
+  // Besta
+  bestaPaixoesQuota: number;
+  bestaPaixoesSpent: number;
+  bestaPaixoesRemaining: number;
+  bestaGrilhoesQuota: number;
+  bestaGrilhoesSpent: number;
+  bestaGrilhoesRemaining: number;
+  flagelosBudget: number;
+  flagelosSpent: number;
+  flagelosRemaining: number;
+
+  // Desvantagens (Pontos de Criação extras desbloqueados)
+  desvantagensPontosTotal: number;
+
+  // Status
+  isDraft: boolean;
+}
+
+/**
+ * Calcula cotas dinâmicas, pontos gastos e pontos restantes durante a criação de personagem em Regras de Ouro.
+ */
+export function calculateRegrasDeOuroAllocation(sheetData: RegrasDeOuroSheetData): RegrasDeOuroAllocation {
+  const etaria = sheetData.etaria || "neonato";
+  const etariaConfig = ETARIAS_CONFIG[etaria] || ETARIAS_CONFIG.neonato;
+
+  // 1. Talentos (12 talentos)
+  const talentos = sheetData.talentos || ({} as RegrasDeOuroTalentos);
+  const talentosFisicosSpent = (talentos.forca || 0) + (talentos.vigor || 0) + (talentos.agilidade || 0);
+  const talentosMentaisSpent =
+    (talentos.destreza || 0) +
+    (talentos.aparencia || 0) +
+    (talentos.social || 0) +
+    (talentos.emocional || 0) +
+    (talentos.espacial || 0) +
+    (talentos.logica || 0) +
+    (talentos.linguistica || 0) +
+    (talentos.musical || 0) +
+    (talentos.naturalista || 0);
+  const talentosSpent = talentosFisicosSpent + talentosMentaisSpent;
+  const talentosQuota = etariaConfig.talentosQuota;
+  const talentosRemaining = talentosQuota - talentosSpent;
+
+  // 2. Virtudes (base gratuita 1 em cada virtude)
+  const { pontosVirtudes: virtudesQuota } = calculateArchetypeBonuses(
+    sheetData.natureza || "Sobrevivente",
+    sheetData.mascara || "Solitário"
+  );
+  const virtudes = sheetData.virtudes || { consciencia: 1, autocontrole: 1, coragem: 1 };
+  const virtudesSpent =
+    Math.max(0, (virtudes.consciencia || 1) - 1) +
+    Math.max(0, (virtudes.autocontrole || 1) - 1) +
+    Math.max(0, (virtudes.coragem || 1) - 1);
+  const virtudesRemaining = virtudesQuota - virtudesSpent;
+
+  // 3. Disciplinas (cota inicial 3)
+  const disciplinasQuota = etariaConfig.disciplinasQuota || 3;
+  const disciplinasSpent = (sheetData.disciplinas || []).reduce((acc, d) => acc + (d.nivel || 0), 0);
+  const disciplinasRemaining = disciplinasQuota - disciplinasSpent;
+
+  // 4. Palavras-Chave
+  const kws = sheetData.palavrasChave || [];
+  const fracosAtuais = kws.filter((k) => k.grau === "fraco").length;
+  const bomAtuais = kws.filter((k) => k.grau === "bom").length;
+  const otimoAtuais = kws.filter((k) => k.grau === "otimo").length;
+  const excepcionalAtuais = kws.filter((k) => k.grau === "excepcional").length;
+  const extraordinarioAtuais = kws.filter((k) => k.grau === "extraordinario").length;
+
+  const kwConfig = etariaConfig.keywordsQuota;
+  const fracosExtras = Math.max(0, fracosAtuais - kwConfig.fracoBase);
+  const fracosValidos = Math.min(fracosExtras, kwConfig.maxFracosExtras);
+  const bomPermitido = kwConfig.bomBase + fracosValidos * 2;
+  const bomRemaining = bomPermitido - bomAtuais;
+  const otimoRemaining = kwConfig.otimoBase - otimoAtuais;
+
+  const keywordsAlloc: RegrasDeOuroKeywordsAlloc = {
+    fracoBase: kwConfig.fracoBase,
+    bomBase: kwConfig.bomBase,
+    otimoBase: kwConfig.otimoBase,
+    maxFracosExtras: kwConfig.maxFracosExtras,
+    fracosAtuais,
+    fracosExtras,
+    bomPermitido,
+    bomAtuais,
+    otimoAtuais,
+    excepcionalAtuais,
+    extraordinarioAtuais,
+    bomRemaining,
+    otimoRemaining,
+  };
+
+  // 5. Paixões e Grilhões da Psique (cota recomendada de 7)
+  const paixoesQuota = etariaConfig.paixoesQuota || 7;
+  const paixoesSpent = (sheetData.paixoes || []).reduce((acc, p) => acc + (p.nivel || 0), 0);
+  const paixoesRemaining = paixoesQuota - paixoesSpent;
+
+  const grilhoesQuota = etariaConfig.grilhoesQuota || 7;
+  const grilhoesSpent = (sheetData.grilhoes || []).reduce((acc, g) => acc + (g.nivel || 0), 0);
+  const grilhoesRemaining = grilhoesQuota - grilhoesSpent;
+
+  // 6. Guia da Besta
+  const besta = sheetData.besta;
+  const bestaPaixoesQuota = etariaConfig.bestaPaixoesQuota || 4;
+  const bestaPaixoesSpent = (besta?.paixoesObscuras || []).reduce((acc, p) => acc + (p.nivel || 0), 0);
+  const bestaPaixoesRemaining = bestaPaixoesQuota - bestaPaixoesSpent;
+
+  const bestaGrilhoesQuota = etariaConfig.bestaGrilhoesQuota || 4;
+  const bestaGrilhoesSpent = (besta?.grilhoesObscuros || []).reduce((acc, g) => acc + (g.nivel || 0), 0);
+  const bestaGrilhoesRemaining = bestaGrilhoesQuota - bestaGrilhoesSpent;
+
+  const flagelosBudget = calculateInitialFlageloPoints(
+    sheetData.trilha?.nivel || 7,
+    sheetData.geracao || 13,
+    etaria
+  );
+  const flagelosSpent = (besta?.flagelos || []).reduce((acc, f) => acc + (f.custo || 1), 0);
+  const flagelosRemaining = flagelosBudget - flagelosSpent;
+
+  // 7. Desvantagens (Pontos de Criação)
+  const desvantagensPontosTotal = (sheetData.desvantagens || []).reduce((acc, d) => acc + (d.pontos || 0), 0);
+
+  // 8. Estado de Rascunho (DRAFT)
+  const isDraft = talentosRemaining > 0 || virtudesRemaining > 0 || disciplinasRemaining > 0;
+
+  return {
+    talentosQuota,
+    talentosSpent,
+    talentosRemaining,
+    talentosFisicosSpent,
+    talentosMentaisSpent,
+
+    virtudesQuota,
+    virtudesSpent,
+    virtudesRemaining,
+
+    disciplinasQuota,
+    disciplinasSpent,
+    disciplinasRemaining,
+
+    keywordsAlloc,
+
+    paixoesQuota,
+    paixoesSpent,
+    paixoesRemaining,
+    grilhoesQuota,
+    grilhoesSpent,
+    grilhoesRemaining,
+
+    bestaPaixoesQuota,
+    bestaPaixoesSpent,
+    bestaPaixoesRemaining,
+    bestaGrilhoesQuota,
+    bestaGrilhoesSpent,
+    bestaGrilhoesRemaining,
+    flagelosBudget,
+    flagelosSpent,
+    flagelosRemaining,
+
+    desvantagensPontosTotal,
+
+    isDraft,
+  };
+}
+

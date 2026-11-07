@@ -30,6 +30,9 @@ interface DisciplinesTreeProps {
   rituais?: RitualTaumaturgicoEntry[];
   onChangeRituais?: (rituais: RitualTaumaturgicoEntry[]) => void;
   disabled?: boolean;
+  disciplinasQuota?: number;
+  disciplinasRemaining?: number;
+  isDraftMode?: boolean;
 }
 
 export default function DisciplinesTree({
@@ -38,6 +41,9 @@ export default function DisciplinesTree({
   rituais = [],
   onChangeRituais,
   disabled = false,
+  disciplinasQuota,
+  disciplinasRemaining,
+  isDraftMode = false,
 }: DisciplinesTreeProps) {
   // Estado para Modal de Despertar Disciplina
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -350,6 +356,28 @@ export default function DisciplinesTree({
                 (Sub-níveis ativam automaticamente ao evoluir)
               </span>
             </h3>
+            {isDraftMode && disciplinasQuota !== undefined && disciplinasRemaining !== undefined && (
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                <span
+                  className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                    disciplinasRemaining === 0
+                      ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                      : disciplinasRemaining > 0
+                      ? "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                      : "bg-red-950/60 border-red-500/40 text-red-400"
+                  }`}
+                >
+                  {disciplinasRemaining === 0
+                    ? "🟢 0 Restantes (Concluído) ✓"
+                    : disciplinasRemaining > 0
+                    ? `🟡 ${disciplinasRemaining} ${disciplinasRemaining === 1 ? "ponto restante" : "pontos restantes"}`
+                    : `🔴 ${Math.abs(disciplinasRemaining)} pontos acima da cota`}
+                </span>
+                <span className="text-[11px] font-data text-gold-accent/80 bg-gold-accent/10 border border-gold-accent/20 px-2 py-0.5 rounded-xs normal-case tracking-normal">
+                  💡 Criação de Personagem: {disciplinasQuota} pontos a distribuir entre Disciplinas de Clã
+                </span>
+              </div>
+            )}
           </div>
 
           <button

@@ -481,3 +481,83 @@ export function calculateInitialFlageloPoints(
   return angustiaPerm + genBonus + etariaBonus;
 }
 
+export interface EtariaDefinition {
+  id: "neonato" | "neofito" | "ancilla";
+  label: string;
+  rangeAnos: string;
+  talentosQuota: number;
+  disciplinasQuota: number;
+  keywordsQuota: {
+    fracoBase: number;
+    bomBase: number;
+    otimoBase: number;
+    maxFracosExtras: number;
+  };
+  paixoesQuota: number;
+  grilhoesQuota: number;
+  bestaPaixoesQuota: number;
+  bestaGrilhoesQuota: number;
+  flagelosBonus: number;
+  description: string;
+}
+
+export const ETARIAS_CONFIG: Record<"neonato" | "neofito" | "ancilla", EtariaDefinition> = {
+  neonato: {
+    id: "neonato",
+    label: "Neonato",
+    rangeAnos: "0 a 10 anos",
+    talentosQuota: 20,
+    disciplinasQuota: 3,
+    keywordsQuota: {
+      fracoBase: 0,
+      bomBase: 2,
+      otimoBase: 1,
+      maxFracosExtras: 0,
+    },
+    paixoesQuota: 7,
+    grilhoesQuota: 7,
+    bestaPaixoesQuota: 4,
+    bestaGrilhoesQuota: 4,
+    flagelosBonus: 0,
+    description: "20 pts de Talentos | Palavras-Chave: 2 Bom, 1 Ótimo | 3 pts de Disciplinas",
+  },
+  neofito: {
+    id: "neofito",
+    label: "Neófito",
+    rangeAnos: "10 a 100 anos",
+    talentosQuota: 22,
+    disciplinasQuota: 3,
+    keywordsQuota: {
+      fracoBase: 0,
+      bomBase: 3,
+      otimoBase: 1,
+      maxFracosExtras: 1,
+    },
+    paixoesQuota: 7,
+    grilhoesQuota: 7,
+    bestaPaixoesQuota: 7,
+    bestaGrilhoesQuota: 7,
+    flagelosBonus: 1,
+    description: "22 pts de Talentos | Palavras-Chave: 3 Bom, 1 Ótimo (+1 Fraco concede +2 Bom) | 3 pts de Disciplinas",
+  },
+  ancilla: {
+    id: "ancilla",
+    label: "Ancilla",
+    rangeAnos: "100 a 250 anos",
+    talentosQuota: 24,
+    disciplinasQuota: 3,
+    keywordsQuota: {
+      fracoBase: 1,
+      bomBase: 4,
+      otimoBase: 2,
+      maxFracosExtras: 2,
+    },
+    paixoesQuota: 7,
+    grilhoesQuota: 7,
+    bestaPaixoesQuota: 10,
+    bestaGrilhoesQuota: 10,
+    flagelosBonus: 3,
+    description: "24 pts de Talentos | Palavras-Chave: 1 Fraco, 4 Bom, 2 Ótimo (+2 Fracos concedem +4 Bom) | 3 pts de Disciplinas",
+  },
+};
+

@@ -18,10 +18,12 @@ import {
   VITAE_BY_GENERATION,
   VANTAGENS_CATALOGO,
   DESVANTAGENS_CATALOGO,
+  ETARIAS_CONFIG,
 } from "@/lib/systems/regrasDeOuro/constants";
 import {
   calculateArchetypeBonuses,
   calculateInitialTrilha,
+  calculateRegrasDeOuroAllocation,
 } from "@/lib/systems/regrasDeOuro/rules";
 import GothicSelect from "@/components/common/GothicSelect";
 import TalentosGrid from "./TalentosGrid";
@@ -36,6 +38,7 @@ interface RegrasDeOuroSheetViewProps {
   characterName: string;
   isNarrator?: boolean;
   disabled?: boolean;
+  status?: "DRAFT" | "READY" | "IN_PLAY";
   onRollDice?: (diceCount: number, difficulty: number, label: string) => void;
 }
 
@@ -47,9 +50,15 @@ export default function RegrasDeOuroSheetView({
   characterName,
   isNarrator = false,
   disabled = false,
+  status = "DRAFT",
   onRollDice,
 }: RegrasDeOuroSheetViewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("talentos");
+
+  // Alocação dinâmica de cotas e modo rascunho
+  const isDraftMode = status !== "IN_PLAY";
+  const alloc = calculateRegrasDeOuroAllocation(sheetData);
+  const etariaDef = ETARIAS_CONFIG[sheetData.etaria] || ETARIAS_CONFIG.neonato;
 
   // Modais de Vantagens, Paixões e Grilhões
   const [isAddPaixaoOpen, setIsAddPaixaoOpen] = useState(false);
@@ -304,6 +313,11 @@ export default function RegrasDeOuroSheetView({
                   />
                 </div>
               </div>
+              {isDraftMode && (
+                <div className="mt-1.5 p-1.5 bg-black/40 border border-white/10 rounded-xs text-[9px] font-data text-gold-accent/90 leading-tight">
+                  💡 <strong>{etariaDef.label}:</strong> {etariaDef.description}
+                </div>
+              )}
             </div>
           </div>
 
@@ -357,6 +371,31 @@ export default function RegrasDeOuroSheetView({
               <span className="text-base font-mono font-bold text-gold-accent">
                 {sheetData.campoPessoal}
               </span>
+            </div>
+
+            {/* Cabeçalho de Virtudes com Badge Dinâmico */}
+            <div className="flex justify-between items-center pb-0.5 border-b border-white/5 pt-0.5">
+              <span className="text-[10px] uppercase font-data tracking-wider text-text-muted">
+                Virtudes ({alloc.virtudesSpent}/{alloc.virtudesQuota} pts):
+              </span>
+              {isDraftMode && (
+                <span
+                  className={`text-[9px] font-data px-1.5 py-0.5 rounded-2xs border uppercase font-bold tracking-wider ${
+                    alloc.virtudesRemaining === 0
+                      ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400"
+                      : alloc.virtudesRemaining > 0
+                      ? "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                      : "bg-red-950/60 border-red-500/40 text-red-400"
+                  }`}
+                  title={`Cota dos Arquétipos (${sheetData.natureza} + ${sheetData.mascara}): ${alloc.virtudesQuota} pontos adicionais`}
+                >
+                  {alloc.virtudesRemaining === 0
+                    ? "🟢 0 Rest. ✓"
+                    : alloc.virtudesRemaining > 0
+                    ? `🟡 ${alloc.virtudesRemaining} rest.`
+                    : `🔴 ${Math.abs(alloc.virtudesRemaining)} acima`}
+                </span>
+              )}
             </div>
 
             {/* Três Virtudes: Consciência, Autocontrole, Coragem */}
@@ -489,6 +528,10 @@ export default function RegrasDeOuroSheetView({
             }}
             onRollTalento={handleRollTalento}
             disabled={disabled}
+            talentosQuota={alloc.talentosQuota}
+            talentosRemaining={alloc.talentosRemaining}
+            isDraftMode={isDraftMode}
+            etariaLabel={etariaDef.label}
           />
 
           <AnatomicalHealthTracker
@@ -518,6 +561,9 @@ export default function RegrasDeOuroSheetView({
               }
             }}
             disabled={disabled}
+            keywordsAlloc={alloc.keywordsAlloc}
+            isDraftMode={isDraftMode}
+            etariaLabel={etariaDef.label}
           />
 
           <DisciplinesTree
@@ -526,6 +572,9 @@ export default function RegrasDeOuroSheetView({
             rituais={sheetData.rituais || []}
             onChangeRituais={(rit) => handleUpdate({ rituais: rit })}
             disabled={disabled}
+            disciplinasQuota={alloc.disciplinasQuota}
+            disciplinasRemaining={alloc.disciplinasRemaining}
+            isDraftMode={isDraftMode}
           />
         </div>
       )}
@@ -547,6 +596,7 @@ export default function RegrasDeOuroSheetView({
             })
           }
           disabled={disabled}
+          isDraftMode={isDraftMode}
         />
       )}
 
@@ -559,14 +609,31 @@ export default function RegrasDeOuroSheetView({
             <div className="bg-bg-card/70 border border-gold-accent/30 rounded-sm p-4 space-y-3">
               <div className="flex justify-between items-center pb-2 border-b border-gold-accent/20">
                 <div>
-                  <h4 className="text-xs font-gothic tracking-widest text-gold-accent uppercase flex items-center gap-1.5">
+                  <h4 className="text-xs font-gothic tracking-widest text-gold-accent uppercase flex flex-wrap items-center gap-1.5">
                     <span>Paixões da Psique</span>
                     <span className="text-[10px] font-mono text-text-dim">
-                      ({totalPontosPaixoes} / 7 pts recomendados)
+                      ({totalPontosPaixoes} / {alloc.paixoesQuota} pts)
                     </span>
+                    {isDraftMode && (
+                      <span
+                        className={`text-[9px] font-data px-1.5 py-0.5 rounded-2xs border font-bold uppercase tracking-wider ${
+                          alloc.paixoesRemaining === 0
+                            ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400"
+                            : alloc.paixoesRemaining > 0
+                            ? "bg-amber-950/60 border-amber-500/40 text-amber-400"
+                            : "bg-red-950/60 border-red-500/40 text-red-400"
+                        }`}
+                      >
+                        {alloc.paixoesRemaining === 0
+                          ? "🟢 0 Rest. ✓"
+                          : alloc.paixoesRemaining > 0
+                          ? `🟡 ${alloc.paixoesRemaining} rest.`
+                          : `🔴 ${Math.abs(alloc.paixoesRemaining)} acima`}
+                      </span>
+                    )}
                   </h4>
                   <p className="text-[9px] text-text-dim font-reading">
-                    Projetos e ideais que justificam a imortalidade.
+                    Projetos e ideais que justificam a imortalidade (Cota: {alloc.paixoesQuota} pts).
                   </p>
                 </div>
 
@@ -624,14 +691,31 @@ export default function RegrasDeOuroSheetView({
             <div className="bg-bg-card/70 border border-gold-accent/30 rounded-sm p-4 space-y-3">
               <div className="flex justify-between items-center pb-2 border-b border-gold-accent/20">
                 <div>
-                  <h4 className="text-xs font-gothic tracking-widest text-gold-accent uppercase flex items-center gap-1.5">
+                  <h4 className="text-xs font-gothic tracking-widest text-gold-accent uppercase flex flex-wrap items-center gap-1.5">
                     <span>Grilhões da Psique</span>
                     <span className="text-[10px] font-mono text-text-dim">
-                      ({totalPontosGrilhoes} / 7 pts recomendados)
+                      ({totalPontosGrilhoes} / {alloc.grilhoesQuota} pts)
                     </span>
+                    {isDraftMode && (
+                      <span
+                        className={`text-[9px] font-data px-1.5 py-0.5 rounded-2xs border font-bold uppercase tracking-wider ${
+                          alloc.grilhoesRemaining === 0
+                            ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400"
+                            : alloc.grilhoesRemaining > 0
+                            ? "bg-amber-950/60 border-amber-500/40 text-amber-400"
+                            : "bg-red-950/60 border-red-500/40 text-red-400"
+                        }`}
+                      >
+                        {alloc.grilhoesRemaining === 0
+                          ? "🟢 0 Rest. ✓"
+                          : alloc.grilhoesRemaining > 0
+                          ? `🟡 ${alloc.grilhoesRemaining} rest.`
+                          : `🔴 ${Math.abs(alloc.grilhoesRemaining)} acima`}
+                      </span>
+                    )}
                   </h4>
                   <p className="text-[9px] text-text-dim font-reading">
-                    Entes, relíquias ou locais amados que ancoram a humanidade.
+                    Entes, relíquias ou locais amados que ancoram a humanidade (Cota: {alloc.grilhoesQuota} pts).
                   </p>
                 </div>
 
@@ -752,11 +836,14 @@ export default function RegrasDeOuroSheetView({
             <div className="bg-bg-card/70 border border-white/10 rounded-sm p-4 space-y-3">
               <div className="flex justify-between items-center pb-2 border-b border-white/10">
                 <div>
-                  <h4 className="text-xs font-gothic tracking-widest text-hunger-red uppercase">
-                    Desvantagens & Defeitos
+                  <h4 className="text-xs font-gothic tracking-widest text-hunger-red uppercase flex flex-wrap items-center gap-1.5">
+                    <span>Desvantagens & Defeitos</span>
+                    <span className="text-[10px] font-mono text-blood-red font-bold">
+                      ({alloc.desvantagensPontosTotal} {alloc.desvantagensPontosTotal === 1 ? "pt de criação" : "pts de criação"})
+                    </span>
                   </h4>
                   <p className="text-[9px] text-text-dim font-reading">
-                    Sequelas e perdições que concedem pontos adicionais.
+                    Sequelas e perdições que concedem pontos adicionais para a criação.
                   </p>
                 </div>
 
@@ -804,6 +891,15 @@ export default function RegrasDeOuroSheetView({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {isDraftMode && (
+                <div className="p-2.5 bg-black/50 border border-white/10 rounded-xs text-[10px] font-data text-text-dim leading-relaxed">
+                  💡 <strong>Pontos de Criação desbloqueados:</strong> Desvantagens geram pontos adicionais para investir na ficha:
+                  <span className="text-gold-accent ml-1.5 font-mono">Talento: 3 pts/nível</span> •
+                  <span className="text-blood-red ml-1.5 font-mono">Disciplina: 5 pts/nível</span> •
+                  <span className="text-green-400 ml-1.5 font-mono">Paixão: 3 pts/nível</span>.
                 </div>
               )}
             </div>

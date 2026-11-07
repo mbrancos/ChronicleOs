@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import type { PalavraChaveItem, PalavraChaveGrau, RegrasDeOuroTalentos } from "@/types/systems/regrasDeOuro";
+import type { RegrasDeOuroKeywordsAlloc } from "@/lib/systems/regrasDeOuro/rules";
 import { KEYWORD_MODIFIERS, TALENTOS_META } from "@/lib/systems/regrasDeOuro/constants";
 import GothicSelect from "@/components/common/GothicSelect";
 
@@ -10,6 +11,9 @@ interface KeywordsSectionProps {
   onChangeKeywords: (keywords: PalavraChaveItem[]) => void;
   onInvokeKeyword?: (kw: PalavraChaveItem) => void;
   disabled?: boolean;
+  keywordsAlloc?: RegrasDeOuroKeywordsAlloc;
+  isDraftMode?: boolean;
+  etariaLabel?: string;
 }
 
 const GRAUS_ORDER: PalavraChaveGrau[] = [
@@ -47,6 +51,9 @@ export default function KeywordsSection({
   onChangeKeywords,
   onInvokeKeyword,
   disabled = false,
+  keywordsAlloc,
+  isDraftMode = false,
+  etariaLabel,
 }: KeywordsSectionProps) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -119,6 +126,44 @@ export default function KeywordsSection({
           + Adicionar Palavra-Chave
         </button>
       </div>
+
+      {/* Dicas e Cotas na Criação (Modo Draft) */}
+      {isDraftMode && keywordsAlloc && (
+        <div className="mb-3 p-2.5 bg-black/50 border border-white/10 rounded-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                keywordsAlloc.bomRemaining === 0
+                  ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                  : keywordsAlloc.bomRemaining > 0
+                  ? "bg-amber-950/60 border-amber-500/40 text-amber-400"
+                  : "bg-red-950/60 border-red-500/40 text-red-400"
+              }`}
+            >
+              Bom: {keywordsAlloc.bomAtuais} / {keywordsAlloc.bomPermitido}
+              {keywordsAlloc.bomRemaining === 0 ? " ✓" : ` (${keywordsAlloc.bomRemaining} rest.)`}
+            </span>
+            <span
+              className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                keywordsAlloc.otimoRemaining === 0
+                  ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                  : keywordsAlloc.otimoRemaining > 0
+                  ? "bg-amber-950/60 border-amber-500/40 text-amber-400"
+                  : "bg-red-950/60 border-red-500/40 text-red-400"
+              }`}
+            >
+              Ótimo: {keywordsAlloc.otimoAtuais} / {keywordsAlloc.otimoBase}
+              {keywordsAlloc.otimoRemaining === 0 ? " ✓" : ` (${keywordsAlloc.otimoRemaining} rest.)`}
+            </span>
+            <span className="text-xs font-data px-2.5 py-0.5 rounded-xs border border-stone-600/40 bg-stone-900/60 text-stone-400 uppercase font-bold tracking-wider">
+              Fraco: {keywordsAlloc.fracosAtuais} (Base: {keywordsAlloc.fracoBase} | Extras: {keywordsAlloc.fracosExtras}/{keywordsAlloc.maxFracosExtras})
+            </span>
+          </div>
+          <span className="text-[11px] font-data text-gold-accent/80 bg-gold-accent/10 border border-gold-accent/20 px-2 py-0.5 rounded-xs normal-case tracking-normal">
+            💡 Câmbio: 1 Fraco extra = +2 Bom | 4 Bom = 1 Ótimo | 4 Ótimo = 1 Excepcional
+          </span>
+        </div>
+      )}
 
       {/* Lista de Palavras-Chave */}
       {palavrasChave.length === 0 ? (

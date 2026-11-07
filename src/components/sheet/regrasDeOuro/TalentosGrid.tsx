@@ -10,6 +10,10 @@ interface TalentosGridProps {
   onChangeTalento: (key: keyof RegrasDeOuroTalentos, value: number) => void;
   onRollTalento?: (key: keyof RegrasDeOuroTalentos, label: string, value: number) => void;
   disabled?: boolean;
+  talentosQuota?: number;
+  talentosRemaining?: number;
+  isDraftMode?: boolean;
+  etariaLabel?: string;
 }
 
 export default function TalentosGrid({
@@ -17,6 +21,10 @@ export default function TalentosGrid({
   onChangeTalento,
   onRollTalento,
   disabled = false,
+  talentosQuota,
+  talentosRemaining,
+  isDraftMode = false,
+  etariaLabel,
 }: TalentosGridProps) {
   const [isFisicosOpen, setIsFisicosOpen] = useState(false); // Recolhido por padrão para caber na dobra!
   const [isMentaisOpen, setIsMentaisOpen] = useState(false); // Recolhido por padrão para caber na dobra!
@@ -99,9 +107,39 @@ export default function TalentosGrid({
 
   const totalFisicos = fisicos.reduce((acc, t) => acc + (talentos[t.key] ?? 0), 0);
   const totalMentais = mentais.reduce((acc, t) => acc + (talentos[t.key] ?? 0), 0);
+  const totalSpent = totalFisicos + totalMentais;
 
   return (
     <div className="space-y-2">
+      {/* Banner de Dicas e Pontos Restantes na Criação (Modo Draft) */}
+      {isDraftMode && talentosQuota !== undefined && talentosRemaining !== undefined && (
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-black/50 border border-white/10 rounded-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`text-xs font-data px-2.5 py-0.5 rounded-xs border uppercase font-bold tracking-wider ${
+                talentosRemaining === 0
+                  ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                  : talentosRemaining > 0
+                  ? "bg-amber-950/60 border-amber-500/40 text-amber-400 animate-pulse"
+                  : "bg-red-950/60 border-red-500/40 text-red-400"
+              }`}
+            >
+              {talentosRemaining === 0
+                ? "🟢 0 Restantes (Concluído) ✓"
+                : talentosRemaining > 0
+                ? `🟡 ${talentosRemaining} ${talentosRemaining === 1 ? "ponto restante" : "pontos restantes"}`
+                : `🔴 ${Math.abs(talentosRemaining)} pontos acima da cota`}
+            </span>
+            <span className="text-[11px] font-mono text-text-dim">
+              {totalSpent} / {talentosQuota} pontos distribuídos
+            </span>
+          </div>
+          <span className="text-[11px] font-data text-gold-accent/90 bg-gold-accent/10 border border-gold-accent/20 px-2 py-0.5 rounded-xs normal-case tracking-normal">
+            💡 Cota da Etária ({etariaLabel || "Neonato"}): {talentosQuota} pts entre os 12 Talentos
+          </span>
+        </div>
+      )}
+
       {/* Barra de Talentos Físicos (3) */}
       <div className="bg-noir-card border border-white/10 rounded-xs overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
         <SolidHeaderBanner

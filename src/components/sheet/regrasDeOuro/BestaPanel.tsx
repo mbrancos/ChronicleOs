@@ -21,6 +21,7 @@ interface BestaPanelProps {
   onChangeBesta: (besta: GuiaDaBestaData) => void;
   onChangeTrilha: (trilha: RegrasDeOuroTrilha) => void;
   disabled?: boolean;
+  isDraftMode?: boolean;
 }
 
 export default function BestaPanel({
@@ -31,6 +32,7 @@ export default function BestaPanel({
   onChangeBesta,
   onChangeTrilha,
   disabled = false,
+  isDraftMode = false,
 }: BestaPanelProps) {
   const [panicRollResult, setPanicRollResult] = useState<{
     roll: number;
@@ -65,6 +67,16 @@ export default function BestaPanel({
   const pontosAngustia = besta.pontosAngustia ?? 0;
   const initialFlageloBudget = calculateInitialFlageloPoints(trilha.nivel, geracao, etaria);
   const spentFlageloPoints = (besta.flagelos || []).reduce((acc, f) => acc + (f.custo || 1), 0);
+  const remainingFlagelos = initialFlageloBudget - spentFlageloPoints;
+
+  const etariaKey = (etaria || "neonato") as "neonato" | "neofito" | "ancilla";
+  const bestaPaixoesQuota = etariaKey === "ancilla" ? 10 : etariaKey === "neofito" ? 7 : 4;
+  const spentPaixoesObscuras = (besta.paixoesObscuras || []).reduce((acc, p) => acc + (p.nivel || 0), 0);
+  const remainingPaixoesObscuras = bestaPaixoesQuota - spentPaixoesObscuras;
+
+  const bestaGrilhoesQuota = etariaKey === "ancilla" ? 10 : etariaKey === "neofito" ? 7 : 4;
+  const spentGrilhoesObscuros = (besta.grilhoesObscuros || []).reduce((acc, g) => acc + (g.nivel || 0), 0);
+  const remainingGrilhoesObscuros = bestaGrilhoesQuota - spentGrilhoesObscuros;
 
   // Simbolismo Arcano Atual
   const currentSimbolismoNome = besta.simbolismoArcano || "O Lobo";
@@ -569,11 +581,26 @@ export default function BestaPanel({
         <div className="bg-bg-card/70 border border-white/10 rounded-sm p-4 relative">
           <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
             <div>
-              <h4 className="text-xs font-gothic tracking-widest text-blood-red uppercase flex items-center gap-2">
+              <h4 className="text-xs font-gothic tracking-widest text-blood-red uppercase flex flex-wrap items-center gap-2">
                 <span>Paixões Obscuras</span>
+                {isDraftMode && (
+                  <span
+                    className={`text-[10px] font-data px-2 py-0.5 rounded-xs border font-bold uppercase tracking-wider ${
+                      remainingPaixoesObscuras === 0
+                        ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400"
+                        : remainingPaixoesObscuras > 0
+                        ? "bg-amber-950/60 border-amber-500/40 text-amber-400"
+                        : "bg-red-950/60 border-red-500/40 text-red-400"
+                    }`}
+                  >
+                    {remainingPaixoesObscuras === 0
+                      ? "🟢 0 Rest. ✓"
+                      : `${spentPaixoesObscuras}/${bestaPaixoesQuota} pts (${remainingPaixoesObscuras} rest.)`}
+                  </span>
+                )}
               </h4>
               <p className="text-[9px] text-text-dim font-reading">
-                Desejos inconfessáveis e perversões conduzidas pelo Guia da Besta.
+                Desejos inconfessáveis e perversões conduzidas pelo Guia da Besta (Cota: {bestaPaixoesQuota} pts).
               </p>
             </div>
 
@@ -633,11 +660,26 @@ export default function BestaPanel({
         <div className="bg-bg-card/70 border border-white/10 rounded-sm p-4 relative">
           <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
             <div>
-              <h4 className="text-xs font-gothic tracking-widest text-hunger-red uppercase flex items-center gap-2">
+              <h4 className="text-xs font-gothic tracking-widest text-hunger-red uppercase flex flex-wrap items-center gap-2">
                 <span>Grilhões Obscuros</span>
+                {isDraftMode && (
+                  <span
+                    className={`text-[10px] font-data px-2 py-0.5 rounded-xs border font-bold uppercase tracking-wider ${
+                      remainingGrilhoesObscuros === 0
+                        ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400"
+                        : remainingGrilhoesObscuros > 0
+                        ? "bg-amber-950/60 border-amber-500/40 text-amber-400"
+                        : "bg-red-950/60 border-red-500/40 text-red-400"
+                    }`}
+                  >
+                    {remainingGrilhoesObscuros === 0
+                      ? "🟢 0 Rest. ✓"
+                      : `${spentGrilhoesObscuros}/${bestaGrilhoesQuota} pts (${remainingGrilhoesObscuros} rest.)`}
+                  </span>
+                )}
               </h4>
               <p className="text-[9px] text-text-dim font-reading">
-                Entes ou locais que despertam rancor, amargura e culpa profunda.
+                Entes ou locais que despertam rancor, amargura e culpa profunda (Cota: {bestaGrilhoesQuota} pts).
               </p>
             </div>
 
@@ -698,14 +740,29 @@ export default function BestaPanel({
       <div className="bg-bg-card/70 border border-white/10 rounded-sm p-4 relative">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3 pb-2 border-b border-white/10">
           <div>
-            <h4 className="text-xs font-gothic tracking-widest text-text-primary uppercase flex items-center gap-2">
+            <h4 className="text-xs font-gothic tracking-widest text-text-primary uppercase flex flex-wrap items-center gap-2">
               <span>Flagelos da Besta</span>
               <span className="text-[10px] font-mono text-blood-red font-bold">
                 ({spentFlageloPoints} / {initialFlageloBudget} pts gastos)
               </span>
+              {isDraftMode && (
+                <span
+                  className={`text-[10px] font-data px-2 py-0.5 rounded-xs border font-bold uppercase tracking-wider ${
+                    remainingFlagelos === 0
+                      ? "bg-emerald-950/60 border-emerald-500/40 text-emerald-400"
+                      : remainingFlagelos > 0
+                      ? "bg-amber-950/60 border-amber-500/40 text-amber-400"
+                      : "bg-red-950/60 border-red-500/40 text-red-400"
+                  }`}
+                >
+                  {remainingFlagelos === 0
+                    ? "🟢 0 Rest. ✓"
+                    : `${remainingFlagelos} ${remainingFlagelos === 1 ? "ponto rest." : "pontos rest."}`}
+                </span>
+              )}
             </h4>
             <p className="text-[10px] text-text-dim font-reading">
-              Poderes psíquicos e sobrenaturais da Besta empregados contra a Psique.
+              Poderes psíquicos e sobrenaturais da Besta empregados contra a Psique (Orçamento: {initialFlageloBudget} pts).
             </p>
           </div>
 
