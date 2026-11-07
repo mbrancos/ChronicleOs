@@ -7,10 +7,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   createCampaignAction,
   createCharacterAction,
-  signOutAction,
   updateCampaignAction,
   deleteCampaignAction
 } from "@/app/actions/hubActions";
+import { signOutAction } from "@/app/actions/auth";
 import {
   deleteCharacterAction,
   duplicateCharacterAction,

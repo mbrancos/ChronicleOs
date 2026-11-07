@@ -8,8 +8,6 @@ import { revalidatePath } from "next/cache";
 import { DEFAULT_CHARACTER_DATA } from "@/types/character";
 import type { SystemId } from "@/types/systems/regrasDeOuro";
 import { createInitialRegrasDeOuroSheet } from "@/lib/systems/regrasDeOuro/rules";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 
 // Busca os dados iniciais do Hub do usuário logado
 export async function getUserHubData() {
@@ -198,19 +196,8 @@ export async function createCharacterAction(
   }
 }
 
-// Ação de Logout
-export async function signOutAction() {
-  try {
-    await auth.signOut({
-      fetchOptions: {
-        headers: await headers(),
-      },
-    });
-  } catch (error) {
-    console.error("Erro no signOut:", error);
-  }
-  redirect("/");
-}
+// Ação de Logout consolidada em auth.ts
+export { signOutAction } from "./auth";
 
 // Server Action para atualizar nome e descrição de uma campanha (crônica)
 export async function updateCampaignAction(campaignId: string, name: string, description?: string) {

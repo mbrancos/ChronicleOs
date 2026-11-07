@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { characters, campaigns, users, xpLedgers } from "@/db/schema";
-import { eq, desc, asc, and, isNull, inArray, sql, or, like } from "drizzle-orm";
+import { eq, asc, and, inArray, or, like } from "drizzle-orm";
 import { CharacterSheetData } from "@/types/character";
 import { auth } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
@@ -102,9 +102,7 @@ export async function updateCharacterSheet(
       .set(updatePayload)
       .where(eq(characters.id, characterId));
 
-    // 4. Auditoria de XP baseada na transição de estados (apenas quando o personagem está ativamente em jogo)
-    const targetStatus = status || oldStatus;
-
+    // 4. Auditoria de compras de XP em tempo real durante o jogo (apenas quando o personagem está ativamente em jogo)
     if (oldStatus === "IN_PLAY" && buildState && oldBuildState) {
       // Auditoria de compras de XP em tempo real durante o jogo
       await auditXpChanges(characterId, oldBuildState, buildState, clan);

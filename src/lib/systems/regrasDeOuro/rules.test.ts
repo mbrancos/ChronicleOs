@@ -37,10 +37,10 @@ assert(getKeywordModifier("extraordinario") === 4, "Extraordinário deve ser +4"
 
 // 4. Dano Anatômico e Transbordamento (Overflow)
 const vit = JSON.parse(JSON.stringify(INITIAL_ANATOMICAL_VITALITY));
-// Cabeça tem maxNormal: 2, maxLetal: 2, maxAgravado: 2
-// Aplicando 3 pontos de dano normal na cabeça: deve encher 2 normais e 1 transbordar para letal!
-const afterNormal = applyAnatomicalDamage(vit, "cabeca", "normal", 3);
-assert(afterNormal.cabeca.normal === 2, `Normal na cabeça esperado 2, obteve ${afterNormal.cabeca.normal}`);
+// Cabeça tem maxNormal: 5, maxLetal: 4, maxAgravado: 3
+// Aplicando 6 pontos de dano normal na cabeça: deve encher 5 normais e 1 transbordar para letal!
+const afterNormal = applyAnatomicalDamage(vit, "cabeca", "normal", 6);
+assert(afterNormal.cabeca.normal === 5, `Normal na cabeça esperado 5, obteve ${afterNormal.cabeca.normal}`);
 assert(afterNormal.cabeca.letal === 1, `Letal transbordado esperado 1, obteve ${afterNormal.cabeca.letal}`);
 assert(afterNormal.cabeca.penalty === -2, `Penalidade na cabeça esperada -2, obteve ${afterNormal.cabeca.penalty}`);
 
