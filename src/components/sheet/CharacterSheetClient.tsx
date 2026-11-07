@@ -175,7 +175,7 @@ export default function CharacterSheetClient({
   useAutosave(regrasDeOuroData, 1000, async (dataToSave) => {
     if (!isRegrasDeOuro) return;
     setSyncStatus("saving");
-    const response = await updateCharacterSheet(characterId, dataToSave as any, buildStateRef.current, statusRef.current);
+    const response = await updateCharacterSheet(characterId, dataToSave as any, undefined, statusRef.current);
     if (response.success) {
       setSyncStatus("saved");
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
@@ -200,7 +200,7 @@ export default function CharacterSheetClient({
           statusRef.current,
           "Edição Divina: Alteração efetuada pelo Narrador"
         )
-      : await updateCharacterSheet(characterId, dataToSave, buildStateRef.current, statusRef.current);
+      : await updateCharacterSheet(characterId, dataToSave, undefined, statusRef.current);
 
     if (response.success) {
       setSyncStatus("saved");
@@ -556,7 +556,7 @@ export default function CharacterSheetClient({
               type="button"
               onClick={async () => {
                 setStatus("IN_PLAY");
-                const response = await updateCharacterSheet(characterId, (isRegrasDeOuro ? regrasDeOuroData : character) as any, buildStateRef.current, "IN_PLAY");
+                const response = await updateCharacterSheet(characterId, (isRegrasDeOuro ? regrasDeOuroData : character) as any, undefined, "IN_PLAY");
                 if (response.success) {
                   showSuccess("Ficha concluída e trancada para a crônica!", "Pronto para Jogar");
                   setTimeout(() => {

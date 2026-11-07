@@ -1182,7 +1182,7 @@ export default function V5SheetView({
           isLocking={isLocking}
           onLockCharacter={async () => {
             setIsLocking(true);
-            const res = await updateCharacterSheet(characterId, character, {}, "READY");
+            const res = await updateCharacterSheet(characterId, character, undefined, "READY");
             setIsLocking(false);
             if (res.success) {
               showSuccess("Ficha concluída e pronta no cofre!", "Criação Concluída");
@@ -2247,7 +2247,7 @@ export default function V5SheetView({
             <button
               type="button"
               onClick={async () => {
-                const response = await updateCharacterSheet(characterId, character, {}, "READY");
+                const response = await updateCharacterSheet(characterId, character, undefined, "READY");
                 if (response.success) {
                   showSuccess("Ficha concluída com sucesso e guardada no cofre!", "Personagem Concluído");
                 } else {
